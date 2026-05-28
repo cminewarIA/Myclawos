@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sliders, Sun, Moon, Sparkles, RefreshCw, Zap, Bot, Laptop } from "lucide-react";
+import DragonLogo from "./DragonLogo";
 
 interface ServiceItem {
   id: string;
@@ -237,35 +238,18 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           <circle r="48" fill="rgba(15, 23, 42, 0.9)" stroke={primaryGlow} strokeWidth="1.5" filter="url(#neon-glow)" />
           <circle r="42" fill="rgba(2, 6, 23, 0.95)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
 
-          {/* Minimal Gorgeous Vector Banana Logo (Thinking center) */}
-          <g transform="scale(1.2) translate(-17, -19)" opacity="0.95">
-            {/* Elegant SVG outline of a cyber banana designed vector style */}
-            <path
-              d="M 12 6 C 14 10, 22 18, 22 26 C 22 32, 16 35, 12 35 C 7 35, 3 31, 3 25 C 3 16, 9 8, 12 6 Z"
-              fill="none"
-              stroke="#fbbf24" /* Golden cyber banana color */
-              strokeWidth="1.8"
-              filter="url(#neon-glow)"
-            />
-            <path
-              d="M 12 6 C 10 11, 4 19, 4 25 C 4 30, 8 33, 12 33"
-              fill="none"
-              stroke="#f59e0b"
-              strokeWidth="1.2"
-              strokeDasharray="2,2"
-            />
-            {/* Cyber Visor of Nano Banana */}
-            <rect x="7" y="16" width="12" height="3" rx="1.5" fill={primaryGlow} filter="url(#neon-glow)" />
-            {/* Micro brainwave antenna thread */}
-            <line x1="12" y1="6" x2="12" y2="2" stroke={primaryGlow} strokeWidth="1" />
-            <circle cx="12" cy="1" r="1" fill={secondaryGlow} />
-          </g>
+          {/* Custom Dragon Logo in the center of the kernel wallpaper */}
+          <foreignObject x="-42" y="-42" width="84" height="84">
+            <div className="w-full h-full flex items-center justify-center">
+              <DragonLogo size={80} glow={true} />
+            </div>
+          </foreignObject>
 
           {/* Subtext around core */}
           <path id="core-text-path" d="M -42,0 A 42,42 0 1,1 42,0" fill="none" />
           <text fontSize="6.5" fontWeight="bold" fill="rgba(255, 255, 255, 0.45)" letterSpacing="1.2" className="font-mono">
             <textPath href="#core-text-path" startOffset="50%" textAnchor="middle">
-              NANO BANANA SYNAPSE DAEMON
+              OPENCLAW KERNEL COGNITIVE FORCE
             </textPath>
           </text>
         </g>

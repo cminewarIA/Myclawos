@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "../types";
 import { Send, Bot, User, RefreshCw, Cpu, Database, HelpCircle } from "lucide-react";
+import DragonLogo from "./DragonLogo";
 
 interface OpenClawCoreProps {
   chatHistory: ChatMessage[];
@@ -110,7 +111,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       {/* Upper Status Hub */}
       <div className="flex items-center justify-between p-3 bg-slate-950 border-b border-slate-800 select-none shrink-0 text-xs text-slate-400">
         <div className="flex items-center space-x-2">
-          <Bot size={15} className="text-emerald-400 stroke-[1.8] animate-pulse" />
+          <DragonLogo size={20} />
           <span className="font-semibold text-slate-300">OpenClaw Cognitive Hub</span>
           <span className="px-1.5 py-0.2 bg-emerald-500/10 border border-emerald-500/20 rounded font-mono text-[9px] text-emerald-400">
             K-Core Connected
@@ -183,10 +184,10 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
                 className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
                   isUser
                     ? "bg-slate-700 border-slate-600 text-slate-200"
-                    : "bg-emerald-950/80 border-emerald-500/30 text-emerald-400"
+                    : "bg-slate-950 border-slate-800 text-emerald-400"
                 }`}
               >
-                {isUser ? <User size={12} /> : <Bot size={12} />}
+                {isUser ? <User size={12} /> : <DragonLogo size={16} />}
               </div>
 
               <div
@@ -227,8 +228,8 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
 
         {isLoading && (
           <div className="flex items-start space-x-2.5 max-w-[80%]">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border bg-emerald-950/80 border-emerald-500/30 text-emerald-400 animate-bounce">
-              <Bot size={12} />
+            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border bg-slate-950 border-slate-800 text-emerald-400 animate-pulse">
+              <DragonLogo size={16} />
             </div>
             <div className="p-3 bg-slate-950 text-slate-400 border border-slate-800 rounded-lg text-xs rounded-tl-none">
               <div className="flex items-center space-x-1.5 font-mono select-none">

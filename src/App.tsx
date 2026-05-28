@@ -12,6 +12,7 @@ import ClawInstaller from "./components/ClawInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
 import BananaWallpaper from "./components/BananaWallpaper";
+import DragonLogo from "./components/DragonLogo";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -482,8 +483,8 @@ export default function App() {
             title="Doble clic para iniciar OpenClaw Core"
             id="launcher-openclaw"
           >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Bot className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-rose-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
+              <DragonLogo size={32} className="group-hover:scale-105 transition-transform" />
             </div>
             <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
               OpenClaw AI
@@ -662,7 +663,7 @@ export default function App() {
               className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
               id="menu-app-openclaw"
             >
-              <Bot size={16} className="text-emerald-400" />
+              <DragonLogo size={18} />
               <div>
                 <p className="font-medium text-slate-300">OpenClaw AI</p>
                 <p className="text-[9px] text-slate-500">Núcleo inteligente central</p>
@@ -834,7 +835,7 @@ export default function App() {
                   id={`taskbar-tab-${win.id}`}
                 >
                   {win.id === "terminal" && <TerminalIcon size={12} />}
-                  {win.id === "openclaw_core" && <Bot size={12} />}
+                  {win.id === "openclaw_core" && <DragonLogo size={14} />}
                   {win.id === "file_manager" && <FolderOpen size={12} />}
                   {win.id === "text_editor" && <FileText size={12} />}
                   {win.id === "system_monitor" && <Cpu size={12} />}
