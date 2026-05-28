@@ -44,12 +44,16 @@ export default function ControlPanel() {
   ]);
 
   // System Services
-  const [services, setServices] = useState([
-    { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
-    { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
-    { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
-    { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
-  ]);
+  const [services, setServices] = useState(() => {
+    const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
+    return [
+      { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+      { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
+      { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+      { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
+      { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
+    ];
+  });
 
   // Handle killing virtual processes
   const handleKillProcess = (pid: number) => {
@@ -71,6 +75,13 @@ export default function ControlPanel() {
 
   // Service toggle trigger
   const handleToggleService = (id: string) => {
+    if (id === "acpi-sleep") {
+      const isSleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
+      if (isSleepDisabled) {
+        alert("Las funciones de suspensión e hibernación han sido desactivadas de forma definitiva por configuración del Kernel del Sistema (Acceso Root Directo).");
+        return;
+      }
+    }
     setServices((prev) =>
       prev.map((s) => {
         if (s.id === id) {
@@ -480,25 +491,41 @@ export default function ControlPanel() {
                       className={`px-2 py-0.5 rounded-full text-[9px] font-mono leading-none select-none shrink-0 ${
                         service.status === "active"
                           ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                          : service.status === "disabled_permanently"
+                          ? "bg-rose-500/10 border border-rose-500/30 text-rose-400"
                           : "bg-slate-900 border border-slate-800 text-slate-500"
                       }`}
                     >
-                      {service.status === "active" ? "RUNNING" : "STOPPED"}
+                      {service.status === "active" 
+                        ? "RUNNING" 
+                        : service.status === "disabled_permanently"
+                        ? "DISABLED (ROOT)"
+                        : "STOPPED"}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between border-t border-slate-900 mt-4 pt-3.5">
-                    <span className="text-[10px] text-slate-600 font-mono">Consumo virtual: {service.status === "active" ? "8.4 MW" : "0.0 MW"}</span>
+                    <span className="text-[10px] text-slate-600 font-mono">
+                      Consumo virtual: {service.status === "disabled_permanently" ? "0.0 MW" : service.status === "active" ? "8.4 MW" : "0.0 MW"}
+                    </span>
                     <button
                       onClick={() => handleToggleService(service.id)}
+                      disabled={service.status === "disabled_permanently"}
                       className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs select-none font-sans font-semibold border transition ${
-                        service.status === "active"
+                        service.status === "disabled_permanently"
+                          ? "bg-slate-950 border-slate-900/40 text-slate-600 cursor-not-allowed"
+                          : service.status === "active"
                           ? "bg-rose-950 hover:bg-rose-900 border-rose-900/50 text-rose-300"
                           : "bg-emerald-950 hover:bg-emerald-900 border-emerald-900/50 text-emerald-300"
                       }`}
                       id={`btn-toggle-service-${service.id}`}
                     >
-                      {service.status === "active" ? (
+                      {service.status === "disabled_permanently" ? (
+                        <>
+                          <AlertTriangle size={11} className="text-rose-500 animate-pulse" />
+                          <span>Bloqueado</span>
+                        </>
+                      ) : service.status === "active" ? (
                         <>
                           <Square size={11} fill="currentColor" />
                           <span>Detener daemon</span>

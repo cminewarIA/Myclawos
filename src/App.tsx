@@ -10,6 +10,7 @@ import SystemMonitor from "./components/SystemMonitor";
 import ControlPanel from "./components/ControlPanel";
 import ClawInstaller from "./components/ClawInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
+import Chromium from "./components/Chromium";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -30,13 +31,17 @@ import {
   Sliders,
   Download,
   Github,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from "lucide-react";
 
 export default function App() {
   // Virtual File System State
   const [vfs, setVfs] = useState<VFSNode>(initialVFS);
-  const [currentPath, setCurrentPath] = useState<string[]>(["home", "user"]);
+  const [currentPath, setCurrentPath] = useState<string[]>(() => {
+    const isRoot = localStorage.getItem("claw_is_root") === "true";
+    return isRoot ? ["root"] : ["home", "user"];
+  });
 
   // Active loaded file in editor
   const [openFilePath, setOpenFilePath] = useState<string[] | null>(null);
@@ -134,6 +139,16 @@ export default function App() {
       zIndex: 22,
       position: { x: 210, y: 115 },
       size: { width: 680, height: 520 },
+    },
+    {
+      id: "chromium",
+      title: "Chromium Web Browser - Navegador Predeterminado",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 12,
+      position: { x: 260, y: 130 },
+      size: { width: 720, height: 500 },
     },
   ]);
 
@@ -329,6 +344,8 @@ export default function App() {
             triggerNotification={triggerNotification}
           />
         );
+      case "chromium":
+        return <Chromium />;
       default:
         return null;
     }
@@ -353,6 +370,8 @@ export default function App() {
         return "Instalador Sencillo Kernel Beta";
       case "updater_github":
         return "Actualizador de GitHub";
+      case "chromium":
+        return "Navegador Chromium";
       default:
         return "Aplicación ClawOS";
     }
@@ -543,6 +562,22 @@ export default function App() {
               Github Sync
             </span>
           </div>
+
+          {/* Launcher 9: Chromium Browser */}
+          <div
+            onDoubleClick={() => handleOpenWindow("chromium")}
+            onTouchEnd={() => handleOpenWindow("chromium")}
+            className="flex flex-col items-center cursor-pointer group text-center"
+            title="Doble clic para abrir el Navegador de Internet Chromium"
+            id="launcher-chromium"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-blue-400/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
+              <Globe className="text-blue-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
+              Chromium
+            </span>
+          </div>
         </div>
 
         {/* Windows Rendering Layer */}
@@ -676,6 +711,18 @@ export default function App() {
               <div>
                 <p className="font-medium text-slate-300">Sincronizador GitHub</p>
                 <p className="text-[9px] text-slate-500">Actualiza y sintoniza el SO mediante git</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleOpenWindow("chromium")}
+              className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
+              id="menu-app-chromium"
+            >
+              <Globe size={16} className="text-blue-400" />
+              <div>
+                <p className="font-medium text-slate-300">Navegador Chromium</p>
+                <p className="text-[9px] text-slate-500">Navega por la red simulated sandbox</p>
               </div>
             </button>
           </div>

@@ -12,7 +12,10 @@ import {
   RotateCcw,
   Sparkles,
   RefreshCw,
-  Clock
+  Clock,
+  Shield,
+  Moon,
+  Globe
 } from "lucide-react";
 
 interface ClawInstallerProps {
@@ -29,6 +32,11 @@ export default function ClawInstaller({
   triggerNotification,
 }: ClawInstallerProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  
+  // Custom Kernel & User configuration states
+  const [omitStandardUser, setOmitStandardUser] = useState(true);
+  const [disableSleep, setDisableSleep] = useState(true);
+  const [defaultBrowserChromium, setDefaultBrowserChromium] = useState(true);
   
   // Storage selection config
   const [selectedDisk, setSelectedDisk] = useState("sda");
@@ -64,12 +72,16 @@ export default function ClawInstaller({
   const runKernelInstallation = () => {
     setIsInstalling(true);
     setInstallProgress(0);
+    
+    // Construct install arguments dynamically
+    const installArgs = `--beta${omitStandardUser ? " --root --no-user" : ""}${disableSleep ? " --disable-acpi-sleep" : ""}${defaultBrowserChromium ? " --default-browser=chromium" : ""}`;
+    
     setInstallLogs([
-      "$ curl -fsSL https://openclaw.ai/install.sh | bash -s -- --beta",
+      `$ curl -fsSL https://openclaw.ai/install.sh | bash -s -- ${installArgs}`,
       "[%] Iniciando descarga TLS segura desde openclaw.ai...",
       "[%] Certificado CA verificado con firma SHA256",
-      "[%] Descargando script de instalación (v1.1.0-beta6)... ok",
-      "[%] Ejecutando bash con argumentos: --beta",
+      "[%] Descargando script de instalación (v1.1.2-stable)... ok",
+      `[%] Ejecutando bash con argumentos: ${installArgs}`,
       "---------------------------------------------------------",
       "   ____                     ____ _               ",
       "  / ___|  _    __ _ __  __ / ___| | __ _ __      ",
@@ -77,38 +89,60 @@ export default function ClawInstaller({
       " | |___ | |__| (_| | >  < | |___| | (_| |\\ v v /    ",
       "  \\____||_____\\__,_|_/\\_\\ \\____|_|\\__,_| \\_/_/     ",
       "                                                 ",
-      " [Nucleo Inteligente OpenClaw Beta Suite Installer]",
+      " [Nucleo Súper Directo Inteligente OpenClaw Setup Suite]",
       "---------------------------------------------------------",
       "[INFO] Comprobando integridad del destino /dev/sda3...",
       "[INFO] Montando partición raíz virtual en /mnt/claw_root...",
     ]);
 
     const logsList = [
-      "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-openclaw-beta)...",
-      "[NET] Descargado: 12.4 MB / 85.0 MB (Velocidad: 14.5 MB/s)",
-      "[NET] Descargado: 38.6 MB / 85.0 MB (Velocidad: 22.1 MB/s)",
-      "[NET] Descargado: 64.1 MB / 85.0 MB (Velocidad: 18.2 MB/s)",
-      "[NET] Descargado: 85.0 MB / 85.0 MB (100% completado)",
-      "[INFO] Desempaquetando archivos del Núcleo Cognitivo OpenClaw...",
+      "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-openclaw-direct-root)...",
+      "[NET] Descargado: 14.8 MB / 92.5 MB (Velocidad: 18.2 MB/s)",
+      "[NET] Descargado: 45.1 MB / 92.5 MB (Velocidad: 24.5 MB/s)",
+      "[NET] Descargado: 74.9 MB / 92.5 MB (Velocidad: 20.1 MB/s)",
+      "[NET] Descargado: 92.5 MB / 92.5 MB (100% completado)",
+      "[INFO] Desempaquetando archivos del Núcleo de Superusuario OpenClaw...",
       "[VFS] Escribiendo /lib/modules/5.16.0-openclaw-generic/kernel/core.bin",
-      "[VFS] Escribiendo /boot/initramfs-openclaw-beta.img",
+      "[VFS] Escribiendo /boot/initramfs-openclaw-direct.img",
       "[VFS] Escribiendo /boot/vmlinuz-openclaw",
+      omitStandardUser 
+        ? "[INFO] [MODO ROOT] Omitiendo la creación de un usuario estándar básico..."
+        : "[INFO] Sincronizando directorio compartido /home/user...",
+      omitStandardUser 
+        ? "[INFO] [MODO ROOT] Configurando acceso de sesión directa como usuario 'root'..."
+        : "[INFO] Creando usuario local user_claw_developer...",
+      omitStandardUser 
+        ? "[INFO] [MODO ROOT] Anulando la solicitud de contraseñas de seguridad (Inicio Directo, Autologin RAÍZ)..."
+        : "",
+      disableSleep 
+        ? "[INFO] [ACPI] Desactivando de forma permanente la suspensión y la hibernación del kernel..."
+        : "",
+      disableSleep 
+        ? "[VFS] Generando directivas restrictivas de energía en /etc/systemd/sleep.conf..."
+        : "",
+      defaultBrowserChromium 
+        ? "[INFO] [APPS] Descargando e integrando navegador predeterminado Chromium..."
+        : "",
+      defaultBrowserChromium 
+        ? "[VFS] Configurando Chromium como controlador predeterminado de enlaces html en /etc/chromium/browser.conf..."
+        : "",
       "[INFO] Inicializando puente cognitivo síncrono con la API de soporte general...",
       "[INFO] Clave de API principal detectada y enlazada de forma segura...",
       "[INFO] Configurando gestor de arranque GRUB 2.06...",
       "[VFS] Configurando módulo ClawBash Shell predeterminado en /bin/clawbash",
-      "[INFO] Sincronizando directorio compartido /home/user...",
       "[INFO] Depurando configuraciones y estableciendo permisos udev...",
       "[SUCCESS] ¡Proceso de instalación completado con éxito!",
-      "[SUCCESS] OpenClaw Linux Beta ya está listo para arrancar en el espacio del usuario.",
-    ];
+      omitStandardUser 
+        ? "[SUCCESS] ¡ClawOS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
+        : "[SUCCESS] OpenClaw Linux Beta ya está listo para arrancar en el espacio del usuario.",
+    ].filter(Boolean);
 
     let currentLogIndex = 0;
-    const intervalTime = 400; // ms between updates
+    const intervalTime = 250; // slightly faster installs
 
     const progressTimer = setInterval(() => {
       setInstallProgress((prev) => {
-        const stepAmt = 5 + Math.floor(Math.random() * 8);
+        const stepAmt = 6 + Math.floor(Math.random() * 9);
         const next = Math.min(prev + stepAmt, 100);
         
         // Feed logs proportional to progress
@@ -121,7 +155,8 @@ export default function ClawInstaller({
           clearInterval(progressTimer);
           setIsInstalling(false);
           
-          // Actually modify the Virtual File System (VFS) to reflect the installation signatures!
+          let updatedVfs = vfs;
+          
           const successFile: VFSNode = {
             name: "certificacion_instalacion_beta.txt",
             type: "file",
@@ -137,12 +172,99 @@ Estado: Completamente Operativo, Conectado al CPU Virtual.
 ¡Gracias por instalar OpenClaw OS!`,
           };
 
-          const newVfs = setNodeAtPath(vfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
-          setVfs(newVfs);
+          if (omitStandardUser) {
+            localStorage.setItem("claw_is_root", "true");
+            
+            const rootReadme: VFSNode = {
+              name: "leeme_root.txt",
+              type: "file",
+              content: `=====================================================
+ENTORNO DE ADMINISTRADOR CLAWOS - ACCESO ROOT DIRECTO
+=====================================================
+
+Has iniciado sesión directamente como el superusuario 'root' sin mediar contraseña.
+Esto te otorga privilegios y control total inmediato sobre los procesos del kernel OpenClaw.
+
+POLÍTICAS APLICADAS:
+* Súper usuario: root (contraseña anulada para inicio autologin)
+* Terminal virtual: cargada por defecto en /root# con privilegios máximos
+* Suspensión y Hibernación ACPI: Desactivadas permanentemente
+* Navegador predeterminado: Chromium Web Browser
+
+Usa comandos avanzados sin 'sudo'. Todo comando tiene privilegios directos de superusuario sin interrupción.`,
+            };
+            
+            const rootCert: VFSNode = {
+              name: "certificacion_instalacion_root.txt",
+              type: "file",
+              content: `=====================================================
+CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO OPENCLAW (ROOT ACCESS)
+=====================================================
+
+Fecha de Compilado: 2026-05-28 20:20 UTC
+Comando usado: curl -fsSL https://openclaw.ai/install.sh | bash -s -- --root --no-user --disable-acpi-sleep --default-browser=chromium
+Kernel Core: OpenClaw Core System v1.1.2 (Direct Superuser Privileges Enabled)
+Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
+
+¡Gracias por configurar su estación súper-servidora de ClawOS!`,
+            };
+
+            updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
+            updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
+          } else {
+            localStorage.setItem("claw_is_root", "false");
+            updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
+          }
+
+          if (defaultBrowserChromium) {
+            localStorage.setItem("claw_default_browser", "chromium");
+            const chromConfig: VFSNode = {
+              name: "browser.conf",
+              type: "file",
+              content: `[Default Browser Configuration]
+BROWSER_BINARY=/bin/chromium-browser
+DEFAULT_BROWSER=Chromium
+CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
+URL_HOME=https://openclaw.ai`,
+            };
+            updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
+            // Also write a system bin link for running chromium
+            updatedVfs = setNodeAtPath(updatedVfs, ["bin"], "chromium", {
+              name: "chromium",
+              type: "file",
+              content: "[Binary Executable - Chromium Web Browser default system browser]",
+            });
+          } else {
+            localStorage.setItem("claw_default_browser", "custom");
+          }
+
+          if (disableSleep) {
+            localStorage.setItem("claw_sleep_disabled", "true");
+            const sleepConfig: VFSNode = {
+              name: "sleep.conf",
+              type: "file",
+              content: `[Sleep/Hibernation Disable Configuration]
+# Desactivación estricta de suspensiones por parámetros del Kernel de Súper Usuario
+AllowSuspend=no
+AllowHibernation=no
+AllowHybridSleep=no
+AllowSuspendThenHibernate=no`,
+            };
+            updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
+          } else {
+            localStorage.removeItem("claw_sleep_disabled");
+          }
+
+          setVfs(updatedVfs);
 
           setTimeout(() => {
             setStep(4);
-            triggerNotification("¡Instalación exitosa! OpenClaw Kernel enlazado.", "success");
+            triggerNotification(
+              omitStandardUser 
+                ? "¡ClawOS instalado correctamente en modo Root!" 
+                : "¡Instalación exitosa! OpenClaw Kernel enlazado.", 
+              "success"
+            );
           }, 600);
         }
         return next;
@@ -222,6 +344,70 @@ Estado: Completamente Operativo, Conectado al CPU Virtual.
                     Enlazada de forma segura
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Custom OS configuration switches */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Parámetros de Personalización del Sistema:</h5>
+              
+              <div className="space-y-3">
+                {/* 1. Root usage instead of standard */}
+                <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition border border-transparent hover:border-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={omitStandardUser}
+                    onChange={(e) => setOmitStandardUser(e.target.checked)}
+                    className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-200 flex items-center space-x-1.5">
+                      <Shield size={12} className="text-emerald-400" />
+                      <span>Omitir usuario estándar y habilitar acceso Root directo</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
+                      Omite la creación de un usuario común, configurando autologin directo como superusuario <code className="text-emerald-400 font-mono">root</code> sin contraseña para privilegios inmediatos.
+                    </p>
+                  </div>
+                </label>
+
+                {/* 2. Suspension and hibernation disabling */}
+                <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition border border-transparent hover:border-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={disableSleep}
+                    onChange={(e) => setDisableSleep(e.target.checked)}
+                    className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-200 flex items-center space-x-1.5">
+                      <Moon size={12} className="text-amber-400" />
+                      <span>Desactivar funciones de suspensión e hibernación</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
+                      Inhabilita de forma definitiva el ahorro de energía ACPI (Sleep & Hibernate) en systemd para asegurar la operatividad ininterrumpida de procesos.
+                    </p>
+                  </div>
+                </label>
+
+                {/* 3. Default browser Chromium */}
+                <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition border border-transparent hover:border-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={defaultBrowserChromium}
+                    onChange={(e) => setDefaultBrowserChromium(e.target.checked)}
+                    className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-200 flex items-center space-x-1.5">
+                      <Globe size={12} className="text-cyan-400" />
+                      <span>Incluir Chromium como navegador predeterminado</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
+                      Descarga y enlaza el navegador Chromium como la solución web por defecto del sistema ClawOS.
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 

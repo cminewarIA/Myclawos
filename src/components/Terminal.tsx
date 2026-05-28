@@ -32,23 +32,42 @@ export default function Terminal({
   onOpenFileInEditor,
   onPostChatMessageFromShell,
 }: TerminalProps) {
-  const [lines, setLines] = useState<TerminalLine[]>([
-    {
-      id: "init-1",
-      text: "Welcome to ClawBash Terminal v3.2.1-lts",
-      type: "info",
-    },
-    {
-      id: "init-2",
-      text: "Kernel con núcleo de inteligencia central: OpenClaw ONLINE.",
-      type: "success",
-    },
-    {
+  const [lines, setLines] = useState<TerminalLine[]>(() => {
+    const isRoot = localStorage.getItem("claw_is_root") === "true";
+    const baseLines: TerminalLine[] = [
+      {
+        id: "init-1",
+        text: "Welcome to ClawBash Terminal v3.2.1-lts",
+        type: "info",
+      },
+    ];
+    if (isRoot) {
+      baseLines.push(
+        {
+          id: "init-root-warn",
+          text: "¡ATENCIÓN! Modo de Superusuario Directo (Acceso ROOT) activo.",
+          type: "success",
+        },
+        {
+          id: "init-root-info",
+          text: "Sesión iniciada sin contraseña. Todos los comandos heredan privilegios elevados.",
+          type: "info",
+        }
+      );
+    } else {
+      baseLines.push({
+        id: "init-2",
+        text: "Kernel con núcleo de inteligencia central: OpenClaw ONLINE.",
+        type: "success",
+      });
+    }
+    baseLines.push({
       id: "init-3",
       text: "Escribe 'help' para ver una lista de comandos disponibles, o 'neofetch' para ver especificaciones.",
       type: "info",
-    },
-  ]);
+    });
+    return baseLines;
+  });
   const [inputValue, setInputValue] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("claw_terminal_history");
@@ -108,7 +127,10 @@ export default function Terminal({
     setHistoryIndex(-1);
 
     // Show input echo line
-    const pathPrompt = `user@openclaw:${getPathString(currentPath)}$`;
+    const isRoot = localStorage.getItem("claw_is_root") === "true";
+    const promptUser = isRoot ? "root" : "user";
+    const promptChar = isRoot ? "#" : "$";
+    const pathPrompt = `${promptUser}@openclaw:${getPathString(currentPath)}${promptChar}`;
     addLine(`${pathPrompt} ${trimmed}`, "input");
 
     // Parse command name and arguments
@@ -152,7 +174,10 @@ export default function Terminal({
         break;
 
       case "whoami":
-        addLine("user_claw_developer", "output");
+        {
+          const isRoot = localStorage.getItem("claw_is_root") === "true";
+          addLine(isRoot ? "root" : "user_claw_developer", "output");
+        }
         break;
 
       case "git":
@@ -199,16 +224,19 @@ export default function Terminal({
         break;
 
       case "neofetch":
-        addLine(`       /\\_/\\       user@openclaw.linux.os`, "success");
-        addLine(`      ( o.o )      ----------------------------`, "success");
-        addLine(`       > ^ <       OS: OpenClaw Linux v1.1.0`, "success");
-        addLine(`      /     \\      Kernel: 5.16.0-openclaw-generic`, "success");
-        addLine(`     |       |     Uptime: 1 hour, 42 mins`, "success");
-        addLine(`    (_______)      Shell: ClawBash 3.2`, "success");
-        addLine(`                   Theme: ClawDE (Modern Dark)`, "success");
-        addLine(`                   CPU: Cortex Quantum Emulator (4 Cores)`, "success");
-        addLine(`                   Memory: 4096MB / 16384MB (32%)`, "success");
-        addLine(`                   OpenClaw AI Engine: ONLINE (Active)`, "success");
+        {
+          const isRoot = localStorage.getItem("claw_is_root") === "true";
+          addLine(`       /\\_/\\       ${isRoot ? "root" : "user"}@openclaw.linux.os`, "success");
+          addLine(`      ( o.o )      ----------------------------`, "success");
+          addLine(`       > ^ <       OS: OpenClaw Linux v1.1.0`, "success");
+          addLine(`      /     \\      Kernel: 5.16.0-openclaw-${isRoot ? "direct-root" : "generic"}`, "success");
+          addLine(`     |       |     Uptime: 1 hour, 42 mins`, "success");
+          addLine(`    (_______)      Shell: ClawBash 3.2`, "success");
+          addLine(`                   Theme: ClawDE (Modern Dark)`, "success");
+          addLine(`                   CPU: Cortex Quantum Emulator (4 Cores)`, "success");
+          addLine(`                   Memory: 4096MB / 16384MB (32%)`, "success");
+          addLine(`                   OpenClaw AI Engine: ONLINE (Active)`, "success");
+        }
         break;
 
       case "top":
@@ -538,7 +566,7 @@ export default function Terminal({
       {/* Shell interactive command builder */}
       <div className="flex items-center space-x-1.5 border-t border-slate-900/60 pt-3 mt-4 shrink-0">
         <span className={`${colorClasses.text} font-bold shrink-0`}>
-          user@openclaw:{getPathString(currentPath)}$
+          {localStorage.getItem("claw_is_root") === "true" ? "root" : "user"}@openclaw:{getPathString(currentPath)}{localStorage.getItem("claw_is_root") === "true" ? "#" : "$"}
         </span>
         <div className="flex-1 relative flex items-center">
           <input
