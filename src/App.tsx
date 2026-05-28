@@ -13,6 +13,7 @@ import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
+import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -34,7 +35,13 @@ import {
   Download,
   Github,
   RefreshCw,
-  Globe
+  Globe,
+  LayoutGrid,
+  Search,
+  Settings,
+  Laptop,
+  Network,
+  Tv
 } from "lucide-react";
 
 export default function App() {
@@ -96,6 +103,23 @@ export default function App() {
       timestamp: new Date(),
     },
   ]);
+
+  // App drawer state & installed packages sync
+  const [appDrawerOpen, setAppDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [installedPackages, setInstalledPackages] = useState<string[]>(() => {
+    const saved = localStorage.getItem("claw_installed_packages");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    const syncPackages = () => {
+      const saved = localStorage.getItem("claw_installed_packages");
+      setInstalledPackages(saved ? JSON.parse(saved) : []);
+    };
+    window.addEventListener("claw_packages_changed", syncPackages);
+    return () => window.removeEventListener("claw_packages_changed", syncPackages);
+  }, []);
 
   // Window list states
   const [windows, setWindows] = useState<WindowState[]>([
@@ -171,7 +195,7 @@ export default function App() {
     },
     {
       id: "updater_github",
-      title: "Consola de Actualizaciones GitHub - claw_sync",
+      title: "Ajustes del Sistema y Control de Hardware - claw_settings",
       isOpen: true,
       isMinimized: false,
       isMaximized: false,
@@ -188,6 +212,56 @@ export default function App() {
       zIndex: 12,
       position: { x: 260, y: 130 },
       size: { width: 720, height: 500 },
+    },
+    {
+      id: "pkg_htop",
+      title: "htop v3.2.0 - Monitor de Procesos Linux",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 6,
+      position: { x: 100, y: 110 },
+      size: { width: 620, height: 400 },
+    },
+    {
+      id: "pkg_neofetch",
+      title: "neofetch - Información de Hardware",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 7,
+      position: { x: 120, y: 130 },
+      size: { width: 520, height: 320 },
+    },
+    {
+      id: "pkg_cmatrix",
+      title: "cmatrix 1.8 - Lluvia Codificada",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 8,
+      position: { x: 140, y: 150 },
+      size: { width: 560, height: 380 },
+    },
+    {
+      id: "pkg_nginx",
+      title: "nginx.conf Suite - Servidor Web",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 9,
+      position: { x: 160, y: 170 },
+      size: { width: 600, height: 420 },
+    },
+    {
+      id: "pkg_retroarch",
+      title: "RetroArch Snake - Arcade Retro",
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 10,
+      position: { x: 180, y: 190 },
+      size: { width: 440, height: 480 },
     },
   ]);
 
@@ -385,6 +459,16 @@ export default function App() {
         );
       case "chromium":
         return <Chromium />;
+      case "pkg_htop":
+        return <PkgHtop />;
+      case "pkg_neofetch":
+        return <PkgNeofetch />;
+      case "pkg_cmatrix":
+        return <PkgCmatrix />;
+      case "pkg_nginx":
+        return <PkgNginx />;
+      case "pkg_retroarch":
+        return <PkgRetroarch />;
       default:
         return null;
     }
@@ -408,9 +492,19 @@ export default function App() {
       case "installer":
         return "Instalador Sencillo Kernel Beta";
       case "updater_github":
-        return "Actualizador de GitHub";
+        return "Ajustes y Hardware";
       case "chromium":
         return "Navegador Chromium";
+      case "pkg_htop":
+        return "htop v3.2.0";
+      case "pkg_neofetch":
+        return "neofetch info";
+      case "pkg_cmatrix":
+        return "cmatrix coderain";
+      case "pkg_nginx":
+        return "nginx server workspace";
+      case "pkg_retroarch":
+        return "RetroArch Snake";
       default:
         return "Aplicación ClawOS";
     }
@@ -587,19 +681,19 @@ export default function App() {
             </span>
           </div>
 
-          {/* Launcher 8: GitHub Auto-Updater */}
+          {/* Launcher 8: Ajustes de Red y Hardware */}
           <div
             onDoubleClick={() => handleOpenWindow("updater_github")}
             onTouchEnd={() => handleOpenWindow("updater_github")}
             className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar la sincronización con GitHub"
+            title="Doble clic para abrir Ajustes y Panel de Hardware"
             id="launcher-updater-github"
           >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Github className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-pink-550 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
+              <Settings className="text-pink-400 w-6 h-6 group-hover:scale-105 transition-transform animate-pulse" />
             </div>
             <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Github Sync
+              Ajustes SO
             </span>
           </div>
 
@@ -616,6 +710,22 @@ export default function App() {
             </div>
             <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
               Chromium
+            </span>
+          </div>
+
+          {/* Launcher 10: Cajón de Aplicaciones (Main Menu Synology-style Launcher) */}
+          <div
+            onDoubleClick={() => setAppDrawerOpen(true)}
+            onClick={() => setAppDrawerOpen(true)}
+            className="flex flex-col items-center cursor-pointer group text-center"
+            title="Doble clic para abrir el Cajón de Aplicaciones DSM"
+            id="launcher-app-drawer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-400 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
+              <LayoutGrid className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
+              Cajón Apps
             </span>
           </div>
         </div>
@@ -747,10 +857,10 @@ export default function App() {
               className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
               id="menu-app-updater-github"
             >
-              <Github size={16} className="text-emerald-400" />
+              <Settings size={16} className="text-pink-400" />
               <div>
-                <p className="font-medium text-slate-300">Sincronizador GitHub</p>
-                <p className="text-[9px] text-slate-500">Actualiza y sintoniza el SO mediante git</p>
+                <p className="font-medium text-slate-300">Ajustes del Sistema</p>
+                <p className="text-[9px] text-slate-500">Hardware, resolución, rotación y paquetes</p>
               </div>
             </button>
 
@@ -841,7 +951,13 @@ export default function App() {
                   {win.id === "system_monitor" && <Cpu size={12} />}
                   {win.id === "control_panel" && <Sliders size={12} />}
                   {win.id === "installer" && <Download size={12} />}
-                  {win.id === "updater_github" && <Github size={12} />}
+                  {win.id === "updater_github" && <Settings size={12} className="text-pink-400" />}
+                  {win.id === "chromium" && <Globe size={12} />}
+                  {win.id === "pkg_htop" && <Cpu size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_neofetch" && <Laptop size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_cmatrix" && <TerminalIcon size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_nginx" && <Network size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_retroarch" && <Tv size={12} className="text-emerald-400" />}
                   <span className="truncate max-w-[110px]">{getFriendlyAppName(win.id)}</span>
                 </button>
               );
@@ -870,6 +986,109 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* App Drawer Fullscreen Overlay (Synology DSM Style Main Menu) */}
+      {appDrawerOpen && (
+        <div 
+          className="absolute inset-x-0 top-0 bottom-12 z-[9999] bg-slate-950/90 backdrop-blur-xl animate-fade-in flex flex-col p-6 overflow-hidden text-sans select-none"
+          id="cajon-apps-overlay"
+        >
+          {/* Header filter & Title bar */}
+          <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between border-b border-slate-800 pb-4 shrink-0 space-y-3 sm:space-y-0 text-left">
+            <div>
+              <h2 className="text-sm font-black text-slate-100 flex items-center space-x-2">
+                <LayoutGrid className="text-emerald-400 w-5 h-5" />
+                <span>Centro del Cajón de Aplicaciones — ClawOS Main Menu</span>
+              </h2>
+              <p className="text-[10px] text-slate-500">Ejecuta herramientas del sistema, complementos inteligentes y paquetes instalados de Linux.</p>
+            </div>
+
+            {/* Search program bar */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500 font-bold" />
+              <input
+                type="text"
+                placeholder="Buscar aplicación..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition shadow-inner font-sans"
+              />
+            </div>
+
+            <button 
+              onClick={() => { setAppDrawerOpen(false); setSearchQuery(""); }}
+              className="p-1 px-3 bg-slate-900 hover:bg-slate-850 rounded-md border border-slate-800 text-slate-350 text-xs font-semibold select-none flex items-center space-x-1"
+            >
+              <X size={12} />
+              <span>Cerrar Menú</span>
+            </button>
+          </div>
+
+          {/* Grid area */}
+          <div className="flex-1 overflow-y-auto py-8 max-w-5xl mx-auto w-full min-h-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6 justify-center">
+              
+              {/* Loop over static and dynamic apps */}
+              {[
+                { id: "openclaw_core", name: "OpenClaw AI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
+                { id: "terminal", name: "Terminal", desc: "Consola ClawBash", icon: TerminalIcon, system: true },
+                { id: "file_manager", name: "Archivos VFS", desc: "Explorador de ficheros", icon: FolderOpen, system: true, iconCol: "text-cyan-400" },
+                { id: "text_editor", name: "Editor Notas", desc: "Editor de textos rápido", icon: FileText, system: true, iconCol: "text-amber-400" },
+                { id: "system_monitor", name: "Monitor", desc: "Hardware en vivo", icon: Cpu, system: true, iconCol: "text-violet-400" },
+                { id: "control_panel", name: "Panel Control", desc: "Ancho de red y servicios", icon: Sliders, system: true, iconCol: "text-emerald-400" },
+                { id: "installer", name: "Instalar Kern", desc: "Instalador de drivers de hardware", icon: Download, system: true, iconCol: "text-cyan-400" },
+                { id: "updater_github", name: "Ajustes Globales", desc: "Comunicaciones y resolución", icon: Settings, system: true, iconCol: "text-pink-400" },
+                { id: "chromium", name: "Chromium", desc: "Navegador de internet", icon: Globe, system: true, iconCol: "text-blue-400" },
+                // Linux Packages
+                { id: "pkg_htop", name: "htop monitor", desc: "Monitor interactivo linux", icon: Cpu, packageId: "pkg_htop", iconCol: "text-emerald-400" },
+                { id: "pkg_neofetch", name: "neofetch info", desc: "Diagnóstico del host", icon: Laptop, packageId: "pkg_neofetch", iconCol: "text-emerald-400" },
+                { id: "pkg_cmatrix", name: "cmatrix rain", desc: "Código digital animado", icon: TerminalIcon, packageId: "pkg_cmatrix", iconCol: "text-emerald-400" },
+                { id: "pkg_nginx", name: "nginx server", desc: "Servidor web local", icon: Network, packageId: "pkg_nginx", iconCol: "text-emerald-400" },
+                { id: "pkg_retroarch", name: "RetroArch Snake", desc: "Juego clásico arcade", icon: Tv, packageId: "pkg_retroarch", iconCol: "text-emerald-400" },
+              ]
+                .filter((app) => app.system || installedPackages.includes(app.packageId || ""))
+                .filter((app) => app.name.toLowerCase().includes(searchQuery.toLowerCase()) || app.desc.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((app) => {
+                  const IconComp = app.icon;
+                  return (
+                    <div
+                      key={app.id}
+                      onClick={() => {
+                        handleOpenWindow(app.id);
+                        setAppDrawerOpen(false);
+                        setSearchQuery("");
+                      }}
+                      className="flex flex-col items-center justify-center p-3.5 rounded-xl hover:bg-slate-900/60 border border-transparent hover:border-slate-800/80 cursor-pointer text-center group transition select-none h-28"
+                      id={`drawer-app-${app.id}`}
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800/80 group-hover:bg-slate-950 group-hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-lg aspect-square">
+                        {app.customIcon ? (
+                          <IconComp size={24} className="group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <IconComp className={`w-5 h-5 group-hover:scale-110 transition-transform ${app.iconCol || "text-slate-200"}`} />
+                        )}
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-100 mt-2 truncate w-full group-hover:text-emerald-400">{app.name}</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 truncate w-full">{app.desc}</span>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Empty Search output */}
+            {installedPackages.length === 0 && searchQuery === "" && (
+              <div className="pt-8 text-center text-xs text-slate-500 italic">
+                No tienes paquetes de Linux instalados actualmente. Instala utilidades en la sección 'Centro de Paquetes' del panel de Ajustes Globales de Hardware.
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 max-w-5xl mx-auto w-full flex justify-between items-center text-[10px] text-slate-500 font-mono shrink-0">
+            <span>ClawOS DSM Main Menu Workspace v1.1</span>
+            <span>Autodetecting Screen Mode: Fully Responsive</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

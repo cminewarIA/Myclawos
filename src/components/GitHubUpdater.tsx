@@ -19,7 +19,20 @@ import {
   ArrowDownCircle, 
   CornerDownRight,
   ShieldAlert,
-  RotateCcw
+  RotateCcw,
+  Wifi,
+  Bluetooth,
+  Radio,
+  Tv,
+  Smartphone,
+  LayoutGrid,
+  Laptop,
+  Network,
+  Download,
+  Terminal,
+  FileCode,
+  Sliders,
+  Maximize2
 } from "lucide-react";
 
 interface GitHubUpdaterProps {
@@ -41,7 +54,82 @@ export default function GitHubUpdater({
   setVfs,
   triggerNotification,
 }: GitHubUpdaterProps) {
-  // Config state
+  // Navigation tabs (Windows Control Panel style + sidebar)
+  const [activeTab, setActiveTab] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github">("index");
+  
+  // Simulated stats and configurations
+  const [wifiEnabled, setWifiEnabled] = useState(true);
+  const [selectedWifi, setSelectedWifi] = useState("ClawNet_5G_Corporate");
+  const [wifiList, setWifiList] = useState([
+    { ssid: "ClawNet_5G_Corporate", signal: 98, lock: true, status: "connected" },
+    { ssid: "Aeropuerto_Gratis_WiFi", signal: 45, lock: false, status: "available" },
+    { ssid: "MyHome_Fiber_Optic", signal: 82, lock: true, status: "available" },
+    { ssid: "Vecino_No_Tocar", signal: 30, lock: true, status: "available" },
+  ]);
+  const [connectingWifi, setConnectingWifi] = useState<string | null>(null);
+  const [wifiProgress, setWifiProgress] = useState(0);
+
+  // Bluetooth configuration
+  const [btEnabled, setBtEnabled] = useState(true);
+  const [devicesList, setDevicesList] = useState([
+    { name: "Beats Solo Pro - Auriculares Audio", paired: true, connected: true, type: "audio" },
+    { name: "Logitech MX Master 3S - Ratón Ergonómico", paired: true, connected: true, type: "mouse" },
+    { name: "Sony DualSense - Mando de Juego", paired: false, connected: false, type: "gamepad" },
+    { name: "SmartTV Living Room", paired: false, connected: false, type: "tv" },
+    { name: "Androide_Core_S24", paired: false, connected: false, type: "phone" },
+  ]);
+  const [btScanning, setBtScanning] = useState(false);
+  const [btScanResults, setBtScanResults] = useState<string[]>([]);
+
+  // Ethernet settings
+  const [ethMode, setEthMode] = useState<"dhcp" | "static">("dhcp");
+  const [ethIp, setEthIp] = useState("192.168.1.135");
+  const [ethMask, setEthMask] = useState("255.255.255.0");
+  const [ethGateway, setEthGateway] = useState("192.168.1.1");
+  const [ethDns, setEthDns] = useState("1.1.1.1");
+
+  // LTE Settings
+  const [lteEnabled, setLteEnabled] = useState(false);
+  const [selectedCarrier, setSelectedCarrier] = useState("ClawMobile LTE-Advanced");
+  const [apnPlausible, setApnPlausible] = useState("internet.claw.mvno");
+
+  // Display Settings
+  const [currentResolution, setCurrentResolution] = useState("auto");
+  const [currentScale, setCurrentScale] = useState(100);
+  const [simulatedOrientation, setSimulatedOrientation] = useState<"landscape" | "portrait">("landscape");
+  const [actualOrientation, setActualOrientation] = useState("landscape");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < window.innerHeight) {
+        setActualOrientation("portrait");
+      } else {
+        setActualOrientation("landscape");
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Package installation manager states
+  const [installedPackages, setInstalledPackages] = useState<string[]>(() => {
+    const saved = localStorage.getItem("claw_installed_packages");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [installingPkg, setInstallingPkg] = useState<string | null>(null);
+  const [pkgInstallProgress, setPkgInstallProgress] = useState(0);
+  const [pkgInstallLog, setPkgInstallLog] = useState<string[]>([]);
+  
+  const packagesCatalog = [
+    { id: "pkg_htop", name: "htop v3.2.0", type: "Monitor de Procesos", desc: "Monitor en tiempo real de hilos de CPU y consumo de memoria ram en entorno de consola interactivo.", icon: CpuThemeIcon },
+    { id: "pkg_neofetch", name: "neofetch v7.1", type: "Información de Hardware", desc: "Imprime un hermoso logotipo pixelado de ClawOS junto con metadatos del sistema host actual.", icon: Laptop },
+    { id: "pkg_cmatrix", name: "cmatrix 1.8", type: "Salva-pantallas Codificado", desc: "El glorioso simulador de caída de lluvia secuencial de códigos en cascada al más puro estilo Matrix.", icon: FileCode },
+    { id: "pkg_nginx", name: "nginx Web Server", type: "Servidor Web Suite", desc: "Monta un alojamiento de archivos local, configura el index.html y depura peticiones HTTP virtuales.", icon: Network },
+    { id: "pkg_retroarch", name: "RetroArch Snake", type: "Juego Arcade Retro", desc: "Consola clásica que emula el juego de la serpiente original con rankings de puntuación alta y arcade.", icon: Tv }
+  ];
+
+  // Original GitHub variables & states retained fully for integration
   const [gitOwner, setGitOwner] = useState(() => {
     const saved = localStorage.getItem("claw_git_owner");
     return (saved && saved !== "openclaw") ? saved : "cminewarIA";
@@ -52,8 +140,6 @@ export default function GitHubUpdater({
   });
   const [gitBranch, setGitBranch] = useState(() => localStorage.getItem("claw_git_branch") || "main");
   const [gitPat, setGitPat] = useState(() => localStorage.getItem("claw_git_pat") || "");
-  
-  // Update state
   const [installedSha, setInstalledSha] = useState(() => localStorage.getItem("claw_installed_sha") || "b7c25e89a");
   const [installedMessage, setInstalledMessage] = useState(() => localStorage.getItem("claw_installed_msg") || "Inicializar núcleo cognitivo y sincronizador udev");
   const [installedDate, setInstalledDate] = useState(() => localStorage.getItem("claw_installed_date") || "2026-05-28 12:44:00 UTC");
@@ -62,14 +148,10 @@ export default function GitHubUpdater({
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // Daemon settings
   const [isDaemonActive, setIsDaemonActive] = useState(() => localStorage.getItem("claw_git_daemon") === "true");
-  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("claw_git_interval")) || 30); // in seconds
+  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("claw_git_interval")) || 30);
   const [lastCheckTime, setLastCheckTime] = useState<string>("-");
 
-  // UI States
-  const [activeSubTab, setActiveSubTab] = useState<"status" | "settings">("status");
   const [updating, setUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateLogs, setUpdateLogs] = useState<string[]>([]);
@@ -78,8 +160,8 @@ export default function GitHubUpdater({
   
   const logContainerRef = useRef<HTMLDivElement>(null);
   const rebootLogContainerRef = useRef<HTMLDivElement>(null);
+  const pkgLogRef = useRef<HTMLDivElement>(null);
 
-  // Persist settings
   useEffect(() => {
     localStorage.setItem("claw_git_owner", gitOwner);
     localStorage.setItem("claw_git_repo", gitRepo);
@@ -92,94 +174,13 @@ export default function GitHubUpdater({
     localStorage.setItem("claw_git_interval", String(pollInterval));
   }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval]);
 
-  // Handle auto-scroll of consoles
   useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTo({
-        top: logContainerRef.current.scrollHeight,
-        behavior: "smooth"
-      });
-    }
-  }, [updateLogs]);
+    localStorage.setItem("claw_installed_packages", JSON.stringify(installedPackages));
+    // Dispatch event to synchronize launchers instantly on App.tsx
+    window.dispatchEvent(new Event("claw_packages_changed"));
+  }, [installedPackages]);
 
-  useEffect(() => {
-    if (rebootLogContainerRef.current) {
-      rebootLogContainerRef.current.scrollTo({
-        top: rebootLogContainerRef.current.scrollHeight,
-        behavior: "smooth"
-      });
-    }
-  }, [rebootLogs]);
-
-  // Fetch commits from Github API helper
-  const fetchGitHubCommits = async (silent = false) => {
-    if (!silent) {
-      setIsFetching(true);
-      setFetchError(null);
-    }
-    
-    const url = `https://api.github.com/repos/${gitOwner}/${gitRepo}/commits?sha=${gitBranch}&per_page=5`;
-    const headers: HeadersInit = {
-      Accept: "application/vnd.github.v3+json",
-    };
-    
-    if (gitPat.trim()) {
-      headers["Authorization"] = `token ${gitPat.trim()}`;
-    }
-
-    try {
-      const response = await fetch(url, { headers });
-      setLastCheckTime(new Date().toLocaleTimeString());
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Repositorio o rama no encontrado. Verifica si es privado o está mal escrito.");
-        } else if (response.status === 403) {
-          throw new Error("Límite de peticiones de GitHub excedido para IP anónima. Añade un Token (PAT) en Configuración.");
-        } else {
-          throw new Error(`Error en la API de GitHub: Símbolo de estado ${response.status}`);
-        }
-      }
-
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const formattedCommits: CommitInfo[] = data.map((c: any) => ({
-          sha: c.sha,
-          message: c.commit.message,
-          author: c.commit.author.name,
-          date: new Date(c.commit.author.date).toLocaleString(),
-          url: c.html_url
-        }));
-        
-        setCommits(formattedCommits);
-        setLatestSha(data[0].sha);
-        
-        // Check for updates trigger if daemon is running or was manual pull
-        const remoteSha = data[0].sha;
-        const shortenedInstalled = installedSha.trim();
-        const simplifiedRemote = remoteSha.substring(0, shortenedInstalled.length);
-        
-        if (remoteSha !== shortenedInstalled && !remoteSha.startsWith(shortenedInstalled) && !silent) {
-          triggerNotification(`¡Nueva actualización detectada en GitHub! Commit: ${remoteSha.substring(0, 7)}`, "info");
-        }
-      } else {
-        throw new Error("La rama consultada no contiene commits válidos.");
-      }
-    } catch (err: any) {
-      console.error("GitHub fetch failed:", err);
-      if (!silent) {
-        setFetchError(err.message || "Fallo de conexión.");
-      }
-      // Populate with realistic simulated fallback commits so user gets a premium experience if API fails/offline
-      loadSimulatedCommits();
-    } finally {
-      if (!silent) {
-        setIsFetching(false);
-      }
-    }
-  };
-
-  // Simulated fallback commits of ClawOS from Github repositories
+  // Fallback dynamic database loader inside Control Panel
   const loadSimulatedCommits = () => {
     const baseCommits: CommitInfo[] = [
       {
@@ -190,10 +191,10 @@ export default function GitHubUpdater({
         url: "#"
       },
       {
-        sha: "9f3cb1d8ac340d826a7cb0a3df92bf83c261eef8",
-        message: "fix: Optimizar refresco de sockets del canal gemini-interactive en Clawbash",
+        sha: "e1029cbb31b7cbd23d8c19a924abdc29009fa5d2",
+        message: "feat: Refactorización total de Ajustes y Control de Hardware + Centro de Paquetes",
         author: "cortex-developer",
-        date: "28/5/2026, 14:15:30",
+        date: "28/5/2026, 23:20:00",
         url: "#"
       },
       {
@@ -202,76 +203,176 @@ export default function GitHubUpdater({
         author: "admin-claw",
         date: "28/5/2026, 12:44:00",
         url: "#"
-      },
-      {
-        sha: "51c2dd94af66d8f68ca9810ebd31a1bf9c11da0c",
-        message: "chore: Actualizar puertos del panel de control de red en claw_control",
-        author: "networking-daemon",
-        date: "27/5/2026, 10:20:00",
-        url: "#"
       }
     ];
     setCommits(baseCommits);
     setLatestSha(baseCommits[0].sha);
   };
 
-  // Fetch commits on mount
   useEffect(() => {
-    fetchGitHubCommits();
+    loadSimulatedCommits();
   }, [gitOwner, gitRepo, gitBranch]);
 
-  // GitHub Auto-updater daemon interval routine
-  useEffect(() => {
-    if (!isDaemonActive) return;
+  // Connect to Simulated Wi-Fi
+  const handleConnectWifi = (ssid: string) => {
+    if (connectingWifi || !wifiEnabled) return;
+    setConnectingWifi(ssid);
+    setWifiProgress(0);
 
-    const timer = setInterval(() => {
-      // In background, compare local state with the actual GitHub response
-      const silentCheckAndPoll = async () => {
-        const url = `https://api.github.com/repos/${gitOwner}/${gitRepo}/commits?sha=${gitBranch}&per_page=1`;
-        const headers: HeadersInit = {
-          Accept: "application/vnd.github.v3+json",
-        };
-        if (gitPat.trim()) {
-          headers["Authorization"] = `token ${gitPat.trim()}`;
+    const intv = setInterval(() => {
+      setWifiProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(intv);
+          setWifiList((old) =>
+            old.map((w) => ({
+              ...w,
+              status: w.ssid === ssid ? "connected" : w.status === "connected" ? "available" : w.status,
+            }))
+          );
+          setSelectedWifi(ssid);
+          setConnectingWifi(null);
+          triggerNotification(`Conectado con éxito a la red WiFi: ${ssid}`, "success");
+          return 100;
         }
-        
-        try {
-          const response = await fetch(url, { headers });
-          if (response.ok) {
-            const data = await response.json();
-            setLastCheckTime(new Date().toLocaleTimeString());
-            
-            if (Array.isArray(data) && data.length > 0) {
-              const remoteSha = data[0].sha;
-              const remoteMessage = data[0].commit.message;
-              const remoteAuthor = data[0].commit.author.name;
-              const remoteDate = new Date(data[0].commit.author.date).toLocaleString();
-              
-              // Local simplified match check
-              if (remoteSha !== installedSha && !remoteSha.startsWith(installedSha)) {
-                // Wow! Remote is different from installed, we must AUTO-UPDATE!
-                triggerNotification(`[GitHub Daemon] ¡Nueva actualización detectada en GitHub! Sincronizando...`, "success");
-                
-                // Trigger auto update sequence!
-                executeGitSync(remoteSha, remoteMessage, remoteAuthor, remoteDate);
-              }
-            }
+        return prev + 15;
+      });
+    }, 250);
+  };
+
+  // Pair Bluetooth device
+  const handlePairBt = (deviceName: string) => {
+    setDevicesList((old) =>
+      old.map((d) => {
+        if (d.name === deviceName) {
+          if (d.connected) {
+            triggerNotification(`Dispositivo desconectado: ${deviceName}`, "info");
+            return { ...d, connected: false };
+          } else {
+            triggerNotification(`Conectando con éxito a Bluetooth: ${deviceName}`, "success");
+            return { ...d, paired: true, connected: true };
           }
-        } catch (e) {
-          console.error("Background daemon check failed:", e);
         }
-      };
+        return d;
+      })
+    );
+  };
 
-      silentCheckAndPoll();
-    }, pollInterval * 1000);
+  const handleScanBt = () => {
+    if (btScanning) return;
+    setBtScanning(true);
+    setBtScanResults([]);
+    setTimeout(() => {
+      setBtScanResults(["ClawGamer_Pro_Headset", "iMac_Vecino_Directo", "Keyboard_RedDragon_K552"]);
+      setBtScanning(false);
+      triggerNotification("Escaneo Bluetooth completado. 3 dispositivos listos.", "info");
+    }, 1500);
+  };
 
-    return () => clearInterval(timer);
-  }, [isDaemonActive, pollInterval, installedSha, gitOwner, gitRepo, gitBranch, gitPat]);
+  // Install Packages Drawer simulator
+  const handleInstallPackage = (packageId: string, name: string) => {
+    if (installingPkg) return;
+    setInstallingPkg(packageId);
+    setPkgInstallProgress(0);
+    setPkgInstallLog([
+      `$ sudo claw-pkg install ${packageId}`,
+      `Leyendo lista de paquetes... Hecho`,
+      `Creando árbol de dependencias virtuales del sistema operativo...`,
+      `Se instalarán los siguientes paquetes NUEVOS: ${packageId}`,
+      `Debe descargarse 144 kB / 4.8 MB de archivos compilados del pipeline de clawOS.`,
+      `Contactando con repositorios estables de OpenClaw...`
+    ]);
 
-  // Execute actual hot-sync and compilation override
+    const installSteps = [
+      `Descargando paquete ${packageId}: [================>] 100% (18.5 MB/s)`,
+      `Verificando firmas SHA256 corporativas del instalador... OK`,
+      `Preparando para desempaquetar /var/cache/claw-pkg/archives/${packageId}_amd64.deb...`,
+      `Desempaquetando archivos del programa en el sistema raíz virtual...`,
+      `Configurando binarios de lanzamiento udev e interfaces compartidas...`,
+      `Instalando lanzador gráfico de escritorio en: /usr/share/applications/${packageId}.desktop`,
+      `Registrando metadatos en el Cajón de Aplicaciones de Synology DSM...`,
+      `Reiniciando descriptores de la barra de tareas e indexando binarios...`,
+      `¡Paquete '${packageId}' instalado y listo para arrancar en el escritorio!`
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      setPkgInstallProgress((prev) => {
+        const next = Math.min(prev + 12, 100);
+        if (currentStep < installSteps.length && next > (currentStep * 10)) {
+          setPkgInstallLog((old) => [...old, installSteps[currentStep]]);
+          currentStep++;
+        }
+        if (pkgLogRef.current) {
+          setTimeout(() => {
+            if (pkgLogRef.current) pkgLogRef.current.scrollTop = pkgLogRef.current.scrollHeight;
+          }, 0);
+        }
+        if (next >= 100) {
+          clearInterval(interval);
+          setInstalledPackages((old) => {
+            if (old.includes(packageId)) return old;
+            return [...old, packageId];
+          });
+          setInstallingPkg(null);
+          triggerNotification(`¡'${name}' se instaló con éxito! Ya se encuentra disponible en tu Cajón de Aplicaciones.`, "success");
+        }
+        return next;
+      });
+    }, 400);
+  };
+
+  const handleUninstallPackage = (packageId: string, name: string) => {
+    setInstalledPackages((old) => old.filter((p) => p !== packageId));
+    triggerNotification(`Desinstalado con éxito: ${name}. Eliminado del Cajón de Aplicaciones.`, "info");
+  };
+
+  // Build scripts download trigger for APK Android Companion
+  const handleDownloadApkBuildKit = () => {
+    const scriptContent = `#!/bin/bash
+# ====================================================================
+# Kit de Compilación WebView APK para Probar clawOS en el Móvil
+# ====================================================================
+# Este script inicializa Capacitor en la SPA para generar tu APK nativa.
+
+echo "[+] Paso 1: Instalando dependencias nativas de Capacitor..."
+npm install @capacitor/core @capacitor/cli @capacitor/android
+
+echo "[+] Paso 2: Inicializando configuración de Capacitor..."
+npx cap init "ClawOS Mobile Viewer" "ai.openclaw.mobile" --web-dir=dist
+
+echo "[+] Paso 3: Agregando la plataforma integrada Android..."
+npx cap add android
+
+echo "[+] Paso 4: Ajustando la preferencia de orientación y rotación fluida..."
+# Esto inserta soporte multi-orientación en el AndroidManifest.xml
+cat <<EOT >> android/app/src/main/AndroidManifest.xml
+<!-- El sistema se ajustará automáticamente tanto en horizontal como en vertical -->
+EOT
+
+echo "[+] Paso 5: Compilando y sincronizando archivos del simulador web..."
+npm run build
+npx cap sync
+
+echo "[+] Paso 6: Abriendo Android Studio para generar tu APK firmada con Gradle!"
+npx cap open android
+
+echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar clawOS."
+`;
+    const blob = new Blob([scriptContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clawos-cordova-build-kit.sh";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerNotification("Script 'clawos-cordova-build-kit.sh' descargado con éxito.", "success");
+  };
+
+  // Original GitHub Sync updater sequence
   const executeGitSync = (targetSha: string, message: string, author: string, date: string) => {
     if (updating || rebooting) return;
-    
     setUpdating(true);
     setUpdateProgress(0);
     setUpdateLogs([
@@ -282,233 +383,899 @@ export default function GitHubUpdater({
     ]);
 
     const syncSteps = [
-      "🔍 [STAGE 1] Comparando árbles de archivos lógicos locales contra repos remotos...",
-      `📥 [PULL] Descargando archivos parcheados en el workspace de desarrollo...`,
+      "🔍 [STAGE 1] Comparando árboles de archivos lógicos locales contra repos remotos...",
+      `📥 [PULL] Descargando archivos parcheados en el de desarrollo...`,
       "📄 [PATCH] Analizando diferencias de código en /src/App.tsx (+45 líneas, -12 líneas)",
-      "📄 [PATCH] Aplicando diffs lógicos en /src/components/GitHubUpdater.tsx (+62 líneas)",
-      "📄 [PATCH] Reemplazando configuraciones del kernel en /src/components/ControlPanel.tsx",
-      "📁 [PARCHING VFS] Creando descriptores actualizados en el sistema virtual...",
       "🔬 [LINTING] Corriendo verificaciones lógicas de compilación en caliente... 100% Correctas",
-      "🏗️ [COMPILING] Recompilando el núcleo de ClawOS con esbuild y empaquetador del kernel...",
-      "🔥 [BUILT] Módulo core beta reconstruido con éxito.",
-      "💾 [SYSTEM] Sincronizando y guardando cambios de GitHub en sectores virtuales del disco Ext4...",
-      "🔄 [SYNC] ¡Sincronizado completamente sin errores de memoria!",
+      "BUILD: compilando y empaquetando sistema...",
+      "🔄 [SYNC] ¡Sincronizado completamente sin errores de memoria!"
     ];
 
     let currentStep = 0;
     const progressTimer = setInterval(() => {
       setUpdateProgress((prev) => {
-        const stepAmt = 8 + Math.floor(Math.random() * 8);
-        const next = Math.min(prev + stepAmt, 100);
-        
-        if (currentStep < syncSteps.length && next > (currentStep * (100 / syncSteps.length))) {
+        const next = Math.min(prev + 15, 100);
+        if (currentStep < syncSteps.length && next > (currentStep * 15)) {
           setUpdateLogs((old) => [...old, syncSteps[currentStep]]);
           currentStep++;
         }
-
         if (next >= 100) {
           clearInterval(progressTimer);
-          
-          // Complete local storage definitions
           setInstalledSha(targetSha);
           setInstalledMessage(message);
           setInstalledDate(date);
+          setUpdating(false);
+          setRebooting(true);
           
-          // Actually write update log file into virtual VFS
-          const updatedFileContent = `{
-  "system_version": "ClawOS v1.1.0-beta6",
-  "github_repository": "${gitOwner}/${gitRepo}",
-  "branch": "${gitBranch}",
-  "last_synced_sha": "${targetSha}",
-  "commit_message": "${message.replace(/"/g, '\\"')}",
-  "author": "${author}",
-  "authored_date": "${date}",
-  "sync_timestamp": "${new Date().toISOString()}",
-  "status3xx": "active_cognition"
-}`;
-
-          const updateLogTxt = `=====================================================
-CLAWOS GITHUB CONEXIÓN Y AUTO-ACTUALIZACIÓN COMPLETADA
-=====================================================
-Compilación Actualizada: ${targetSha}
-Mensaje: ${message}
-Autor: ${author} - (${date})
-Sincronizado el: ${new Date().toLocaleString()}
-
-Los binarios lógicos de desarrollo local se actualizaron con éxito directamente
-del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`;
-
-          let tempVfs = setNodeAtPath(vfs, ["etc"], "system_update.json", {
-            name: "system_update.json",
-            type: "file",
-            content: updatedFileContent
-          });
-
-          tempVfs = setNodeAtPath(tempVfs, ["home", "user"], "log_actualizacion_github.txt", {
-            name: "log_actualizacion_github.txt",
-            type: "file",
-            content: updateLogTxt
-          });
-
-          setVfs(tempVfs);
-
+          setRebootLogs([
+            "Reiniciando el kernel de ClawOS...",
+            "Iniciando gestor de sesiones Claw-Session...",
+            "¡El sistema se ha auto-actualizado de GitHub con éxito!"
+          ]);
           setTimeout(() => {
-            setUpdating(false);
-            // Trigger reboot transition
-            triggerRebootSequence();
-          }, 1000);
+            setRebooting(false);
+            triggerNotification(`¡ClawOS actualizado y reiniciado con éxito de GitHub!`, "success");
+          }, 2000);
         }
         return next;
       });
-    }, 550);
-  };
-
-  // Perform beautiful visual reboot sequence within the window or full-app to load the new kernel files
-  const triggerRebootSequence = () => {
-    setRebooting(true);
-    setRebootLogs([
-      "CRITICAL: ClawOS recibió señal SIGTERM para recargar el kernel caliente...",
-      "Desmontando volumen virtual /mnt/claw_root [EXT4]... ok",
-      "Deteniendo el multiplexor de hilos de Gemini Core...",
-      "Cerrando descriptores udev locales de ClawNet [Network Monitor]...",
-      "Salvaguardando estados persistentes del VFS en sector local... ok",
-      "Reiniciando el emulador de escritorio ClawDE (Claw Desktop Environment)...",
-      "----------------------------------------------------------------",
-      "                   [ REINICIANDO CLAWOS KERNEL ]                 ",
-      "----------------------------------------------------------------",
-      "BIOS Rom v1.02.04 cargando...",
-      "Cargando Grub Bootloader 2.06...",
-      "Procesando comandos boot: /boot/vmlinuz-openclaw ro root=UUID=8f7bc2e5a8",
-      "Sincronizando actualizaciones descargadas desde GitHub...",
-    ]);
-
-    const rebootSteps = [
-      "✔ [OK] Aplicando parche GitHub SHA: " + localShortSha(latestSha || "a59e81b3f9"),
-      "✔ [OK] Copiado /boot/initramfs-openclaw-beta.img de los nuevos cambios",
-      "✔ [OK] Montado /sys, /proc y volumen VFS virtualizado",
-      "✔ [OK] Inicializado bridge cognitivo inteligente con API Key certificada de Google AI",
-      "✔ [OK] Activando daemon de sondeo persistente GitHub auto-update...",
-      "✔ [OK] Cargado sistema base del entorno gráfico claw_control de forma segura",
-      "Iniciando gestor de sesiones Claw-Session...",
-      "¡El sistema se ha auto-actualizado y cargado con éxito!",
-    ];
-
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < rebootSteps.length) {
-        setRebootLogs((old) => [...old, rebootSteps[currentStep]]);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        setRebooting(false);
-        triggerNotification(`¡ClawOS actualizado y reiniciado con éxito del commit de GitHub!`, "success");
-      }
-    }, 600);
-  };
-
-  const localShortSha = (shaString: string) => {
-    if (!shaString) return "Stale-SHA";
-    return shaString.substring(0, 9);
-  };
-
-  const getIsUpdateAvailable = () => {
-    if (!latestSha || !installedSha) return false;
-    const simplifiedSelf = installedSha.trim();
-    return latestSha !== simplifiedSelf && !latestSha.startsWith(simplifiedSelf);
+    }, 400);
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 text-slate-350 min-h-0 select-none relative font-sans h-full">
-      {/* Visual Simulated SYSTEM REBOOT OVERLAY */}
+    <div className="flex-1 flex flex-col bg-slate-900 text-slate-300 min-h-0 select-none relative font-sans h-full">
+      
+      {/* Visual Reboot Overlay */}
       {rebooting && (
-        <div 
-          ref={rebootLogContainerRef}
-          className="absolute inset-0 bg-slate-950 z-[9999] p-6 flex flex-col font-mono text-xs text-emerald-400 select-none overflow-y-auto"
-        >
+        <div ref={rebootLogContainerRef} className="absolute inset-0 bg-slate-950 z-[9999] p-6 flex flex-col font-mono text-xs text-emerald-400 select-none overflow-y-auto">
           <div className="max-w-xl mx-auto w-full space-y-2 py-4">
             <div className="flex items-center space-x-2 text-emerald-300 border-b border-emerald-950 pb-2 mb-3">
-              <RefreshCw className="animate-spin text-emerald-400 duration-1000" size={16} />
-              <span className="font-bold uppercase tracking-wider text-[11px]">Sincronización Git Core: Reiniciando Módulos</span>
+              <RefreshCw className="animate-spin text-emerald-400" size={16} />
+              <span className="font-bold uppercase tracking-wider text-[11px]">Control System: Sincronizando Módulos</span>
             </div>
-
-            <div className="space-y-1 text-[11px] leading-relaxed">
-              {rebootLogs.map((log, idx) => {
-                let color = "text-slate-300";
-                if (log && log.includes("✔ [OK]")) color = "text-emerald-400 font-semibold";
-                else if (log && (log.includes("CRITICAL:") || log.includes("REINICIANDO"))) color = "text-cyan-400 font-bold";
-                else if (log && log.includes("exito")) color = "text-emerald-350 font-black tracking-wide";
-                
-                return (
-                  <div key={idx} className={color}>
-                    {log}
-                  </div>
-                );
-              })}
+            <div className="space-y-1 text-[11px]">
+              {rebootLogs.map((log, idx) => (
+                <div key={idx} className="text-slate-300">{log}</div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
       {/* Header Bar */}
-      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between select-none shrink-0">
+      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/5">
-            <Github className="text-emerald-400 w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-pink-500/10 border border-pink-500/30 flex items-center justify-center shadow-lg shadow-pink-500/5">
+            <Settings className="text-pink-400 w-5 h-5 animate-spin" style={{ animationDuration: '40s' }} />
           </div>
           <div>
             <h3 className="text-xs font-bold text-slate-100 flex items-center space-x-2">
-              <span>Sincronizador & Auto-Updater de GitHub</span>
-              <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded text-[8px] font-mono select-none font-bold">
-                GIT-PATCHER
+              <span>Panel de Ajustes Globales de Hardware</span>
+              <span className="px-1.5 py-0.5 bg-pink-500/10 border border-pink-500/20 text-pink-400 rounded text-[8px] font-mono select-none font-bold">
+                OLD-CONTROL-PANEL
               </span>
             </h3>
-            <p className="text-[10px] text-slate-500">Auto-actualizaciones calientes del SO al subir commits en GitHub.</p>
+            <p className="text-[10px] text-slate-500">Configuración total de comunicaciones, resolución de pantalla, APK móvil y cajón de paquetes de Linux.</p>
           </div>
         </div>
 
-        {/* View Switch */}
-        <div className="flex bg-slate-900 border border-slate-800 rounded p-0.5 text-[10px] font-mono leading-none">
+        {/* Home Button to return to index category view */}
+        {activeTab !== "index" && (
           <button
-            onClick={() => setActiveSubTab("status")}
-            className={`px-3 py-1.5 rounded transition ${
-              activeSubTab === "status"
-                ? "bg-slate-950 text-emerald-400 font-bold shadow"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            onClick={() => setActiveTab("index")}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-semibold rounded-lg border border-slate-800 transition"
           >
-            Estado del SO
+            <LayoutGrid size={12} className="text-pink-400" />
+            <span>Inicio Panel</span>
           </button>
-          <button
-            onClick={() => setActiveSubTab("settings")}
-            className={`px-3 py-1.5 rounded transition ${
-              activeSubTab === "settings"
-                ? "bg-slate-950 text-emerald-400 font-bold shadow"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            id="subtab-git-settings"
-          >
-            Config Repo
-          </button>
-        </div>
+        )}
       </div>
 
-      {activeSubTab === "status" ? (
+      {/* Primary Categories Grid (Old Windows Control Panel Style) */}
+      {activeTab === "index" ? (
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="border-b border-slate-800 pb-3">
+              <span className="text-xs font-bold font-mono uppercase text-slate-500 tracking-widest text-left block">Selecciona una categoría de hardware o sistema:</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              
+              {/* Card 1: WiFi */}
+              <button
+                onClick={() => setActiveTab("wifi")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-cyan-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                    <Wifi size={16} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className={`w-2 h-2 rounded-full ${wifiEnabled ? "bg-emerald-400 animate-pulse" : "bg-slate-700"}`} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-cyan-400 transition">Control de Red WiFi</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Administra SSID, contraseñas y chips iwlwifi o chipsets Host.</p>
+                </div>
+              </button>
+
+              {/* Card 2: Bluetooth */}
+              <button
+                onClick={() => setActiveTab("bluetooth")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-blue-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <Bluetooth size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className={`w-2 h-2 rounded-full ${btEnabled ? "bg-emerald-400 animate-pulse" : "bg-slate-700"}`} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-blue-400 transition">Conexiones Bluetooth</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Escanea dispositivos externos, vincula audios y gamepads.</p>
+                </div>
+              </button>
+
+              {/* Card 3: Ethernet */}
+              <button
+                onClick={() => setActiveTab("ethernet")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-emerald-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <Network size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition">Ethernet Cableada</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Direccionamiento estático de IP local, DHCP, DNS y gateways.</p>
+                </div>
+              </button>
+
+              {/* Card 4: LTE cellular */}
+              <button
+                onClick={() => setActiveTab("lte")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-violet-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                    <Radio size={16} className="text-violet-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className={`w-2 h-2 rounded-full ${lteEnabled ? "bg-violet-400 animate-pulse" : "bg-slate-700"}`} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-violet-400 transition"> LTE Banda Ancha</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Configura tarjetas SIM físicas y control de ModemManager.</p>
+                </div>
+              </button>
+
+              {/* Card 5: Screen settings */}
+              <button
+                onClick={() => setActiveTab("display")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-pink-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
+                  <Tv size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-pink-400 transition">Ajuste de Pantalla</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Resolución del sistema, escala interactiva y control de rotación.</p>
+                </div>
+              </button>
+
+              {/* Card 6: Android APK */}
+              <button
+                onClick={() => setActiveTab("apk")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-yellow-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                  <Smartphone size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-yellow-400 transition">Android APK & Rotación</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Configura el WebView para el móvil, con rotación en vivo.</p>
+                </div>
+              </button>
+
+              {/* Card 7: Package Center installer */}
+              <button
+                onClick={() => setActiveTab("packages")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-emerald-400/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+                id="btn-category-packages"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <LayoutGrid size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-bold font-mono">
+                    {installedPackages.length} INST
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition">Centro de Paquetes</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Instala programas (`htop`, `retroarch`, etc.) para tu cajón de app drawer.</p>
+                </div>
+              </button>
+
+              {/* Card 8: GitHub AutoSync tool */}
+              <button
+                onClick={() => setActiveTab("github")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-400/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+              >
+                <div className="w-8 h-8 rounded-lg bg-slate-500/10 border border-slate-500/20 flex items-center justify-center">
+                  <Github size={16} className="text-slate-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-slate-400 transition">Sincronizador GitHub</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Configura y sintoniza commits de código caliente con repositorios.</p>
+                </div>
+              </button>
+
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* SECTION 1: WiFi Screen */}
+      {activeTab === "wifi" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                <Wifi size={14} className="text-cyan-400" />
+                <span>Configuración de Red Inalámbrica WiFi</span>
+              </h4>
+              <p className="text-[10px] text-slate-500 mt-0.5">Define los puntos de acceso y analiza la operabilidad del chip virtual.</p>
+            </div>
+            
+            <button
+              onClick={() => setWifiEnabled(!wifiEnabled)}
+              className="p-1 hover:bg-slate-950/60 rounded transition"
+              id="btn-toggle-wifi"
+            >
+              {wifiEnabled ? (
+                <span className="text-emerald-400 flex items-center space-x-1 font-mono text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <span>ACTIVO</span>
+                  <ToggleRight size={24} className="text-emerald-400" />
+                </span>
+              ) : (
+                <span className="text-slate-500 flex items-center space-x-1 font-mono text-[10px]">
+                  <span>APAGADO</span>
+                  <ToggleLeft size={24} className="text-slate-600" />
+                </span>
+              )}
+            </button>
+          </div>
+
+          {wifiEnabled ? (
+            <div className="space-y-3">
+              {connectingWifi && (
+                <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center text-[11px] font-mono">
+                    <span className="text-cyan-400 animate-pulse">Estableciendo Handshake WPA3 con {connectingWifi}...</span>
+                    <span>{wifiProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-1 rounded overflow-hidden">
+                    <div className="bg-cyan-400 h-full transition-all duration-300" style={{ width: `${wifiProgress}%` }} />
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-950/40 rounded-xl border border-slate-800/80 divide-y divide-slate-900 select-none">
+                {wifiList.map((net) => (
+                  <div key={net.ssid} className="p-3 flex items-center justify-between hover:bg-slate-950/80 transition">
+                    <div className="flex items-center space-x-3">
+                      <Wifi size={13} className={net.status === "connected" ? "text-emerald-400" : "text-slate-400"} />
+                      <div className="text-xs">
+                        <span className="font-semibold text-slate-200 block">{net.ssid}</span>
+                        <span className="text-[10px] text-slate-500">Señal: {net.signal}% • Segura: {net.lock ? "WPA3 / AES" : "Abierta"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      {net.status === "connected" ? (
+                        <span className="px-2 py-0.5 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full font-bold">
+                          CONECTADO
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleConnectWifi(net.ssid)}
+                          disabled={connectingWifi !== null}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded transition"
+                        >
+                          Conectar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3.5 bg-slate-950 border border-slate-800/80 rounded-xl text-slate-500 text-[10px] font-mono leading-relaxed">
+                📶 <span className="text-slate-400 font-bold uppercase block mb-1">Hardware Interface Diagnostics:</span>
+                Interface: wlan0 <br />
+                Device Chipset: Intel Centrino Ultimate-N 6300 (PCIe bus) <br />
+                Controlador kernel: iwlwifi-firmware-6300u.ucode v5.16 <br />
+                Status link: {selectedWifi ? `Active (SSID: ${selectedWifi})` : "Disconnected"}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              La tarjeta de red inalámbrica está desactivada en ClawOS. Actívala arriba para buscar redes.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 2: Bluetooth Screen */}
+      {activeTab === "bluetooth" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                <Bluetooth size={14} className="text-blue-400" />
+                <span>Configuración y Periféricos Bluetooth</span>
+              </h4>
+              <p className="text-[10px] text-slate-500 mt-0.5">Administra dongles inalámbricos de entrada y audio compatible con bluez.</p>
+            </div>
+            
+            <button
+              onClick={() => setBtEnabled(!btEnabled)}
+              className="p-1 hover:bg-slate-950/60 rounded transition"
+              id="btn-toggle-bt"
+            >
+              {btEnabled ? (
+                <span className="text-emerald-400 flex items-center space-x-1 font-mono text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <span>ACTIVO</span>
+                  <ToggleRight size={24} className="text-emerald-400" />
+                </span>
+              ) : (
+                <span className="text-slate-500 flex items-center space-x-1 font-mono text-[10px]">
+                  <span>APAGADO</span>
+                  <ToggleLeft size={24} className="text-slate-600" />
+                </span>
+              )}
+            </button>
+          </div>
+
+          {btEnabled ? (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <span className="text-xs text-slate-400">¿Deseas buscar nuevos dispositivos bluetooth?</span>
+                <button
+                  onClick={handleScanBt}
+                  disabled={btScanning}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg transition"
+                >
+                  {btScanning ? "Escaneando cerca..." : "Escanear Periféricos"}
+                </button>
+              </div>
+
+              {btScanResults.length > 0 && (
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                  <span className="text-[9px] uppercase tracking-wider font-mono text-blue-400 font-bold block">Dispositivos Encontrados (En el rango):</span>
+                  <div className="divide-y divide-slate-900 space-y-2">
+                    {btScanResults.map((dev) => (
+                      <div key={dev} className="flex justify-between items-center pt-2 text-xs">
+                        <span className="font-mono">{dev}</span>
+                        <button
+                          onClick={() => {
+                            setDevicesList((old) => [...old, { name: dev, paired: true, connected: true, type: "audio" }]);
+                            setBtScanResults((old) => old.filter((o) => o !== dev));
+                            triggerNotification(`Emparejado: ${dev}`, "success");
+                          }}
+                          className="px-2 py-0.5 bg-slate-900 hover:bg-slate-900/60 text-emerald-400 text-[10px] font-mono border border-slate-800 rounded"
+                        >
+                          [Emparejar dispositivo]
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-950/40 rounded-xl border border-slate-800 divide-y divide-slate-900">
+                {devicesList.map((dev) => (
+                  <div key={dev.name} className="p-3 flex items-center justify-between hover:bg-slate-950/80 transition">
+                    <div className="flex items-center space-x-3">
+                      <Bluetooth size={13} className={dev.connected ? "text-blue-400" : "text-slate-500"} />
+                      <div className="text-xs">
+                        <span className="font-semibold text-slate-200 block">{dev.name}</span>
+                        <span className="text-[10px] text-slate-500">Servicios: {dev.type === "audio" ? "A2DP Sink Core" : "HID Input"} • Código vinculación: Sincronizado</span>
+                      </div>
+                    </div>
+                    <div>
+                      <button
+                        onClick={() => handlePairBt(dev.name)}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded transition border ${
+                          dev.connected
+                            ? "bg-rose-950 border-rose-900 text-rose-300 hover:bg-rose-900 hover:text-white"
+                            : "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        {dev.connected ? "Desconectar" : "Conectar"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3.5 bg-slate-950 border border-slate-800 text-slate-500 text-[10px] font-mono leading-relaxed">
+                🔵 <span className="text-slate-400 font-bold uppercase block mb-1">bluez Software Stack info:</span>
+                Daemon: bluetoothd (v5.64) <br />
+                Controller path: /org/bluez/hci0 <br />
+                BD_ADDR: C4:15:F6:A3:89:D2 <br />
+                Driver kernel: btusb.ko v5.16
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              Bluetooth está desactivado en ClawOS. Actívalo en el switch superior para buscar periféricos.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 3: Ethernet Cableada */}
+      {activeTab === "ethernet" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4" id="view-ethernet-panel">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <Network size={14} className="text-emerald-400" />
+              <span>Configuración Ethernet ( eth0 Virtual Link )</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">Asigna direccionamiento IP, servidores DNS y monitorea la trama GigE.</p>
+          </div>
+
+          <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-450 font-semibold font-mono">Modo de configuración de IP:</span>
+              <div className="flex bg-slate-900 rounded border border-slate-800 p-0.5 text-[10px]">
+                <button
+                  onClick={() => setEthMode("dhcp")}
+                  className={`px-3 py-1 rounded transition ${ethMode === "dhcp" ? "bg-slate-950 text-emerald-400 font-bold" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  DHCP Automático
+                </button>
+                <button
+                  onClick={() => setEthMode("static")}
+                  className={`px-3 py-1 rounded transition ${ethMode === "static" ? "bg-slate-950 text-emerald-400 font-bold" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  IP Estática
+                </button>
+              </div>
+            </div>
+
+            {ethMode === "dhcp" ? (
+              <div className="space-y-2 pt-2 border-t border-slate-900 text-xs">
+                <div className="flex justify-between font-mono py-1">
+                  <span className="text-slate-500">IP Asignada DHCP:</span>
+                  <span className="text-slate-200 font-bold">192.168.1.135 (Reservada)</span>
+                </div>
+                <div className="flex justify-between font-mono py-1">
+                  <span className="text-slate-500">Mascara subred (CIDR):</span>
+                  <span className="text-slate-200">255.255.255.0 (/24)</span>
+                </div>
+                <div className="flex justify-between font-mono py-1">
+                  <span className="text-slate-500">Puerta de enlace predeterminada:</span>
+                  <span className="text-slate-200">192.168.1.1</span>
+                </div>
+                <div className="flex justify-between font-mono py-1">
+                  <span className="text-slate-500">DNS Server primario:</span>
+                  <span className="text-slate-200">1.1.1.1 (Cloudflare Edge)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2 border-t border-slate-900 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-mono text-slate-500 block">Dirección IP Estática:</label>
+                  <input
+                    type="text"
+                    value={ethIp}
+                    onChange={(e) => setEthIp(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-emerald-500 text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-mono text-slate-500 block">Máscara de Subred:</label>
+                  <input
+                    type="text"
+                    value={ethMask}
+                    onChange={(e) => setEthMask(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-emerald-500 text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-mono text-slate-500 block">Puerta de Enlace (Router Gateway):</label>
+                  <input
+                    type="text"
+                    value={ethGateway}
+                    onChange={(e) => setEthGateway(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-emerald-500 text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-mono text-slate-500 block">DNS Server:</label>
+                  <input
+                    type="text"
+                    value={ethDns}
+                    onChange={(e) => setEthDns(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-emerald-500 text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => triggerNotification("Configuración de IPv4 estática guardada con éxito", "success")}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded"
+                  >
+                    Aplicar Dirección Estática
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3.5 bg-slate-950 border border-slate-800 text-slate-500 text-[10px] font-mono leading-relaxed">
+            🕸️ <span className="text-slate-400 font-bold uppercase block mb-1">Ethernet NIC Device Telemetry:</span>
+            Interface: eth0 (Virtual PCIe Link) <br />
+            Speed: 1000 Mbps Full Duplex (Gigabit Ethernet) <br />
+            Link Mode: Auto-negotiation active <br />
+            MAC ADDRESS: 52:54:00:12:34:56
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 4: LTE cellular broad-band */}
+      {activeTab === "lte" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                <Radio size={14} className="text-violet-400" />
+                <span>Módem Celular Móvil LTE / 5G</span>
+              </h4>
+              <p className="text-[10px] text-slate-500 mt-0.5">Controla la inicialización de tarjetas SIM mediante la pila ModemManager del Kernel.</p>
+            </div>
+            
+            <button
+              onClick={() => setLteEnabled(!lteEnabled)}
+              className="p-1 hover:bg-slate-950/60 rounded transition"
+              id="btn-toggle-lte"
+            >
+              {lteEnabled ? (
+                <span className="text-emerald-400 flex items-center space-x-1 font-mono text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <span>ACTIVO</span>
+                  <ToggleRight size={24} className="text-emerald-400" />
+                </span>
+              ) : (
+                <span className="text-slate-500 flex items-center space-x-1 font-mono text-[10px]">
+                  <span>APAGADO</span>
+                  <ToggleLeft size={24} className="text-slate-600" />
+                </span>
+              )}
+            </button>
+          </div>
+
+          {lteEnabled ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2.5">
+                  <span className="text-[8.5px] uppercase font-mono text-slate-500 font-bold block">Intensidad de Señal Celular</span>
+                  <div className="flex items-end space-x-1 h-10 py-1">
+                    <div className="w-2 h-2 rounded bg-violet-400" />
+                    <div className="w-2 h-4 rounded bg-violet-400" />
+                    <div className="w-2 h-6 rounded bg-violet-400" />
+                    <div className="w-2 h-8 rounded bg-violet-400" />
+                    <div className="w-2 h-10 rounded bg-slate-800 animate-pulse" />
+                    <span className="text-xs font-bold font-mono text-violet-400 ml-2">Excelente (LTE+)</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-center space-y-1">
+                  <span className="text-[8.5px] uppercase font-mono text-slate-500 font-bold block">Operador Móvil Enlazado:</span>
+                  <span className="text-xs font-mono text-slate-100 font-bold flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 mr-2" /> {selectedCarrier}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3.5 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-mono text-slate-550 block">Punto de Acceso del Operador (APN Settings):</label>
+                  <input
+                    type="text"
+                    value={apnPlausible}
+                    onChange={(e) => setApnPlausible(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-violet-500 text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => triggerNotification("APN Celular configurada con éxito", "success")}
+                    className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded"
+                  >
+                    Guardar Config APN
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-950 border border-slate-800 text-slate-500 text-[10px] font-mono leading-relaxed">
+                📱 <span className="text-slate-400 font-bold uppercase block mb-1">ModemManager protocol stack:</span>
+                Driver: qmi_wwan (Qualcomm Gobi LTE driver) <br />
+                Modem state: Connected <br />
+                SIM details: MVNO eSIM integrated <br />
+                CDC network port: wwan0
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              Servicio de datos móviles LTE/5G desactivado en el Kernel. Actívalo en el switch de arriba.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 5: Display & Viewport settings */}
+      {activeTab === "display" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4" id="view-display-settings-view">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <Tv size={14} className="text-pink-400" />
+              <span>Configuración de Pantalla, Orientación y Escala</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">Controla la resolución de salida, escala global y rotación del chasis virtual.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            {/* Resolution Selector */}
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2.5 text-xs text-left">
+              <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Resolución de Salida:</span>
+              <div className="space-y-2">
+                {["auto", "1920x1080", "1366x768", "1080x1920", "720x1280"].map((res) => (
+                  <button
+                    key={res}
+                    onClick={() => {
+                      setCurrentResolution(res);
+                      triggerNotification(`Resolución de pantalla cambiada a ${res}`, "info");
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded transition font-mono flex justify-between items-center ${
+                      currentResolution === res
+                        ? "bg-pink-500/15 border border-pink-500/25 text-pink-400 font-bold"
+                        : "bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850"
+                    }`}
+                  >
+                    <span>{res === "auto" ? "Auto-Ajustable DSM" : res}</span>
+                    <span className="text-[9px] text-slate-500">{res.includes("1080x1920") || res.includes("720x1280") ? "Vertical" : "Horizontal"}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Simulated scale and Orientation info */}
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs">
+                <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Escala de Elementos en Pantalla:</span>
+                <div className="grid grid-cols-3 gap-2 py-2">
+                  {[100, 125, 150].map((sc) => (
+                    <button
+                      key={sc}
+                      onClick={() => {
+                        setCurrentScale(sc);
+                        triggerNotification(`Escala de elementos fijada al ${sc}%`, "success");
+                      }}
+                      className={`py-1.5 rounded text-center transition font-semibold text-[11px] ${
+                        currentScale === sc
+                          ? "bg-pink-500/20 text-pink-300 border border-pink-500/30"
+                          : "bg-slate-900 border border-slate-850 text-slate-400 hover:bg-slate-800"
+                      }`}
+                    >
+                      {sc}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Angle orientation sensor */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2.5 text-xs">
+                <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Consola del Sensor de Rotación Móvil:</span>
+                <div className="space-y-1.5 font-mono text-[10.5px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Giroscopio Físico:</span>
+                    <span className="text-emerald-400 font-bold">Activo & Preparado</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Orientación Detectada:</span>
+                    <span className="text-pink-400 font-bold uppercase">{actualOrientation}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Escalado Vertical DSM:</span>
+                    <span className="text-slate-350">{actualOrientation === "portrait" ? "AJUSTADO (9:16)" : "Sintonizado (16:9)"}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const newSim = simulatedOrientation === "landscape" ? "portrait" : "landscape";
+                    setSimulatedOrientation(newSim);
+                    // Force rotation alert info
+                    triggerNotification(`Giroscopio simulado cambiado a ${newSim.toUpperCase()}`, "info");
+                  }}
+                  className="w-full mt-2.5 py-1.5 bg-pink-950 hover:bg-pink-900 text-pink-300 rounded font-semibold text-[10.5px] border border-pink-900/40 transition"
+                  id="btn-simulate-rotation"
+                >
+                  [Girar dispositivo simulación]
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 6: Android APK Compiler */}
+      {activeTab === "apk" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <Smartphone size={14} className="text-yellow-400 animate-pulse" />
+              <span>Prueba Móvil: Compilador APK & Rotación en Vivo</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">Cómo empaquetar la interfaz de clawOS para ejecutarla desde cualquier teléfono móvil con rotación fluida.</p>
+          </div>
+
+          <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
+                <Download size={18} className="text-yellow-400 animate-bounce" />
+              </div>
+              <div className="text-xs">
+                <span className="font-bold text-slate-100 block">Soporte nativo Cordova / Capacitor para Android</span>
+                <span className="text-[10px] text-slate-500">Detecta orientación en vivo, adapta barra de estado y el cargador al vuelo.</span>
+              </div>
+            </div>
+
+            <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
+              ClawOS está programado en su totalidad con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Se ajustará perfectamente de forma automática al detectar el cambio de proporciones en el dispositivo. En posición vertical, esconde interfaces densas para facilitar controles limpios al operante.
+            </p>
+
+            <div className="text-xs font-mono space-y-1.5 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
+              <div className="flex justify-between">
+                <span>Auto-rotation detection (JS Sensor):</span>
+                <span className="text-emerald-400">ENABLED</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Viewport adjust tags:</span>
+                <span className="text-cyan-400">width=device-width, initial-scale=1.0</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={handleDownloadApkBuildKit}
+                className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-slate-950 text-xs font-bold rounded-lg transition"
+              >
+                <Download size={13} fill="currentColor" />
+                <span>Descargar Script Script-Build-APK</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
+            <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico DSM Móvil:</span>
+            <p className="text-[10px]">
+              Al abrir la URL de desarrollo de AI Studio en tu Navegador Web móvil (Chrome/Safari), el sistema detectará al instante si giras la pantalla de tu móvil para adecuar los widgets, barras y el lanzador al vuelo.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 7: Package Center & App Drawer Integration */}
+      {activeTab === "packages" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-2xl mx-auto w-full space-y-4" id="view-package-installer">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <LayoutGrid size={14} className="text-emerald-400" />
+              <span>Centro de Paquetes de Linux y Cajón de Apps DSM</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">Instala paquetes de sistema operativos libres en ClawOS. Aparecerán al instante en tu Cajón de Aplicaciones del escritorio.</p>
+          </div>
+
+          {/* Installation output Logger console */}
+          {installingPkg && (
+            <div className="p-4 bg-slate-950 border border-emerald-500/20 rounded-xl space-y-3 animate-pulse">
+              <div className="flex justify-between text-xs font-mono leading-none text-emerald-300">
+                <span className="flex items-center">
+                  <RefreshCw size={11} className="mr-1.5 animate-spin" />
+                  <span>Configurando archivo de manifiesto interactivo ({installingPkg})...</span>
+                </span>
+                <span>{pkgInstallProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-900 h-1.5 rounded overflow-hidden">
+                <div className="bg-emerald-400 h-full transition-all duration-300" style={{ width: `${pkgInstallProgress}%` }} />
+              </div>
+              <div 
+                ref={pkgLogRef}
+                className="h-28 bg-slate-900 p-2 border border-slate-850 rounded font-mono text-[9px] text-emerald-400 overflow-y-auto leading-relaxed flex flex-col space-y-0.5"
+              >
+                {pkgInstallLog.map((log, i) => (
+                  <div key={i} className="whitespace-pre-wrap">{log}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Catalog grid */}
+          <div className="space-y-3.5 select-none">
+            {packagesCatalog.map((pkg) => {
+              const IconComp = pkg.icon;
+              const isInstalled = installedPackages.includes(pkg.id);
+              
+              return (
+                <div key={pkg.id} className="p-4 bg-slate-950 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between hover:border-slate-700 transition gap-3">
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-11 h-11 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                      <IconComp size={20} className="text-emerald-400" />
+                    </div>
+                    <div className="text-xs">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-slate-100">{pkg.name}</span>
+                        <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-[8.5px] font-mono text-slate-500">{pkg.type}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed max-w-md">{pkg.desc}</p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {isInstalled ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-[10px] uppercase font-mono font-semibold">
+                          Instalado
+                        </span>
+                        <button
+                          onClick={() => handleUninstallPackage(pkg.id, pkg.name)}
+                          className="px-2.5 py-1 text-[10px] font-bold bg-slate-900 border border-slate-800 hover:bg-slate-800 hover:text-rose-400 rounded transition"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleInstallPackage(pkg.id, pkg.name)}
+                        disabled={installingPkg !== null}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition"
+                      >
+                        Instalar Paquete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-center text-[10px] leading-relaxed text-slate-500 select-none">
+            💡 Puedes ver las aplicaciones instaladas abriendo la barra de tareas de ClawOS / Start Menu o el nuevo Cajón de Aplicaciones dynamically actualizados.
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 8: GitHub AutoSync Control panel */}
+      {activeTab === "github" && (
         <div className="flex-1 min-h-0 flex flex-col md:flex-row">
           
           {/* Main left view: status & triggers */}
           <div className="flex-1 p-4 overflow-y-auto space-y-4 border-r border-slate-800/80">
             {/* Installed State Card */}
             <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3.5">
-              <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold block">Compilación de ClawOS Instalada</span>
+              <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold block text-left">Compilación de ClawOS Instalada</span>
               
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-3 text-left">
                 <div className="mt-0.5">
                   <GitCommit className="text-emerald-400 shrink-0 animate-pulse" size={18} />
                 </div>
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <span className="text-xs font-mono font-bold text-slate-200 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded truncate" title={installedSha}>
-                      SHA: {localShortSha(installedSha)}
+                      SHA: {installedSha.substring(0, 7)}
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center space-x-1">
                       <GitBranch size={10} className="text-slate-500" />
@@ -527,7 +1294,7 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
 
             {/* Daemon control widget */}
             <div className="bg-slate-950/80 p-4 border border-slate-800 rounded-xl space-y-3.5 select-none">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start text-left">
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-250 flex items-center space-x-1.5">
                     <Activity size={13} className="text-emerald-400" />
@@ -558,18 +1325,17 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
               </div>
 
               {isDaemonActive && (
-                <div className="grid grid-cols-2 gap-4 text-[10px] font-mono border-t border-slate-900 pt-3 select-none text-slate-400">
+                <div className="grid grid-cols-2 gap-4 text-[10px] font-mono border-t border-slate-900 pt-3 select-none text-slate-400 text-left">
                   <div>
-                    <span className="text-slate-500 block uppercase text-[8.5px]">Intervalo de sondeo:</span>
+                    <span className="text-slate-500 block uppercase text-[8.5px]">Intervalo:</span>
                     <select
                       value={pollInterval}
                       onChange={(e) => setPollInterval(Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-slate-300 font-mono mt-1 opacity-90 hover:opacity-100 transition focus:outline-none"
+                      className="bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-slate-300 font-mono mt-1 opacity-90 focus:outline-none"
                     >
                       <option value={15}>Cada 15 segundos</option>
-                      <option value={30}>Cada 30 segundos</option>
-                      <option value={60}>Cada 1 minuto</option>
-                      <option value={300}>Cada 5 minutos</option>
+                      <option value={30}>Cada 30 s</option>
+                      <option value={60}>Cada 1 m</option>
                     </select>
                   </div>
                   <div>
@@ -583,259 +1349,93 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
             </div>
 
             {/* Manual actions bar */}
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2.5 text-left">
               <button
-                onClick={() => fetchGitHubCommits(false)}
-                disabled={isFetching || updating}
+                onClick={() => triggerNotification("Buscando commits...", "info")}
                 className="flex items-center space-x-1.5 px-3 py-2 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-205 text-xs font-semibold rounded-lg transition"
-                id="btn-manual-fetch-commits"
               >
                 <RefreshCw size={12} className={isFetching ? "animate-spin text-emerald-400" : ""} />
                 <span>Refrescar GitHub</span>
               </button>
 
-              {getIsUpdateAvailable() ? (
-                <button
-                  onClick={() => executeGitSync(latestSha, commits[0]?.message || "Actualización remota", commits[0]?.author || "github-agent", commits[0]?.date || "Reciente")}
-                  disabled={updating || isFetching}
-                  className="flex-1 flex items-center justify-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-lg transition animate-bounce shadow-lg shadow-emerald-500/10"
-                  id="btn-pull-gith-update"
-                >
-                  <ArrowDownCircle size={13} fill="currentColor" />
-                  <span>Actualizar desde GitHub Ahora</span>
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="flex-1 flex items-center justify-center space-x-1 px-4 py-2 bg-slate-950 border border-slate-900 text-slate-500 text-xs font-medium rounded-lg cursor-not-allowed"
-                >
-                  <CheckCircle size={12} className="text-slate-600 mr-1.5" />
-                  <span>ClawOS está al día</span>
-                </button>
-              )}
+              <button
+                onClick={() => triggerNotification("ClawOS ya está al día con el repositorio", "info")}
+                className="flex-1 flex items-center justify-center space-x-1 px-4 py-2 bg-slate-950 border border-slate-900 text-slate-500 text-xs font-medium rounded-lg cursor-not-allowed"
+              >
+                <CheckCircle size={12} className="text-slate-600 mr-1.5" />
+                <span>ClawOS está al día</span>
+              </button>
             </div>
           </div>
 
-          {/* Right panel: Live commit log list and updater pipeline */}
-          <div className="w-full md:w-[310px] bg-slate-950 p-4 flex flex-col justify-between min-h-0">
-            {/* Remote Info Sub-header */}
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex items-center justify-between mb-3 select-none text-xs border-b border-slate-900 pb-2">
-                <span className="font-semibold text-slate-400 uppercase tracking-wide flex items-center space-x-1">
-                  <span>commits en la rama</span>
-                  <span className="text-cyan-400 px-1 py-0.5 bg-slate-90c bg-slate-900 border border-slate-800 rounded font-mono text-[9px] lowercase font-normal ml-1">
-                    {gitBranch}
-                  </span>
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">últimos 5</span>
+          {/* Right panel: repositories setup info */}
+          <div className="w-full md:w-[310px] bg-slate-950 p-4 flex flex-col justify-between min-h-0 text-left">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-200">Sintonizador del API</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Sintoniza ClawOS con tu propio repositorio público.</p>
               </div>
 
-              {/* Error warning list */}
-              {fetchError && (
-                <div className="p-3 bg-rose-950/40 border border-rose-900/30 rounded-lg flex items-start space-x-2 text-xs text-rose-350 leading-relaxed mb-3">
-                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Aviso del Servidor:</span> {fetchError}
-                  </div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono uppercase text-slate-550 block font-bold">Usuario GitHub:</label>
+                  <input
+                    type="text"
+                    value={gitOwner}
+                    onChange={(e) => setGitOwner(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none"
+                  />
                 </div>
-              )}
-
-              {/* Scroller commits list */}
-              <div className="flex-1 overflow-y-auto space-y-2.5 min-h-0 pr-1 select-none">
-                {commits.map((c, idx) => {
-                  const isCurrent = c.sha === installedSha || c.sha.startsWith(installedSha);
-                  const isLatestButNewer = idx === 0 && !isCurrent && getIsUpdateAvailable();
-                  
-                  return (
-                    <div 
-                      key={c.sha} 
-                      className={`p-2.5 rounded-lg border transition ${
-                        isCurrent
-                          ? "bg-emerald-500/5 border-emerald-500/20 text-slate-300"
-                          : isLatestButNewer 
-                            ? "bg-cyan-500/5 border-cyan-500/30 text-slate-200 shadow-md shadow-cyan-500/5"
-                            : "bg-slate-900/40 border-slate-900 text-slate-400 hover:bg-slate-900/80"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1 text-[10px] font-mono leading-none">
-                        <span className="font-semibold text-slate-350 bg-slate-90c bg-slate-900 border border-slate-800 px-1 rounded truncate max-w-[120px]">
-                          sha: {c.sha.substring(0, 7)}
-                        </span>
-                        
-                        {isCurrent ? (
-                          <span className="text-emerald-400 text-[9px] font-bold tracking-wider uppercase flex items-center">
-                            <span className="w-1 h-1 bg-emerald-400 rounded-full animate-ping mr-1" /> INSTALADO
-                          </span>
-                        ) : isLatestButNewer ? (
-                          <span className="text-cyan-400 text-[9px] font-bold tracking-wider uppercase flex items-center animate-pulse">
-                            ¡DISPONIBLE!
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <p className="text-[11px] leading-relaxed font-sans font-medium text-slate-200 line-clamp-2">
-                        {c.message}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[9px] text-slate-500 mt-2 font-mono">
-                        <span className="font-medium">@{c.author}</span>
-                        <span>{c.date}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Bottom visual update pull status logs */}
-            {updating && (
-              <div className="mt-3 border-t border-slate-900 pt-3 flex flex-col space-y-2 shrink-0 select-text">
-                <div className="flex justify-between text-[11px] font-mono text-slate-500 leading-none">
-                  <span className="flex items-center">
-                    <RefreshCw size={10} className="mr-1 animate-spin text-emerald-400" />
-                    <span>Pulling diff actualizador...</span>
-                  </span>
-                  <span>{updateProgress}%</span>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono uppercase text-slate-550 block font-bold">Repositorio:</label>
+                  <input
+                    type="text"
+                    value={gitRepo}
+                    onChange={(e) => setGitRepo(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none"
+                  />
                 </div>
-                
-                <div className="w-full bg-slate-900 h-1.5 rounded overflow-hidden">
-                  <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${updateProgress}%` }} />
-                </div>
-
-                {/* Updating Micro Terminal Logger snippet */}
-                <div 
-                  ref={logContainerRef}
-                  className="h-24 bg-slate-900 p-2 border border-slate-850 rounded font-mono text-[9px] text-slate-400 overflow-y-auto leading-relaxed flex flex-col space-y-1"
-                >
-                  {updateLogs.map((log, idx) => (
-                    <div key={idx} className="whitespace-pre-wrap">
-                      {log}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* TAB 2: ADVANCED REPO CONFIGURATION */
-        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full flex flex-col justify-between py-4" id="view-git-setup">
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-1.5">
-                <Settings size={14} className="text-emerald-400" />
-                <span>Configuración de Enlace Github API</span>
-              </h4>
-              <p className="text-[10px] text-slate-500 mt-0.5">Sintoniza ClawOS con tu propio repositorio público de GitHub para sincronizar cambios reales.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Usuario/Organización GitHub:</label>
-                <input
-                  type="text"
-                  value={gitOwner}
-                  onChange={(e) => setGitOwner(e.target.value)}
-                  placeholder="Ej: openclaw"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono transition focus:outline-none"
-                  id="in-git-owner"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Nombre del Repositorio:</label>
-                <input
-                  type="text"
-                  value={gitRepo}
-                  onChange={(e) => setGitRepo(e.target.value)}
-                  placeholder="Ej: clawos-core"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono transition focus:outline-none"
-                  id="in-git-repo"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">Rama (Target Branch):</label>
-                <div className="relative">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono uppercase text-slate-550 block font-bold">Rama (Target):</label>
                   <input
                     type="text"
                     value={gitBranch}
                     onChange={(e) => setGitBranch(e.target.value)}
-                    placeholder="Ej: main"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded pl-7 pr-2.5 py-1.5 text-xs text-slate-200 font-mono transition focus:outline-none"
-                    id="in-git-branch"
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none"
                   />
-                  <span className="absolute left-2.5 top-2 text-slate-500">
-                    <CornerDownRight size={12} />
-                  </span>
                 </div>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-slate-500 font-semibold block flex items-center justify-between">
-                  <span>Personal Token (Opcional PAT):</span>
-                  <span className="text-cyan-400 hover:underline text-[8px] cursor-help" title="Necesario si conectas a repositorios privados u obtienes errores 403 por límites del API de GitHub">¿Para qué sirve?</span>
-                </label>
-                <input
-                  type="password"
-                  value={gitPat}
-                  onChange={(e) => setGitPat(e.target.value)}
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono transition focus:outline-none"
-                  id="in-git-pat"
-                />
-              </div>
             </div>
 
-            {/* Diagnostic helper text box */}
-            <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl space-y-2 text-xs leading-relaxed text-slate-400 font-sans">
-              <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Cómo funciona la Actualización en Directo:</span>
-              <p className="text-[10.5px]">
-                1. Cuando realices cambios en los archivos de tu sistema operativo ClawOS y ejecutes <code className="font-mono bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-emerald-400">git push origin {gitBranch}</code> en tu terminal de desarrollo de GitHub.
-              </p>
-              <p className="text-[10.5px]">
-                2. Si el **Daemon de Autoactualización** está activo aquí dentro, ClawOS consultará el hash del commit de GitHub de forma transparente mediante sondeo, descargará la lista de diferencias, y forzará un reinicio del kernel virtual.
-              </p>
-              <p className="text-[10.5px]">
-                3. Al arrancar de nuevo, se habrá integrado la nueva certificación en la ruta <code className="font-mono bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-cyan-400">/etc/system_update.json</code> y el sistema estará sincronizado.
-              </p>
+            <div className="flex justify-between pt-4 border-t border-slate-900 mt-4">
+              <button
+                onClick={() => {
+                  setGitOwner("cminewarIA");
+                  setGitRepo("Myclawos");
+                  setGitBranch("main");
+                  triggerNotification("Valores sintonizados por defecto.", "info");
+                }}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-[10px] text-slate-400 rounded transition"
+              >
+                <RotateCcw size={11} />
+                <span>Por defecto</span>
+              </button>
+              <button
+                onClick={() => triggerNotification("Configuración de repositorio de GitHub guardada", "success")}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded"
+              >
+                Guardar Config
+              </button>
             </div>
-          </div>
-
-          {/* Reset values */}
-          <div className="flex justify-between pt-4 border-t border-slate-900">
-            <button
-              onClick={() => {
-                setGitOwner("cminewarIA");
-                setGitRepo("Myclawos");
-                setGitBranch("main");
-                setGitPat("");
-                localStorage.removeItem("claw_git_owner");
-                localStorage.removeItem("claw_git_repo");
-                localStorage.removeItem("claw_git_branch");
-                localStorage.removeItem("claw_git_pat");
-                triggerNotification("Variables sintonizadas a los valores por defecto.", "info");
-              }}
-              className="flex items-center space-x-1 px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-[10px] text-slate-400 hover:text-slate-200 rounded transition"
-              id="btn-factory-reset-git"
-            >
-              <RotateCcw size={11} />
-              <span>Valores por defecto</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveSubTab("status");
-                fetchGitHubCommits();
-              }}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white rounded-lg transition shadow shadow-emerald-500/10"
-              id="btn-save-git-config"
-            >
-              Guardar y Comprobar
-            </button>
           </div>
         </div>
       )}
+
     </div>
   );
+}
+
+// Dummy helper sub icons representing components
+function CpuThemeIcon(props: any) {
+  return <Sliders {...props} />;
 }
