@@ -11,11 +11,26 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isFirstMountRef = useRef(true);
+  const prevHistoryLengthRef = useRef(chatHistory.length);
 
   useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    prevHistoryLengthRef.current = chatHistory.length;
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const isUserSent = lastMessage && lastMessage.role === "user";
+    
+    // Check if user is scrolled near the bottom (within 180px threshold)
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
+
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      container.scrollTop = container.scrollHeight;
+    } else if (isUserSent || isNearBottom || isLoading) {
+      container.scrollTo({
+        top: container.scrollHeight,
         behavior: "smooth"
       });
     }
