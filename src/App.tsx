@@ -9,6 +9,7 @@ import OpenClawCore from "./components/OpenClawCore";
 import SystemMonitor from "./components/SystemMonitor";
 import ControlPanel from "./components/ControlPanel";
 import ClawInstaller from "./components/ClawInstaller";
+import GitHubUpdater from "./components/GitHubUpdater";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -27,7 +28,9 @@ import {
   Info,
   Activity,
   Sliders,
-  Download
+  Download,
+  Github,
+  RefreshCw
 } from "lucide-react";
 
 export default function App() {
@@ -121,6 +124,16 @@ export default function App() {
       zIndex: 20,
       position: { x: 190, y: 80 },
       size: { width: 660, height: 500 },
+    },
+    {
+      id: "updater_github",
+      title: "Consola de Actualizaciones GitHub - claw_sync",
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 22,
+      position: { x: 210, y: 115 },
+      size: { width: 680, height: 520 },
     },
   ]);
 
@@ -308,6 +321,14 @@ export default function App() {
             triggerNotification={triggerNotification}
           />
         );
+      case "updater_github":
+        return (
+          <GitHubUpdater
+            vfs={vfs}
+            setVfs={setVfs}
+            triggerNotification={triggerNotification}
+          />
+        );
       default:
         return null;
     }
@@ -330,6 +351,8 @@ export default function App() {
         return "Panel de Control";
       case "installer":
         return "Instalador Sencillo Kernel Beta";
+      case "updater_github":
+        return "Actualizador de GitHub";
       default:
         return "Aplicación ClawOS";
     }
@@ -504,6 +527,22 @@ export default function App() {
               Instalar Kern
             </span>
           </div>
+
+          {/* Launcher 8: GitHub Auto-Updater */}
+          <div
+            onDoubleClick={() => handleOpenWindow("updater_github")}
+            onTouchEnd={() => handleOpenWindow("updater_github")}
+            className="flex flex-col items-center cursor-pointer group text-center"
+            title="Doble clic para iniciar la sincronización con GitHub"
+            id="launcher-updater-github"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
+              <Github className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
+              Github Sync
+            </span>
+          </div>
         </div>
 
         {/* Windows Rendering Layer */}
@@ -627,6 +666,18 @@ export default function App() {
                 <p className="text-[9px] text-slate-500">Asistente de instalación del núcleo beta</p>
               </div>
             </button>
+
+            <button
+              onClick={() => handleOpenWindow("updater_github")}
+              className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
+              id="menu-app-updater-github"
+            >
+              <Github size={16} className="text-emerald-400" />
+              <div>
+                <p className="font-medium text-slate-300">Sincronizador GitHub</p>
+                <p className="text-[9px] text-slate-500">Actualiza y sintoniza el SO mediante git</p>
+              </div>
+            </button>
           </div>
 
           <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-500">
@@ -703,6 +754,7 @@ export default function App() {
                   {win.id === "system_monitor" && <Cpu size={12} />}
                   {win.id === "control_panel" && <Sliders size={12} />}
                   {win.id === "installer" && <Download size={12} />}
+                  {win.id === "updater_github" && <Github size={12} />}
                   <span className="truncate max-w-[110px]">{getFriendlyAppName(win.id)}</span>
                 </button>
               );
