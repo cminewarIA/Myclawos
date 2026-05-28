@@ -53,9 +53,9 @@ export default function DragonLogo({ size = 48, className = "", glow = true }: D
         </linearGradient>
 
         <linearGradient id="gothic-c-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#0f172a" />
-          <stop offset="50%" stopColor="#020617" />
-          <stop offset="100%" stopColor="#1e293b" />
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="55%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#e2e8f0" />
         </linearGradient>
       </defs>
 
@@ -110,17 +110,21 @@ export default function DragonLogo({ size = 48, className = "", glow = true }: D
         {/* Gothic vertical central pillar/crossbar decoration */}
         <path
           d="M 85 55 L 85 130 L 93 130 L 93 55 Z"
-          fill="#020617"
+          fill="url(#gothic-c-grad)"
+          stroke="#020617"
+          strokeWidth="1.2"
         />
         <path
           d="M 75 92 L 105 92 L 105 99 L 75 99 Z"
-          fill="#020617"
+          fill="url(#gothic-c-grad)"
+          stroke="#020617"
+          strokeWidth="1.2"
         />
         {/* Flourish sharp spikes on Letter C */}
-        <path d="M 52 48 L 46 62 L 60 55 Z" fill="#020617" />
-        <path d="M 45 125 L 42 108 L 54 116 Z" fill="#020617" />
-        <path d="M 124 43 L 138 35 L 128 50 Z" fill="#020617" />
-        <path d="M 125 143 L 135 152 L 118 148 Z" fill="#020617" />
+        <path d="M 52 48 L 46 62 L 60 55 Z" fill="url(#gothic-c-grad)" stroke="#020617" strokeWidth="1" />
+        <path d="M 45 125 L 42 108 L 54 116 Z" fill="url(#gothic-c-grad)" stroke="#020617" strokeWidth="1" />
+        <path d="M 124 43 L 138 35 L 128 50 Z" fill="url(#gothic-c-grad)" stroke="#020617" strokeWidth="1" />
+        <path d="M 125 143 L 135 152 L 118 148 Z" fill="url(#gothic-c-grad)" stroke="#020617" strokeWidth="1" />
       </g>
 
       {/* 3. THE MAJESTIC RED DRAGON S-COIL WITH SPINE SPIKES & HEAD */}

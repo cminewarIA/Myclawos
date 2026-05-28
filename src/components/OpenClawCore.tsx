@@ -19,23 +19,31 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
     const container = messagesContainerRef.current;
     if (!container) return;
 
+    const prevLength = prevHistoryLengthRef.current;
     prevHistoryLengthRef.current = chatHistory.length;
-    const lastMessage = chatHistory[chatHistory.length - 1];
-    const isUserSent = lastMessage && lastMessage.role === "user";
-    
+
     // Check if user is scrolled near the bottom (within 180px threshold)
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
 
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false;
       container.scrollTop = container.scrollHeight;
-    } else if (isUserSent || isNearBottom || isLoading) {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth"
-      });
+      return;
     }
-  }, [chatHistory, isLoading]);
+
+    // Only auto-scroll on new message insertions
+    if (chatHistory.length > prevLength) {
+      const lastMessage = chatHistory[chatHistory.length - 1];
+      const isUserSent = lastMessage && lastMessage.role === "user";
+
+      if (isUserSent || isNearBottom) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
+      }
+    }
+  }, [chatHistory]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

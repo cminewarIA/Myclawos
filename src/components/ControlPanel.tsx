@@ -321,7 +321,7 @@ export default function ControlPanel() {
             </div>
 
             {/* Detailed sockets connections block */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 min-h-0 overflow-y-auto">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5 font-sans">
                 <TrendingUp size={14} className="text-cyan-400" />
                 <span>Puertos Virtuales Auxiliares y Sockets Activos</span>
@@ -427,13 +427,13 @@ export default function ControlPanel() {
             </div>
 
             {/* Process List Table */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 min-h-0 flex flex-col overflow-y-auto">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 font-sans flex items-center space-x-1.5 select-none shrink-0 border-b border-slate-900 pb-2">
                 <Cpu size={14} className="text-violet-400 animate-spin" style={{ animationDuration: '6s' }} />
                 <span>Interactuar con Procesos (Clawbash CLI & Kernel-Core-Mapp)</span>
               </h4>
 
-              <div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 text-xs font-mono">
+              <div className="space-y-1.5 text-xs font-mono">
                 <div className="grid grid-cols-6 gap-2 text-slate-500 text-[9px] uppercase tracking-wider pb-1.5 select-none border-b border-slate-900">
                   <span>PID</span>
                   <span className="col-span-2">NOMBRE PROCESO</span>
