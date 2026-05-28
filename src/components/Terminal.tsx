@@ -1,0 +1,489 @@
+import React, { useState, useRef, useEffect } from "react";
+import { TerminalLine, VFSNode } from "../types";
+import { parsePath, getNodeByPath, setNodeAtPath, deleteNodeAtPath } from "../vfs";
+import { Terminal as TerminalIcon, Sparkles } from "lucide-react";
+
+interface TerminalProps {
+  vfs: VFSNode;
+  setVfs: (newVfs: VFSNode) => void;
+  currentPath: string[];
+  setCurrentPath: (path: string[]) => void;
+  openWindow: (windowId: string) => void;
+  onOpenFileInEditor: (filePath: string[], fileName: string, content: string) => void;
+  onPostChatMessageFromShell: (text: string) => void;
+}
+
+export default function Terminal({
+  vfs,
+  setVfs,
+  currentPath,
+  setCurrentPath,
+  openWindow,
+  onOpenFileInEditor,
+  onPostChatMessageFromShell,
+}: TerminalProps) {
+  const [lines, setLines] = useState<TerminalLine[]>([
+    {
+      id: "init-1",
+      text: "Welcome to ClawBash Terminal v3.2.1-lts",
+      type: "info",
+    },
+    {
+      id: "init-2",
+      text: "Kernel con núcleo de inteligencia central: OpenClaw ONLINE.",
+      type: "success",
+    },
+    {
+      id: "init-3",
+      text: "Escribe 'help' para ver una lista de comandos disponibles, o 'neofetch' para ver especificaciones.",
+      type: "info",
+    },
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [themeColor, setThemeColor] = useState<"green" | "amber" | "white">("green");
+
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto scroll to bottom whenever logs update
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [lines]);
+
+  // Handle focus on clicking terminal area
+  const handleTerminalClick = () => {
+    inputRef.current?.focus();
+  };
+
+  // Keep focus on input initially
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const addLine = (text: string, type: TerminalLine["type"] = "output") => {
+    const newLine: TerminalLine = {
+      id: `line-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      text,
+      type,
+    };
+    setLines((prev) => [...prev, newLine]);
+  };
+
+  const getPathString = (pathArr: string[]) => {
+    return "/" + pathArr.join("/");
+  };
+
+  // Command executor
+  const executeCommand = async (fullCommand: string) => {
+    const trimmed = fullCommand.trim();
+    if (!trimmed) return;
+
+    // Save history
+    setCommandHistory((prev) => [...prev, trimmed]);
+    setHistoryIndex(-1);
+
+    // Show input echo line
+    const pathPrompt = `user@openclaw:${getPathString(currentPath)}$`;
+    addLine(`${pathPrompt} ${trimmed}`, "input");
+
+    // Parse command name and arguments
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    switch (cmd) {
+      case "help":
+        addLine("Comandos de ClawBash disponibles:", "info");
+        addLine("  ls [dir]          - Listar archivos y directorios virtuales.", "output");
+        addLine("  cd [dir]          - Cambiar de directorio (es posible usar '..').", "output");
+        addLine("  pwd               - Imprimir la ruta del directorio de trabajo actual.", "output");
+        addLine("  cat [archivo]     - Mostrar contenido de un archivo.", "output");
+        addLine("  touch [archivo]   - Crear un archivo de texto vacío.", "output");
+        addLine("  mkdir [dir]       - Crear una nueva carpeta virtual.", "output");
+        addLine("  rm [archivo/dir]  - Eliminar archivos o directorios.", "output");
+        addLine("  neofetch          - Mostrar logotipo estético del kernel y datos del SO.", "output");
+        addLine("  date              - Mostrar el reloj de sistema.", "output");
+        addLine("  whoami            - Mostrar el usuario con sesión activa.", "output");
+        addLine("  uname -a          - Imprimir detalles del firmware y kernel central.", "output");
+        addLine("  top               - Mostrar procesos clave ejecutándose en segundo plano.", "output");
+        addLine("  openclaw [msg]    - Enviar directamente una pregunta al núcleo de IA OpenClaw.", "success");
+        addLine("  clear             - Limpiar la pantalla de la terminal.", "output");
+        addLine("  theme [color]     - Cambiar tema de la terminal (green, amber, white).", "output");
+        break;
+
+      case "clear":
+        setLines([]);
+        break;
+
+      case "date":
+        addLine(new Date().toString(), "output");
+        break;
+
+      case "whoami":
+        addLine("user_claw_developer", "output");
+        break;
+
+      case "uname":
+        if (args.includes("-a") || args.includes("-r")) {
+          addLine("Linux clawos-kernel 5.16.0-openclaw-generic-quantum #1 SMP PREEMPT Thu May 28 18:43:12 UTC 2026 x86_64 GNU/Linux", "output");
+        } else {
+          addLine("Linux", "output");
+        }
+        break;
+
+      case "theme":
+        const col = args[0]?.toLowerCase();
+        if (col === "green" || col === "amber" || col === "white") {
+          setThemeColor(col as any);
+          addLine(`Tema del terminal configurado a: ${col}`, "success");
+        } else {
+          addLine("Uso: theme [green | amber | white]", "error");
+        }
+        break;
+
+      case "neofetch":
+        addLine(`       /\\_/\\       user@openclaw.linux.os`, "success");
+        addLine(`      ( o.o )      ----------------------------`, "success");
+        addLine(`       > ^ <       OS: OpenClaw Linux v1.1.0`, "success");
+        addLine(`      /     \\      Kernel: 5.16.0-openclaw-generic`, "success");
+        addLine(`     |       |     Uptime: 1 hour, 42 mins`, "success");
+        addLine(`    (_______)      Shell: ClawBash 3.2`, "success");
+        addLine(`                   Theme: ClawDE (Modern Dark)`, "success");
+        addLine(`                   CPU: Cortex Quantum Emulator (4 Cores)`, "success");
+        addLine(`                   Memory: 4096MB / 16384MB (32%)`, "success");
+        addLine(`                   OpenClaw AI Engine: ONLINE (Active)`, "success");
+        break;
+
+      case "top":
+        addLine("ID de Proceso (PID)  | NOMBRE               | CPU % | MEM % | ESTADO", "info");
+        addLine("  1                  | systemd              | 0.0   | 0.1   | S (sleep)", "output");
+        addLine("  42                 | openclaw-kernel-core | 1.8   | 8.4   | R (running)", "success");
+        addLine("  50                 | clawbash-shell       | 0.2   | 1.2   | R (running)", "output");
+        addLine("  120                | xorg-server          | 0.5   | 4.6   | S (sleep)", "output");
+        addLine("  204                | code-editor-daemon   | 0.0   | 2.1   | S (sleep)", "output");
+        addLine("  301                | claw-desktop-env     | 1.2   | 5.8   | R (running)", "output");
+        break;
+
+      case "pwd":
+        addLine(getPathString(currentPath), "output");
+        break;
+
+      case "ls":
+        const targetLsPath = args[0] ? parsePath(currentPath, args[0]) : currentPath;
+        const lsNode = getNodeByPath(vfs, targetLsPath);
+        
+        if (!lsNode) {
+          addLine(`ls: no se puede acceder a '${args[0]}': No existe el archivo o el directorio`, "error");
+        } else if (lsNode.type === "file") {
+          // just display file name
+          addLine(lsNode.name, "output");
+        } else if (lsNode.type === "dir" && lsNode.children) {
+          const names = Object.values(lsNode.children).map((child) => {
+            if (child.type === "dir") {
+              return `${child.name}/  [Carpeta]`;
+            }
+            return `${child.name}   [Archivo]`;
+          });
+          if (names.length === 0) {
+            addLine("(directorio vacío)", "info");
+          } else {
+            names.forEach((name) => addLine(name, "output"));
+          }
+        }
+        break;
+
+      case "cd":
+        if (!args[0]) {
+          // cd without arguments goes to /home/user or root
+          setCurrentPath(["home", "user"]);
+          break;
+        }
+        const targetCdPath = parsePath(currentPath, args[0]);
+        const cdNode = getNodeByPath(vfs, targetCdPath);
+
+        if (!cdNode) {
+          addLine(`cd: '${args[0]}': No existe el directorio`, "error");
+        } else if (cdNode.type !== "dir") {
+          addLine(`cd: '${args[0]}': No es un directorio`, "error");
+        } else {
+          setCurrentPath(targetCdPath);
+        }
+        break;
+
+      case "cat":
+        if (!args[0]) {
+          addLine("Uso: cat [nombre_archivo]", "error");
+          break;
+        }
+        const targetCatPath = parsePath(currentPath, args[0]);
+        const fileName = targetCatPath.pop() || "";
+        const parentNodeDir = getNodeByPath(vfs, targetCatPath);
+
+        if (!parentNodeDir || !parentNodeDir.children || !parentNodeDir.children[fileName]) {
+          addLine(`cat: ${args[0]}: El archivo no existe`, "error");
+        } else {
+          const fileToRead = parentNodeDir.children[fileName];
+          if (fileToRead.type === "dir") {
+            addLine(`cat: ${args[0]}: Es un directorio`, "error");
+          } else {
+            addLine(fileToRead.content || "(archivo sin contenido)", "output");
+          }
+        }
+        break;
+
+      case "touch":
+        if (!args[0]) {
+          addLine("Uso: touch [nombre_archivo]", "error");
+          break;
+        }
+        const targetTouchPath = parsePath(currentPath, args[0]);
+        const touchFileName = targetTouchPath.pop() || "";
+        const touchParentNode = getNodeByPath(vfs, targetTouchPath);
+
+        if (!touchParentNode || touchParentNode.type !== "dir") {
+          addLine(`touch: no se puede crear '${args[0]}': Ruta inválida`, "error");
+        } else {
+          // Node structure modification
+          const newFile: VFSNode = {
+            name: touchFileName,
+            type: "file",
+            content: `Creado el ${new Date().toLocaleDateString()} vía terminal bash.`,
+          };
+          const updatedVfs = setNodeAtPath(vfs, targetTouchPath, touchFileName, newFile);
+          setVfs(updatedVfs);
+          addLine(`Archivo de texto '${touchFileName}' creado con éxito.`, "success");
+        }
+        break;
+
+      case "mkdir":
+        if (!args[0]) {
+          addLine("Uso: mkdir [nombre_carpeta]", "error");
+          break;
+        }
+        const targetMkdirPath = parsePath(currentPath, args[0]);
+        const mkdirName = targetMkdirPath.pop() || "";
+        const mkdirParentNode = getNodeByPath(vfs, targetMkdirPath);
+
+        if (!mkdirParentNode || mkdirParentNode.type !== "dir") {
+          addLine(`mkdir: no se puede crear '${args[0]}': Carpeta contenedora inválida`, "error");
+        } else {
+          const newDir: VFSNode = {
+            name: mkdirName,
+            type: "dir",
+            children: {},
+          };
+          const updatedVfs = setNodeAtPath(vfs, targetMkdirPath, mkdirName, newDir);
+          setVfs(updatedVfs);
+          addLine(`Carpeta de usuario '${mkdirName}' creada con éxito.`, "success");
+        }
+        break;
+
+      case "rm":
+        if (!args[0]) {
+          addLine("Uso: rm [nombre_archivo_o_carpeta]", "error");
+          break;
+        }
+        const targetRmPath = parsePath(currentPath, args[0]);
+        const rmName = targetRmPath.pop() || "";
+        const rmParentNode = getNodeByPath(vfs, targetRmPath);
+
+        if (!rmParentNode || !rmParentNode.children || !rmParentNode.children[rmName]) {
+          addLine(`rm: no se puede eliminar '${args[0]}': No existe`, "error");
+        } else {
+          const updatedVfs = deleteNodeAtPath(vfs, targetRmPath, rmName);
+          setVfs(updatedVfs);
+          addLine(`Elemento '${rmName}' eliminado de forma permanente.`, "info");
+        }
+        break;
+
+      case "sudo":
+        addLine("Privilegios root solicitados...", "info");
+        setTimeout(() => {
+          addLine("[ALERTA] user is not in the sudoers file. This incident will be reported to OpenClaw Central Core.", "error");
+        }, 300);
+        break;
+
+      case "openclaw":
+        const chatPrompt = args.join(" ");
+        if (!chatPrompt.trim()) {
+          addLine("Uso: openclaw [un mensaje para el núcleo de inteligencia central]", "error");
+          addLine("Ejemplo: openclaw ¿cómo puedo ordenar carpetas en linux?", "info");
+          break;
+        }
+        
+        addLine("Estableciendo túnel cuántico directo con OpenClaw Core...", "info");
+        
+        try {
+          const response = await fetch("/api/openclaw/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: chatPrompt }),
+          });
+          const data = await response.json();
+          
+          addLine("--- Respuesta de OpenClaw Core ---", "success");
+          addLine(data.text, "success");
+          addLine("----------------------------------", "success");
+          
+          // Also synch and open the central chat app for convenient interaction
+          onPostChatMessageFromShell(chatPrompt);
+        } catch (e: any) {
+          addLine(`Error de kernel: Fallo de enlace síncrono. Detalle: ${e.message}`, "error");
+        }
+        break;
+
+      default:
+        // Try to check if target is a file in the working directory that can be ran
+        const parentW = getNodeByPath(vfs, currentPath);
+        if (parentW && parentW.children && parentW.children[cmd] && parentW.children[cmd].type === "file") {
+          const selfFile = parentW.children[cmd];
+          addLine(`Ejecutando script local '${cmd}':`, "info");
+          addLine(selfFile.content || "Sin salida estándar.", "output");
+        } else {
+          addLine(`clawbash: comando no encontrado: '${cmd}'.`, "error");
+          addLine("Tip: Escribe 'help' para descubrir utilidades.", "info");
+        }
+        break;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const val = inputValue;
+      setInputValue("");
+      executeCommand(val);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (commandHistory.length === 0) return;
+      const nextIndex = historyIndex === -1 ? commandHistory.length - 1 : Math.max(0, historyIndex - 1);
+      setHistoryIndex(nextIndex);
+      setInputValue(commandHistory[nextIndex]);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyIndex === -1) return;
+      const nextIndex = historyIndex + 1;
+      if (nextIndex >= commandHistory.length) {
+        setHistoryIndex(-1);
+        setInputValue("");
+      } else {
+        setHistoryIndex(nextIndex);
+        setInputValue(commandHistory[nextIndex]);
+      }
+    }
+  };
+
+  const colorClasses = {
+    green: {
+      text: "text-emerald-400 font-mono",
+      caret: "bg-emerald-400",
+      border: "border-emerald-500/30",
+      accent: "text-emerald-500",
+    },
+    amber: {
+      text: "text-amber-500 font-mono",
+      caret: "bg-amber-500",
+      border: "border-amber-500/30",
+      accent: "text-amber-600",
+    },
+    white: {
+      text: "text-slate-100 font-mono",
+      caret: "bg-slate-300",
+      border: "border-slate-500/30",
+      accent: "text-slate-400",
+    },
+  }[themeColor];
+
+  return (
+    <div
+      onClick={handleTerminalClick}
+      className="flex-1 flex flex-col bg-slate-950 p-4 font-mono text-xs overflow-y-auto cursor-text select-text"
+      style={{ minHeight: "100%" }}
+    >
+      {/* Scrollable terminal lines */}
+      <div className="flex-1 space-y-2">
+        {lines.map((line) => {
+          let lineStyle = "text-slate-300";
+          if (line.type === "input") lineStyle = "text-slate-100 font-semibold";
+          else if (line.type === "error") lineStyle = "text-rose-400 font-bold";
+          else if (line.type === "success") lineStyle = "text-emerald-400";
+          else if (line.type === "info") lineStyle = "text-blue-400";
+
+          return (
+            <div key={line.id} className="whitespace-pre-wrap leading-relaxed break-all">
+              {line.type === "input" ? (
+                <span className={lineStyle}>{line.text}</span>
+              ) : (
+                <span className={lineStyle}>{line.text}</span>
+              )}
+            </div>
+          );
+        })}
+        <div ref={terminalEndRef} />
+      </div>
+
+      {/* Shell interactive command builder */}
+      <div className="flex items-center space-x-1.5 border-t border-slate-900/60 pt-3 mt-4 shrink-0">
+        <span className={`${colorClasses.text} font-bold shrink-0`}>
+          user@openclaw:{getPathString(currentPath)}$
+        </span>
+        <div className="flex-1 relative flex items-center">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className={`w-full bg-transparent border-none outline-none focus:ring-0 p-0 ${colorClasses.text}`}
+            spellCheck="false"
+            autoComplete="off"
+            id="terminal-input"
+          />
+        </div>
+      </div>
+
+      {/* Terminal Footer Indicator */}
+      <div className="flex justify-between items-center text-[10px] text-slate-500 mt-4 pt-2 border-t border-slate-900 shrink-0 select-none">
+        <div className="flex items-center space-x-2">
+          <span className="flex items-center space-x-1">
+            <TerminalIcon size={11} className="text-slate-500" />
+            <span>Bash Simulator v3.2</span>
+          </span>
+          <span>•</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setThemeColor("green");
+            }}
+            className={`hover:underline ${themeColor === "green" ? "text-emerald-400" : ""}`}
+          >
+            Green
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setThemeColor("amber");
+            }}
+            className={`hover:underline ${themeColor === "amber" ? "text-amber-500" : ""}`}
+          >
+            Amber
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setThemeColor("white");
+            }}
+            className={`hover:underline ${themeColor === "white" ? "text-white" : ""}`}
+          >
+            White
+          </button>
+        </div>
+        <div className="flex items-center space-x-1 text-slate-400 bg-sky-950/40 border border-sky-500/20 px-1.5 py-0.5 rounded">
+          <Sparkles size={10} className="text-cyan-400 animate-pulse" />
+          <span>Nucleo OpenClaw Vinculado</span>
+        </div>
+      </div>
+    </div>
+  );
+}

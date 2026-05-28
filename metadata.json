@@ -1,0 +1,6 @@
+{
+  "name": "OpenClaw Linux",
+  "description": "Un sistema operativo Linux simulado con una interfaz de escritorio amigable y el núcleo inteligente OpenClaw como asistente central, terminal Bash interactivo, explorador de archivos, monitor de sistema y utilidades.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
