@@ -571,9 +571,9 @@ export default function FileManager({
               <div className="bg-slate-950 p-3 rounded-lg border border-slate-950 text-[10px] text-slate-400/90 leading-relaxed space-y-1.5 h-36 overflow-y-auto select-text text-left">
                 {connectionLogs.map((log, lIdx) => (
                   <p key={lIdx} className={
-                    log.includes("OK") || log.includes("¡Éxito!") || log.includes("correcta") || log.includes("exitoso")
+                    log && (log.includes("OK") || log.includes("¡Éxito!") || log.includes("correcta") || log.includes("exitoso"))
                       ? "text-emerald-400 font-semibold" 
-                      : log.includes("USER") || log.includes("PASS") || log.includes("CWD")
+                      : log && (log.includes("USER") || log.includes("PASS") || log.includes("CWD"))
                       ? "text-cyan-400"
                       : "text-slate-400"
                   }>

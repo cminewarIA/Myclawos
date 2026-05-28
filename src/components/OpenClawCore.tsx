@@ -10,10 +10,15 @@ interface OpenClawCoreProps {
 export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCoreProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [chatHistory, isLoading]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -135,7 +140,11 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       </div>
 
       {/* Messages Stagger Box */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-900/60" id="claw-chat-messages">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-900/60" 
+        id="claw-chat-messages"
+      >
         {chatHistory.map((m) => {
           const isUser = m.role === "user";
           const isSys = m.role === "system";
@@ -214,7 +223,6 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
             </div>
           </div>
         )}
-        <div ref={scrollRef} />
       </div>
 
       {/* Input box */}

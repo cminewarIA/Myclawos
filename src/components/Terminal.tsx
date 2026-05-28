@@ -86,12 +86,17 @@ export default function Terminal({
     localStorage.setItem("claw_terminal_history", JSON.stringify(commandHistory));
   }, [commandHistory]);
 
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll to bottom whenever logs update
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (terminalContainerRef.current) {
+      terminalContainerRef.current.scrollTo({
+        top: terminalContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [lines]);
 
   // Handle focus on clicking terminal area
@@ -155,6 +160,7 @@ export default function Terminal({
         addLine("  top               - Mostrar procesos clave ejecutándose en segundo plano.", "output");
         addLine("  openclaw [msg]    - Enviar directamente una pregunta al núcleo de IA OpenClaw.", "success");
         addLine("  git [cmd]         - Gestionar y refrescar actualizaciones de GitHub.", "success");
+        addLine("  download-iso      - Compilar y descargar la imagen ISO oficial (.iso).", "success");
         addLine("  history           - Ver, buscar y re-ejecutar comandos anteriores.", "success");
         addLine("  clear             - Limpiar la pantalla de la terminal.", "output");
         addLine("  theme [color]     - Cambiar tema de la terminal (green, amber, white).", "output");
@@ -168,6 +174,111 @@ export default function Terminal({
 
       case "clear":
         setLines([]);
+        break;
+
+      case "download-iso":
+        {
+          const isRoot = localStorage.getItem("claw_is_root") === "true";
+          const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
+          const defaultBrowserChromium = localStorage.getItem("claw_default_browser") === "chromium";
+
+          addLine("Iniciando compilador del firmware ClawOS ISO-9660...", "info");
+          addLine("Sincronizando volumen del sistema de archivos actual (VFS)...", "info");
+          addLine("Escribiendo sector de arranque GRUB bootloader con configuraciones locales...", "info");
+
+          setTimeout(() => {
+            addLine("[10%] Estructura de tracks virtuales asignada...", "output");
+          }, 300);
+          setTimeout(() => {
+            addLine("[50%] Respaldo de base de datos VFS inyectado en /boot/vfs-backup.json...", "output");
+          }, 600);
+          setTimeout(() => {
+            addLine("[90%] Certificados RSA firmados de forma segura...", "output");
+          }, 900);
+
+          setTimeout(() => {
+            const vfsJson = JSON.stringify(vfs, null, 2);
+            const isoDataContent = `========================================================================
+CLAWOS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
+========================================================================
+Volume Label:  CLAWOS_LIVE_V112
+Publisher:     OpenClaw OS Foundation
+Architecture:  x86_amd64 / Intel Virtualization Cores
+Build Date:    2026-05-28 21:00 UTC
+Virtual Size:  142.6 MB
+
+[ BAKED KERNEL PARAMETERS - SELECTED INTEGRATED DIRECTIVES ]
+------------------------------------------------------------------------
+● AUTOLOGIN TARGET:    ${isRoot ? "Superuser 'root' Direct Mode (No Passwords)" : "Standard User 'user_claw_developer'"}
+● ACPI POWER SUSPEND:  ${sleepDisabled ? "DISABLED PERMANENTLY (acpi=off sleep.allow=no)" : "ENABLED STANDARD POLICIES"}
+● CORE WEB SUITE:      ${defaultBrowserChromium ? "Chromium Web Browser Defaulting" : "Generic Web Host Controller"}
+------------------------------------------------------------------------
+
+* GRUB BOOTLOADER DESCRIPTOR & HARDWARE INVOCATOR *
+------------------------------------------------------------------------
+cat << 'GRUB_CONFIG'
+# /boot/grub/grub.cfg
+set default="0"
+set timeout=5
+
+menuentry "ClawOS Linux v1.1.2 Live CLI-GUI Environment (x86_64)" {
+    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
+    linux /boot/vmlinuz-openclaw console=ttyS0 quiet ${isRoot ? "init=/bin/clawbash_root_init" : "init=/bin/clawbash_init"} ${sleepDisabled ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-openclaw-direct.img
+}
+
+menuentry "ClawOS Recovery Console" {
+    linux /boot/vmlinuz-openclaw console=ttyS0 single
+    initrd /boot/initramfs-openclaw-direct.img
+}
+GRUB_CONFIG
+
+------------------------------------------------------------------------
+* RECREATING THE WORKSPACE LOCAL COGNITIVE STRUCTURE (JSON SNAPSHOT) *
+------------------------------------------------------------------------
+This snapshot matches your current virtual disk environment precisely.
+You can import or paste this VFS dump into ClawOS back-restores:
+
+VFS_SNAPSHOT_BEGIN
+${vfsJson}
+VFS_SNAPSHOT_END
+
+------------------------------------------------------------------------
+* BASH BOOTSTRAP DEPLOYMENT SCRIPT (install.sh) *
+------------------------------------------------------------------------
+#!/usr/bin/env bash
+# ClawOS Virtual deployment script
+echo "=== CLAWOS DEPLOYMENT INITIALIZER ==="
+echo "Montando estructura virtual..."
+mkdir -p /mnt/claw_root
+mount -t ext4 /dev/sda3 /mnt/claw_root
+
+echo "Escribiendo configuraciones del kernel..."
+echo "${isRoot ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/claw_root/etc/clawos/auth.conf
+echo "${sleepDisabled ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/claw_root/etc/systemd/sleep.conf
+
+echo "Iniciando descarga de modulos cognitivos..."
+curl -fsSL https://openclaw.ai/install.sh | bash
+
+echo "Sincronizando volumen de archivos del usuario..."
+sync
+echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
+`;
+
+            const blob = new Blob([isoDataContent], { type: "application/octet-stream" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `clawos-v1.1.2-live-${isRoot ? "root" : "user"}.iso`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            addLine("[SUCCESS] ¡Proceso de compilación de firmware completado con éxito!", "success");
+            addLine(`[SUCCESS] Se descargó el archivo 'clawos-v1.1.2-live-${isRoot ? "root" : "user"}.iso'.`, "success");
+          }, 1200);
+        }
         break;
 
       case "date":
@@ -584,6 +695,7 @@ export default function Terminal({
 
   return (
     <div
+      ref={terminalContainerRef}
       onClick={handleTerminalClick}
       className="relative flex-1 flex flex-col bg-slate-950 p-4 font-mono text-xs overflow-y-auto cursor-text select-text overflow-x-hidden"
       style={{ minHeight: "100%" }}
@@ -607,7 +719,6 @@ export default function Terminal({
             </div>
           );
         })}
-        <div ref={terminalEndRef} />
       </div>
 
       {/* Shell interactive command builder */}

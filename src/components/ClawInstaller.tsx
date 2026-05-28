@@ -49,6 +49,108 @@ export default function ClawInstaller({
   const [installLogs, setInstallLogs] = useState<string[]>([]);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
+  // ISO dynamic compiler configuration
+  const [isGeneratingIso, setIsGeneratingIso] = useState(false);
+  const [isoProgress, setIsoProgress] = useState(0);
+
+  const handleDownloadISO = () => {
+    if (isGeneratingIso) return;
+    setIsGeneratingIso(true);
+    setIsoProgress(0);
+
+    const interval = setInterval(() => {
+      setIsoProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsGeneratingIso(false);
+
+          // Generate detailed retro-structured boot text layout replicating a virtual CD-ROM
+          const vfsJson = JSON.stringify(vfs, null, 2);
+          const isoDataContent = `========================================================================
+CLAWOS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
+========================================================================
+Volume Label:  CLAWOS_LIVE_V112
+Publisher:     OpenClaw OS Foundation
+Architecture:  x86_amd64 / Intel Virtualization Cores
+Build Date:    2026-05-28 21:00 UTC
+Virtual Size:  142.6 MB
+
+[ BAKED KERNEL PARAMETERS - SELECTED INTEGRATED DIRECTIVES ]
+------------------------------------------------------------------------
+● AUTOLOGIN TARGET:    ${omitStandardUser ? "Superuser 'root' Direct Mode (No Passwords)" : "Standard User 'user_claw_developer'"}
+● ACPI POWER SUSPEND:  ${disableSleep ? "DISABLED PERMANENTLY (acpi=off sleep.allow=no)" : "ENABLED STANDARD POLICIES"}
+● CORE WEB SUITE:      ${defaultBrowserChromium ? "Chromium Web Browser Defaulting" : "Generic Web Host Controller"}
+------------------------------------------------------------------------
+
+* GRUB BOOTLOADER DESCRIPTOR & HARDWARE INVOCATOR *
+------------------------------------------------------------------------
+cat << 'GRUB_CONFIG'
+# /boot/grub/grub.cfg
+set default="0"
+set timeout=5
+
+menuentry "ClawOS Linux v1.1.2 Live CLI-GUI Environment (x86_64)" {
+    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
+    linux /boot/vmlinuz-openclaw console=ttyS0 quiet ${omitStandardUser ? "init=/bin/clawbash_root_init" : "init=/bin/clawbash_init"} ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-openclaw-direct.img
+}
+
+menuentry "ClawOS Recovery Console" {
+    linux /boot/vmlinuz-openclaw console=ttyS0 single
+    initrd /boot/initramfs-openclaw-direct.img
+}
+GRUB_CONFIG
+
+------------------------------------------------------------------------
+* RECREATING THE WORKSPACE LOCAL COGNITIVE STRUCTURE (JSON SNAPSHOT) *
+------------------------------------------------------------------------
+This snapshot matches your current virtual disk environment precisely.
+You can import or paste this VFS dump into ClawOS back-restores:
+
+VFS_SNAPSHOT_BEGIN
+${vfsJson}
+VFS_SNAPSHOT_END
+
+------------------------------------------------------------------------
+* BASH BOOTSTRAP DEPLOYMENT SCRIPT (install.sh) *
+------------------------------------------------------------------------
+#!/usr/bin/env bash
+# ClawOS Virtual deployment script
+echo "=== CLAWOS DEPLOYMENT INITIALIZER ==="
+echo "Montando estructura virtual..."
+mkdir -p /mnt/claw_root
+mount -t ext4 /dev/sda3 /mnt/claw_root
+
+echo "Escribiendo configuraciones del kernel..."
+echo "${omitStandardUser ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/claw_root/etc/clawos/auth.conf
+echo "${disableSleep ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/claw_root/etc/systemd/sleep.conf
+
+echo "Iniciando descarga de modulos cognitivos..."
+curl -fsSL https://openclaw.ai/install.sh | bash
+
+echo "Sincronizando volumen de archivos del usuario..."
+sync
+echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
+`;
+
+          const blob = new Blob([isoDataContent], { type: "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `clawos-v1.1.2-live-${omitStandardUser ? "root" : "user"}.iso`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          triggerNotification("¡Imagen ISO de ClawOS generada y descargada con éxito!", "success");
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 150);
+  };
+
   // Auto-scroll simulation logs
   useEffect(() => {
     if (logContainerRef.current) {
@@ -408,6 +510,52 @@ AllowSuspendThenHibernate=no`,
                     </p>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            {/* Custom option to obtain a Physical ISO image to download */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-dashed border-cyan-500/30 bg-gradient-to-br from-slate-950 to-cyan-950/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Download className="text-cyan-400 w-4 h-4 animate-bounce" />
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-cyan-400">¿Deseas descargar la imagen ISO oficial?</h5>
+                </div>
+                <span className="px-1.5 py-0.5 bg-cyan-455/10 bg-cyan-500/10 border border-cyan-500/20 text-[8px] font-mono text-cyan-300 rounded uppercase tracking-wider">
+                  Live ISO Build
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed text-left">
+                Puedes compilar una <strong>Imagen ISO Virtual Inteligente</strong> de ClawOS (<code className="text-cyan-300 font-mono text-[9px]">clawos-v1.1.2-live.iso</code>) armada a medida con tus parámetros de root ({omitStandardUser ? "Activado" : "Desactivado"}) y ACPI ({disableSleep ? "Desactivado" : "Activado"}). Contiene la firma del kernel, arranque con GRUB2, scripts de instalación y un respaldo JSON íntegro de tu sistema de archivos actual.
+              </p>
+              
+              <div className="pt-1">
+                {isGeneratingIso ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[11px] font-mono text-cyan-400">
+                      <span className="flex items-center space-x-1.5">
+                        <RefreshCw size={12} className="animate-spin text-cyan-400" />
+                        <span>Esbozando sectores del sector de arranque (MSR / MBR)...</span>
+                      </span>
+                      <span>{isoProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-1.5 rounded overflow-hidden">
+                      <div
+                        className="bg-cyan-400 h-full transition-all duration-300"
+                        style={{ width: `${isoProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleDownloadISO}
+                    className="w-full flex items-center justify-center space-x-1.5 px-3.5 py-2 bg-slate-900 border border-cyan-500/40 hover:bg-cyan-950/20 hover:border-cyan-400 text-cyan-300 rounded-lg text-xs font-semibold tracking-wide transition shadow-lg"
+                    id="btn-download-iso"
+                  >
+                    <Download size={13} className="text-cyan-400" />
+                    <span>Compilar y Descargar clawos-v1.1.2-live.iso</span>
+                  </button>
+                )}
               </div>
             </div>
 

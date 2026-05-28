@@ -417,13 +417,15 @@ export default function App() {
 
   // Notification engine trigger
   const triggerNotification = (text: string, type: "success" | "info" = "info") => {
-    const freshId = `not-${Date.now()}`;
-    setNotifications((prev) => [...prev, { id: freshId, text, type }]);
-    
-    // Auto erase toast after 4 sec
     setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== freshId));
-    }, 4000);
+      const freshId = `not-${Date.now()}`;
+      setNotifications((prev) => [...prev, { id: freshId, text, type }]);
+      
+      // Auto erase toast after 4 sec
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((n) => n.id !== freshId));
+      }, 4000);
+    }, 0);
   };
 
   const removeNotification = (id: string) => {

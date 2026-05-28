@@ -76,8 +76,8 @@ export default function GitHubUpdater({
   const [rebooting, setRebooting] = useState(false);
   const [rebootLogs, setRebootLogs] = useState<string[]>([]);
   
-  const logEndRef = useRef<HTMLDivElement>(null);
-  const rebootLogEndRef = useRef<HTMLDivElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const rebootLogContainerRef = useRef<HTMLDivElement>(null);
 
   // Persist settings
   useEffect(() => {
@@ -94,14 +94,20 @@ export default function GitHubUpdater({
 
   // Handle auto-scroll of consoles
   useEffect(() => {
-    if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTo({
+        top: logContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [updateLogs]);
 
   useEffect(() => {
-    if (rebootLogEndRef.current) {
-      rebootLogEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (rebootLogContainerRef.current) {
+      rebootLogContainerRef.current.scrollTo({
+        top: rebootLogContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [rebootLogs]);
 
@@ -415,7 +421,10 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
     <div className="flex-1 flex flex-col bg-slate-900 text-slate-350 min-h-0 select-none relative font-sans h-full">
       {/* Visual Simulated SYSTEM REBOOT OVERLAY */}
       {rebooting && (
-        <div className="absolute inset-0 bg-slate-950 z-[9999] p-6 flex flex-col font-mono text-xs text-emerald-400 select-none overflow-y-auto">
+        <div 
+          ref={rebootLogContainerRef}
+          className="absolute inset-0 bg-slate-950 z-[9999] p-6 flex flex-col font-mono text-xs text-emerald-400 select-none overflow-y-auto"
+        >
           <div className="max-w-xl mx-auto w-full space-y-2 py-4">
             <div className="flex items-center space-x-2 text-emerald-300 border-b border-emerald-950 pb-2 mb-3">
               <RefreshCw className="animate-spin text-emerald-400 duration-1000" size={16} />
@@ -425,9 +434,9 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
             <div className="space-y-1 text-[11px] leading-relaxed">
               {rebootLogs.map((log, idx) => {
                 let color = "text-slate-300";
-                if (log.includes("✔ [OK]")) color = "text-emerald-400 font-semibold";
-                else if (log.includes("CRITICAL:") || log.includes("REINICIANDO")) color = "text-cyan-400 font-bold";
-                else if (log.includes("exito")) color = "text-emerald-350 font-black tracking-wide";
+                if (log && log.includes("✔ [OK]")) color = "text-emerald-400 font-semibold";
+                else if (log && (log.includes("CRITICAL:") || log.includes("REINICIANDO"))) color = "text-cyan-400 font-bold";
+                else if (log && log.includes("exito")) color = "text-emerald-350 font-black tracking-wide";
                 
                 return (
                   <div key={idx} className={color}>
@@ -436,7 +445,6 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
                 );
               })}
             </div>
-            <div ref={rebootLogEndRef} />
           </div>
         </div>
       )}
@@ -695,13 +703,15 @@ del pipeline remoto de GitHub. Se ha montado el servicio de autoactualización.`
                 </div>
 
                 {/* Updating Micro Terminal Logger snippet */}
-                <div className="h-24 bg-slate-900 p-2 border border-slate-850 rounded font-mono text-[9px] text-slate-400 overflow-y-auto leading-relaxed flex flex-col space-y-1">
+                <div 
+                  ref={logContainerRef}
+                  className="h-24 bg-slate-900 p-2 border border-slate-850 rounded font-mono text-[9px] text-slate-400 overflow-y-auto leading-relaxed flex flex-col space-y-1"
+                >
                   {updateLogs.map((log, idx) => (
                     <div key={idx} className="whitespace-pre-wrap">
                       {log}
                     </div>
                   ))}
-                  <div ref={logEndRef} />
                 </div>
               </div>
             )}
