@@ -381,7 +381,7 @@ AllowSuspendThenHibernate=no`,
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 select-none text-slate-200">
+    <div className="flex-1 flex flex-col bg-slate-900 select-none text-slate-200 h-full overflow-hidden">
       
       {/* Visual Status Steps Wizard Header */}
       <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between select-none shrink-0">
