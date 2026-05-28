@@ -418,7 +418,7 @@ export default function App() {
   // Notification engine trigger
   const triggerNotification = (text: string, type: "success" | "info" = "info") => {
     setTimeout(() => {
-      const freshId = `not-${Date.now()}`;
+      const freshId = `not-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setNotifications((prev) => [...prev, { id: freshId, text, type }]);
       
       // Auto erase toast after 4 sec
