@@ -45,15 +45,29 @@ export default function ControlPanel() {
 
   // System Services
   const [services, setServices] = useState(() => {
+    const saved = localStorage.getItem("claw_system_services");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
     const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
-    return [
+    const initialServices = [
       { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
       { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
       { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
       { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
       { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
     ];
+    localStorage.setItem("claw_system_services", JSON.stringify(initialServices));
+    return initialServices;
   });
+
+  // Keep services persisted and dispatch event on update
+  useEffect(() => {
+    localStorage.setItem("claw_system_services", JSON.stringify(services));
+    window.dispatchEvent(new Event("storage"));
+  }, [services]);
 
   // Handle killing virtual processes
   const handleKillProcess = (pid: number) => {
@@ -540,6 +554,72 @@ export default function ControlPanel() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Install New Service Custom Section */}
+            <div className="bg-slate-950/75 p-4 rounded-xl border border-dashed border-slate-800 space-y-3 mt-1 shadow-inner" id="install-new-service-container">
+              <div>
+                <h4 className="text-xs font-bold text-slate-100 flex items-center space-x-1.5 font-mono">
+                  <Sliders size={13} className="text-emerald-400" />
+                  <span>[SISTEMA] INSTALAR NUEVO SERVICIO DAEMON</span>
+                </h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Agrega servicios personalizados al kernel. Nano Banana asimilará el socket al instante en su red de fondo dinámico.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                <div>
+                  <label className="block text-[9px] text-slate-500 mb-1 font-mono uppercase font-bold">Nombre del Servicio:</label>
+                  <input
+                    type="text"
+                    id="inst-service-name"
+                    placeholder="ej. Banana Database Cluster"
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] text-slate-500 mb-1 font-mono uppercase font-bold">Descripción Corta:</label>
+                  <input
+                    type="text"
+                    id="inst-service-desc"
+                    placeholder="ej. Respaldos redundantes en racimos de plátano"
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nameInput = document.getElementById("inst-service-name") as HTMLInputElement;
+                    const descInput = document.getElementById("inst-service-desc") as HTMLInputElement;
+                    const name = nameInput?.value?.trim();
+                    const desc = descInput?.value?.trim();
+
+                    if (!name || !desc) {
+                      alert("Por favor rellena el nombre y descripción del nuevo servicio.");
+                      return;
+                    }
+
+                    const newService = {
+                      id: "custom-" + Date.now(),
+                      name,
+                      description: desc,
+                      status: "active"
+                    };
+
+                    setServices((prev) => [...prev, newService]);
+                    nameInput.value = "";
+                    descInput.value = "";
+                    alert(`¡Servicio '${name}' instalado e iniciado con éxito! Nano Banana ha expandido su fondo dinámico.`);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 rounded font-semibold text-[11px] transition cursor-pointer font-sans"
+                >
+                  Registrar e Instalar Servicio
+                </button>
+              </div>
             </div>
 
             {/* Diagnostic system log snippet */}

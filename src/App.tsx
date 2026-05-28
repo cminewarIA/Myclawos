@@ -11,6 +11,7 @@ import ControlPanel from "./components/ControlPanel";
 import ClawInstaller from "./components/ClawInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
+import BananaWallpaper from "./components/BananaWallpaper";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -42,6 +43,43 @@ export default function App() {
     const isRoot = localStorage.getItem("claw_is_root") === "true";
     return isRoot ? ["root"] : ["home", "user"];
   });
+
+  // List of active system services for dynamic bg-molding
+  const [services, setServices] = useState<any[]>(() => {
+    const saved = localStorage.getItem("claw_system_services");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
+    const initialServices = [
+      { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+      { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
+      { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+      { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
+      { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
+    ];
+    localStorage.setItem("claw_system_services", JSON.stringify(initialServices));
+    return initialServices;
+  });
+
+  useEffect(() => {
+    const syncServices = () => {
+      const saved = localStorage.getItem("claw_system_services");
+      if (saved) {
+        try {
+          setServices(JSON.parse(saved));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener("storage", syncServices);
+    const interval = setInterval(syncServices, 1500);
+    return () => {
+      window.removeEventListener("storage", syncServices);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Active loaded file in editor
   const [openFilePath, setOpenFilePath] = useState<string[] | null>(null);
@@ -394,11 +432,10 @@ export default function App() {
 
   return (
     <div
-      style={{
-        backgroundImage: "radial-gradient(circle at 40% 40%, #1e293b 0%, #0f172a 100%)",
-      }}
-      className="w-full h-screen relative overflow-hidden font-sans text-slate-100 flex flex-col justify-between select-none"
+      className="w-full h-screen relative overflow-hidden font-sans text-slate-100 flex flex-col justify-between select-none bg-slate-950"
     >
+      {/* Dynamic Hourly Generative Wallpaper by Nano Banana */}
+      <BananaWallpaper services={services} />
       {/* Dynamic Notification Layer */}
       <div className="absolute top-4 right-4 z-[9999] flex flex-col space-y-2 max-w-sm w-full pointer-events-auto">
         {notifications.map((n) => (

@@ -158,6 +158,7 @@ export default function Terminal({
         addLine("  history           - Ver, buscar y re-ejecutar comandos anteriores.", "success");
         addLine("  clear             - Limpiar la pantalla de la terminal.", "output");
         addLine("  theme [color]     - Cambiar tema de la terminal (green, amber, white).", "output");
+        addLine("  install-service   - Instalar un nuevo servicio y asimilarlo en fondo.", "success");
         break;
 
       case "history":
@@ -251,6 +252,52 @@ export default function Terminal({
 
       case "pwd":
         addLine(getPathString(currentPath), "output");
+        break;
+
+      case "install-service":
+        if (!args[0] || !args[1]) {
+          addLine("Uso: install-service [nombre-del-servicio] [descripción breve...]", "error");
+          addLine("Ejemplo: install-service BananaSync 'Sincronizador automático de ramilletes'", "info");
+        } else {
+          const sName = args[0].replace(/-/g, " ");
+          const sDesc = args.slice(1).join(" ");
+          const sId = "custom-" + Date.now();
+          
+          let savedServices = [];
+          try {
+            const savedStr = localStorage.getItem("claw_system_services");
+            if (savedStr) savedServices = JSON.parse(savedStr);
+          } catch(err) {}
+          
+          if (savedServices.length === 0) {
+            const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
+            savedServices = [
+              { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+              { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
+              { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+              { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
+              { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
+            ];
+          }
+
+          const newService = {
+            id: sId,
+            name: sName,
+            description: sDesc,
+            status: "active"
+          };
+
+          savedServices.push(newService);
+          localStorage.setItem("claw_system_services", JSON.stringify(savedServices));
+          
+          addLine(`[SYSTEMD] Descargando y resolviendo dependencias para daemon: ${sName}...`, "info");
+          addLine(`[SYSTEMD] Enlazando sockets y cargando firmas unitarias...`, "info");
+          addLine(`[SUCCESS] ¡Servicio '${sName}' registrado y activado con éxito!`, "success");
+          addLine(`[SUCCESS] Nano Banana ha asimilado el nuevo nudo de servicio en el fondo dinámico.`, "success");
+          
+          // Dispatch window event so background updates smoothly
+          window.dispatchEvent(new Event("storage"));
+        }
         break;
 
       case "ls":
