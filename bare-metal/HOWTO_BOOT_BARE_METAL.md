@@ -4,6 +4,46 @@ Esta carpeta contiene los archivos fuentes reales de bajo nivel y las recetas de
 
 ---
 
+## 💡 Clarificación Crucial: ¿Es clawOS una Simulación o es Real?
+
+Este proyecto consta de **dos partes organizadas con absoluta honestidad de ingeniería**:
+
+1. **La Interfaz de Desarrollo que ves en tu Pantalla:** Es una aplicación interactiva en tiempo real (SPA con React + Node.js) diseñada para emular y programar la UX/UI de clawOS. Corre en un contenedor en la nube y sirve para "sandboxear" la apariencia de la interfaz.
+2. **Los archivos nativos de esta carpeta (`/bare-metal`):** Son **totalmente reales e instalables sobre el hardware**. Aquí tienes el binario de carga MBR (`boot.asm`), el cargador de arranque nativo UEFI en C (`uefi_loader.c`), y la receta de empaquetado ISO (`build_iso.sh`) que utiliza un kernel Linux real optimizado para empaquetar toda esta interfaz web de la aplicación y ejecutarla de forma auto-arrancable directamente sobre el ordenador en pantalla completa, sin Windows o macOS por debajo.
+
+---
+
+## 📶 Compatibilidad con Componentes Físicos: WiFi, Bluetooth y LTE / Móvil (LLT)
+
+Para que el sistema sea un **sistema "Claw-To-Go" 100% funcional** capaz de arrancar en cualquier placa madre y detectar inalámbricos de inmediato, la ISO Linux se construye empaquetando los siguientes controladores y sub-sistemas libres de firmware oficiales del kernel upstream:
+
+### 1. Controladores de Bluetooth (`Bluetooth`)
+*   **Pila de Protocolo:** `bluez` y `bluez-utils`.
+*   **Firmware inyectado en `/lib/firmware`:** Controladores universales de Broadcom (`brcm/`), Intel Wireless Bluetooth (`intel/`), y Realtek (`rtlbt/`).
+*   **Servicio de Arranque:** Activado por defecto en la construcción mediante:
+    ```bash
+    systemctl enable bluetooth.service
+    ```
+
+### 2. Controladores de Red Inalámbrica (`WiFi`)
+*   **Suministrador de Conexión:** `NetworkManager` junto a la suite `wpa_supplicant`.
+*   **Firmware inyectado en `/lib/firmware`:**
+    *   Chips Intel Centrino/Wireless-AC: `iwlwifi-*.ucode`
+    *   Chips Realtek (compatibles con la gran mayoría de dongles USB y módulos de laptop): `rtlwifi/`
+    *   Soporte Broadcom (MacBooks antiguos, portátiles HP/Dell): `brcm/` y `b43/`
+    *   Drivers de Atheros (Qualcomm): `ath10k/`, `ath11k/`
+
+### 3. Conectividad Móvil Banda Ancha (`LTE / LTE-M / 4G / 5G`)
+*   **Suministrador de Módems:** `ModemManager` y `usb-modeswitch` (para auto-conmutar módems USB de modo almacenamiento a modo interfaz de datos).
+*   **Protocolos de comunicación de chipsets físicos:** `libqmi` (módems Qualcomm Gobi/LTE), `libmbim` (módems LTE genéricos modernos) y el driver del kernel `cdc_ether` / `qmi_wwan`.
+*   **Servicio de Arranque:**
+    ```bash
+    systemctl enable ModemManager.service
+    ```
+    (Gestionará de inmediato la activación de tarjetas SIM y módems embebidos en el portátil para darte internet celular de inmediato).
+
+---
+
 ## Estructura de Archivos Bare-Metal creados
 *   `boot.asm` - Cargador de arranque Master Boot Record (MBR) escrito en **Ensamblador puro (16-bit x86 ASM)** para sistemas con BIOS Legacy antiguos o sistemas modernos con CSM (Compatibility Support Module) activado.
 *   `uefi_loader.c` - Cargador de arranque UEFI de 64 bits en **C nativo**, que usa la especificación e inicializa los buffers gráficos del ordenador físico antes de invocar la interfaz visual.

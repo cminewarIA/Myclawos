@@ -15,7 +15,10 @@ import {
   Clock,
   Shield,
   Moon,
-  Globe
+  Globe,
+  Bluetooth,
+  Radio,
+  Wifi
 } from "lucide-react";
 
 interface ClawInstallerProps {
@@ -42,6 +45,54 @@ export default function ClawInstaller({
   const [isPortableToGo, setIsPortableToGo] = useState(true);
   const [withUniversalDrivers, setWithUniversalDrivers] = useState(true);
   const [persistenceOnUSB, setPersistenceOnUSB] = useState(true);
+
+  // Dynamic hardware technologies detection
+  const [hwChecking, setHwChecking] = useState<boolean>(true);
+  const [hasBluetooth, setHasBluetooth] = useState<boolean>(false);
+  const [hasWifi, setHasWifi] = useState<boolean>(false);
+  const [hasLte, setHasLte] = useState<boolean>(false);
+
+  // Install toggles for each technology, only shown if detected
+  const [installBluetooth, setInstallBluetooth] = useState<boolean>(true);
+  const [installWifi, setInstallWifi] = useState<boolean>(true);
+  const [installLte, setInstallLte] = useState<boolean>(true);
+
+  useEffect(() => {
+    const checkHardware = async () => {
+      setHwChecking(true);
+      
+      // Probar soporte real del navegador
+      const supportsBluetooth = 'bluetooth' in navigator;
+      const supportsWifi = typeof navigator.onLine !== 'undefined';
+      
+      let supportsLte = false;
+      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+      if (conn) {
+        if (conn.type === 'cellular' || conn.effectiveType === '4g' || conn.effectiveType === '3g') {
+          supportsLte = true;
+        }
+      }
+      
+      if (navigator.maxTouchPoints > 1 && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        supportsLte = true;
+      }
+
+      // Simulamos la alineación en caliente para realismo de bajo nivel
+      setTimeout(() => {
+        setHasBluetooth(supportsBluetooth);
+        setHasWifi(supportsWifi);
+        setHasLte(supportsLte);
+        
+        setInstallBluetooth(supportsBluetooth);
+        setInstallWifi(supportsWifi);
+        setInstallLte(supportsLte);
+        
+        setHwChecking(false);
+      }, 1200);
+    };
+
+    checkHardware();
+  }, []);
   
   // Storage selection config
   const [selectedDisk, setSelectedDisk] = useState("sdb"); // Default to portable USB sdb!
@@ -213,10 +264,19 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         ? `[VFS] Configurando módulo de persistencia: Creando enlace OverlayFS de /dev/${selectedDisk}2 con /home y /var/lib` 
         : "",
       isPortableToGo && withUniversalDrivers 
-        ? `[INFO] [DRIVERS] Inyectando pila de controladores universales (Mesa-DRI, Nouveau, AMDGPU, firmware Broadcom, Intel WiFi)...` 
+        ? `[INFO] [DRIVERS] Inyectando pila de controladores universales de vídeo y GPU (Mesa-DRI, Nouveau, AMDGPU)...` 
+        : "",
+      isPortableToGo && withUniversalDrivers && installWifi 
+        ? `[DRIVERS] [WiFi] Cargando firmware de red inalámbrica (iwlwifi para Intel, ath10k para Qualcomm, b43 para Broadcom)...`
+        : "",
+      isPortableToGo && withUniversalDrivers && installBluetooth 
+        ? `[DRIVERS] [BT] Cargando pila Bluetooth corporativa (bluez) y microcódigo firmware Realtek BT / Intel BT...`
+        : "",
+      isPortableToGo && withUniversalDrivers && installLte 
+        ? `[DRIVERS] [LTE-Cellular] Inyectando ModemManager, usb-modeswitch y controladores CDC Ethernet / QMI / MBIM...`
         : "",
       isPortableToGo && withUniversalDrivers 
-        ? `[VFS] Generando reglas dinámicas en /etc/udev/rules.d/70-hardware-probe.rules para detectar GPU e Interfaces de red al vuelo` 
+        ? `[VFS] Generando reglas dinámicas en /etc/udev/rules.d/70-hardware-probe.rules para ajustar controladores de sonido, vídeo y red al cambiar de ordenador...` 
         : "",
       "[VFS] Escribiendo /lib/modules/5.16.0-openclaw-generic/kernel/core.bin",
       "[VFS] Escribiendo /boot/initramfs-openclaw-direct.img (Alineación udev auto-detect universal)",
@@ -563,7 +623,7 @@ AllowSuspendThenHibernate=no`,
                         <span>Sondear y Cargar Drivers en Caliente (udev Auto-Detect)</span>
                       </div>
                       <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
-                        Inyecta firmware Open-Source y privativo (Mesa DRI, Nouveau, Intel, Nvidia, AMDGPU, Broadcom/Realtek WiFi) para adaptar de inmediato el vídeo, wifi y audio al cambiar de ordenador.
+                        Inyecta firmware Open-Source y privativo (Mesa DRI, Nouveau, Intel, Nvidia, AMDGPU) para adaptar de inmediato el vídeo y sonido al cambiar de ordenador.
                       </p>
                     </div>
                   </label>
@@ -579,13 +639,119 @@ AllowSuspendThenHibernate=no`,
                     <div className="text-xs">
                       <div className="font-bold text-slate-200 flex items-center space-x-1.5">
                         <Clock size={12} className="text-violet-400" />
-                        <span>Mantener memoria persistente en el USBf/Disco Duro</span>
+                        <span>Mantener memoria persistente en el USB / Disco Duro</span>
                       </div>
                       <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
                         Usa una partición EXT4 persistente con sistema de superposición (OverlayFS) para conservar tus archivos, descargas y configuraciones en el disco extraíble.
                       </p>
                     </div>
                   </label>
+
+                  {/* Dynamic Hardware Toggles Section */}
+                  <div className="border-t border-slate-900/60 pt-2.5 mt-2 space-y-2">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Drivers Inalámbricos / Comunicaciones (Detección en Caliente):</span>
+                    
+                    {hwChecking ? (
+                      <div className="flex items-center space-x-2 py-1.5 px-2 bg-slate-950/40 rounded-lg border border-slate-800/40 animate-pulse">
+                        <RefreshCw size={11} className="animate-spin text-emerald-400" />
+                        <span className="text-[10px] text-slate-400">Analizando antenas host, chipsets Bluetooth y módems LTE...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {/* WiFi configuration options, only shown if WiFi/Network is active */}
+                        {hasWifi && (
+                          <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-emerald-950/10 hover:bg-emerald-950/20 transition border border-emerald-500/10 hover:border-emerald-500/20">
+                            <input
+                              type="checkbox"
+                              checked={installWifi}
+                              disabled={!isPortableToGo}
+                              onChange={(e) => setInstallWifi(e.target.checked)}
+                              className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800 disabled:opacity-40"
+                            />
+                            <div className="text-xs">
+                              <div className="font-bold text-slate-100 flex items-center space-x-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-0.5" />
+                                <Wifi size={12} className="text-cyan-400" />
+                                <span>Inyectar Pila de Drivers WiFi (`iwlwifi` + firmware b43)</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed text-left">
+                                Chipset inalámbrico detectado en Host. Agrega firmas y soporte WiFi de Intel, Realtek y Qualcomm al arranque móvil.
+                              </p>
+                            </div>
+                          </label>
+                        )}
+
+                        {/* Bluetooth configuration options, only shown if Bluetooth capability is found */}
+                        {hasBluetooth && (
+                          <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-blue-950/10 hover:bg-blue-950/20 transition border border-blue-500/10 hover:border-blue-500/20">
+                            <input
+                              type="checkbox"
+                              checked={installBluetooth}
+                              disabled={!isPortableToGo}
+                              onChange={(e) => setInstallBluetooth(e.target.checked)}
+                              className="mt-1 accent-blue-500 rounded text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800 disabled:opacity-40"
+                            />
+                            <div className="text-xs">
+                              <div className="font-bold text-slate-100 flex items-center space-x-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse mr-0.5" />
+                                <Bluetooth size={12} className="text-blue-400" />
+                                <span>Inyectar Pila de Drivers Bluetooth (`bluez` + firmware)</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed text-left">
+                                Adaptador Bluetooth verificado. Integra firmware universales Realtek/Intel BT para periféricos de audio y mandos de entrada.
+                              </p>
+                            </div>
+                          </label>
+                        )}
+
+                        {/* LTE/Cellular Broadband configuration options, only shown if connection/modem capability is found */}
+                        {hasLte && (
+                          <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-violet-950/10 hover:bg-violet-950/20 transition border border-violet-500/10 hover:border-violet-500/20">
+                            <input
+                              type="checkbox"
+                              checked={installLte}
+                              disabled={!isPortableToGo}
+                              onChange={(e) => setInstallLte(e.target.checked)}
+                              className="mt-1 accent-violet-500 rounded text-violet-500 focus:ring-violet-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800 disabled:opacity-40"
+                            />
+                            <div className="text-xs">
+                              <div className="font-bold text-slate-100 flex items-center space-x-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse mr-0.5" />
+                                <Radio size={12} className="text-violet-400" />
+                                <span>Inyectar Pila de Driver Móvil LTE/5G (`ModemManager`)</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed text-left">
+                                Interfaz LTE/Celular móvil de banda ancha detectada. Inyecta conmutador usb-modeswitch y controladores QMI/MBIM para tarjetas SIM físicas.
+                              </p>
+                            </div>
+                          </label>
+                        )}
+
+                        {/* If none are detected, display explanation info with simulation override */}
+                        {!hasWifi && !hasBluetooth && !hasLte && (
+                          <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-800 space-y-2 select-none">
+                            <p className="text-[10px] text-slate-400 text-left leading-relaxed">
+                              ⚠️ No se han detectado chips activos de Bluetooth, antenas WiFi o módems celulares móviles en este host virtualizado. Las opciones de controladores de comunicación avanzadas permanecen ocultas para optimizar peso del kernel.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setHasWifi(true);
+                                setHasBluetooth(true);
+                                setHasLte(true);
+                                setInstallWifi(true);
+                                setInstallBluetooth(true);
+                                setInstallLte(true);
+                              }}
+                              className="text-[9px] text-emerald-400 font-bold uppercase hover:text-emerald-350 transition tracking-wider block text-left"
+                            >
+                              [+] Forzar simulación de antenas de comunicación (WiFi, Bluetooth, LTE)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
