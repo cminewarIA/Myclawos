@@ -38,8 +38,13 @@ export default function ClawInstaller({
   const [disableSleep, setDisableSleep] = useState(true);
   const [defaultBrowserChromium, setDefaultBrowserChromium] = useState(true);
   
+  // Claw-To-Go portable driver & persistency states
+  const [isPortableToGo, setIsPortableToGo] = useState(true);
+  const [withUniversalDrivers, setWithUniversalDrivers] = useState(true);
+  const [persistenceOnUSB, setPersistenceOnUSB] = useState(true);
+  
   // Storage selection config
-  const [selectedDisk, setSelectedDisk] = useState("sda");
+  const [selectedDisk, setSelectedDisk] = useState("sdb"); // Default to portable USB sdb!
   const [partitionSuccess, setPartitionSuccess] = useState(false);
   const [isPartitioning, setIsPartitioning] = useState(false);
   
@@ -176,7 +181,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
     setInstallProgress(0);
     
     // Construct install arguments dynamically
-    const installArgs = `--beta${omitStandardUser ? " --root --no-user" : ""}${disableSleep ? " --disable-acpi-sleep" : ""}${defaultBrowserChromium ? " --default-browser=chromium" : ""}`;
+    const installArgs = `--beta${omitStandardUser ? " --root --no-user" : ""}${disableSleep ? " --disable-acpi-sleep" : ""}${defaultBrowserChromium ? " --default-browser=chromium" : ""}${isPortableToGo ? " --portable-to-go --with-universal-drivers" : ""}`;
     
     setInstallLogs([
       `$ curl -fsSL https://openclaw.ai/install.sh | bash -s -- ${installArgs}`,
@@ -193,19 +198,28 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       "                                                 ",
       " [Nucleo Súper Directo Inteligente OpenClaw Setup Suite]",
       "---------------------------------------------------------",
-      "[INFO] Comprobando integridad del destino /dev/sda3...",
-      "[INFO] Montando partición raíz virtual en /mnt/claw_root...",
+      `[INFO] Comprobando integridad de la unidad de destino /dev/${selectedDisk}... OK`,
+      `[INFO] Particiones de destino detectadas: /dev/${selectedDisk}1 [EFI], ${persistenceOnUSB && selectedDisk !== "sda" ? `/dev/${selectedDisk}2 [PERSISTENCIA], ` : ""}/dev/${selectedDisk}3 [RAÍZ]`,
+      `[INFO] Montando partición raíz virtual en /mnt/claw_root (apuntando a /dev/${selectedDisk}3)...`,
     ]);
 
     const logsList = [
       "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-openclaw-direct-root)...",
       "[NET] Descargado: 14.8 MB / 92.5 MB (Velocidad: 18.2 MB/s)",
-      "[NET] Descargado: 45.1 MB / 92.5 MB (Velocidad: 24.5 MB/s)",
-      "[NET] Descargado: 74.9 MB / 92.5 MB (Velocidad: 20.1 MB/s)",
       "[NET] Descargado: 92.5 MB / 92.5 MB (100% completado)",
       "[INFO] Desempaquetando archivos del Núcleo de Superusuario OpenClaw...",
+      isPortableToGo ? `[INFO] [CLAW-TO-GO] Configurando soporte portátil multidisco...` : "",
+      isPortableToGo && persistenceOnUSB && selectedDisk !== "sda" 
+        ? `[VFS] Configurando módulo de persistencia: Creando enlace OverlayFS de /dev/${selectedDisk}2 con /home y /var/lib` 
+        : "",
+      isPortableToGo && withUniversalDrivers 
+        ? `[INFO] [DRIVERS] Inyectando pila de controladores universales (Mesa-DRI, Nouveau, AMDGPU, firmware Broadcom, Intel WiFi)...` 
+        : "",
+      isPortableToGo && withUniversalDrivers 
+        ? `[VFS] Generando reglas dinámicas en /etc/udev/rules.d/70-hardware-probe.rules para detectar GPU e Interfaces de red al vuelo` 
+        : "",
       "[VFS] Escribiendo /lib/modules/5.16.0-openclaw-generic/kernel/core.bin",
-      "[VFS] Escribiendo /boot/initramfs-openclaw-direct.img",
+      "[VFS] Escribiendo /boot/initramfs-openclaw-direct.img (Alineación udev auto-detect universal)",
       "[VFS] Escribiendo /boot/vmlinuz-openclaw",
       omitStandardUser 
         ? "[INFO] [MODO ROOT] Omitiendo la creación de un usuario estándar básico..."
@@ -230,13 +244,15 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         : "",
       "[INFO] Inicializando puente cognitivo síncrono con la API de soporte general...",
       "[INFO] Clave de API principal detectada y enlazada de forma segura...",
-      "[INFO] Configurando gestor de arranque GRUB 2.06...",
+      `[INFO] Configurando gestor de arranque GRUB 2.06 compatible con BIOS Legacy y UEFI en /dev/${selectedDisk}...`,
       "[VFS] Configurando módulo ClawBash Shell predeterminado en /bin/clawbash",
       "[INFO] Depurando configuraciones y estableciendo permisos udev...",
       "[SUCCESS] ¡Proceso de instalación completado con éxito!",
-      omitStandardUser 
-        ? "[SUCCESS] ¡ClawOS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
-        : "[SUCCESS] OpenClaw Linux Beta ya está listo para arrancar en el espacio del usuario.",
+      isPortableToGo && persistenceOnUSB && selectedDisk !== "sda"
+        ? `[SUCCESS] ¡Instalación Claw-To-Go lista! Tus datos se mantendrán grabados físicamente en la unidad y podrás iniciar de inmediato en cualquier PC.`
+        : omitStandardUser 
+          ? "[SUCCESS] ¡ClawOS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
+          : "[SUCCESS] OpenClaw Linux Beta ya está listo para arrancar en el espacio del usuario.",
     ].filter(Boolean);
 
     let currentLogIndex = 0;
@@ -510,6 +526,67 @@ AllowSuspendThenHibernate=no`,
                     </p>
                   </div>
                 </label>
+
+                {/* 4. Claw-To-Go Portable Mode (Windows To Go Equivalent) */}
+                <div className="border-t border-slate-900 pt-3 mt-1 space-y-3">
+                  <h6 className="text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Opciones de Movilidad Extrema (Claw-To-Go):</h6>
+                  
+                  <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-emerald-950/20 hover:bg-emerald-950/30 transition border border-emerald-500/10 hover:border-emerald-500/30">
+                    <input
+                      type="checkbox"
+                      checked={isPortableToGo}
+                      onChange={(e) => setIsPortableToGo(e.target.checked)}
+                      className="mt-1 accent-emerald-550 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-slate-100 flex items-center space-x-1.5">
+                        <HardDrive size={12} className="text-emerald-400" />
+                        <span>Habilitar Modo Portable "Claw-To-Go" (Instalación Móvil)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed text-left">
+                        Configura el cargador de arranque y el kernel para correr desde discos duros externos/USB. Podrás mover el disco entre cualquier ordenador x86.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition border border-transparent hover:border-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={withUniversalDrivers}
+                      onChange={(e) => setWithUniversalDrivers(e.target.checked)}
+                      disabled={!isPortableToGo}
+                      className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800 disabled:opacity-40"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-slate-200 flex items-center space-x-1.5">
+                        <RefreshCw size={12} className="text-cyan-400" />
+                        <span>Sondear y Cargar Drivers en Caliente (udev Auto-Detect)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
+                        Inyecta firmware Open-Source y privativo (Mesa DRI, Nouveau, Intel, Nvidia, AMDGPU, Broadcom/Realtek WiFi) para adaptar de inmediato el vídeo, wifi y audio al cambiar de ordenador.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition border border-transparent hover:border-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={persistenceOnUSB}
+                      onChange={(e) => setPersistenceOnUSB(e.target.checked)}
+                      disabled={!isPortableToGo}
+                      className="mt-1 accent-emerald-500 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-950 border-slate-800 disabled:opacity-40"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-slate-200 flex items-center space-x-1.5">
+                        <Clock size={12} className="text-violet-400" />
+                        <span>Mantener memoria persistente en el USBf/Disco Duro</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
+                        Usa una partición EXT4 persistente con sistema de superposición (OverlayFS) para conservar tus archivos, descargas y configuraciones en el disco extraíble.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -580,75 +657,122 @@ AllowSuspendThenHibernate=no`,
                 <HardDrive size={16} className="text-emerald-400" />
                 <span>Gestor de Particionado Autónomo</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Define las áreas requeridas por ClawOS para cargar sus archivos raíz virtuales y sectores de arranque.</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Define las áreas requeridas por ClawOS para cargar sus archivos raíz virtuales y sectores de arranque.
+              </p>
             </div>
 
             {/* Simulated drive select */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
+                type="button"
                 onClick={() => setSelectedDisk("sda")}
                 className={`p-3 rounded-lg border text-left transition ${
                   selectedDisk === "sda"
-                    ? "bg-slate-950 border-emerald-500 text-slate-100"
+                    ? "bg-slate-950 border-cyan-500 text-slate-100 ring-1 ring-cyan-500/20"
                     : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
                 }`}
                 id="disk-select-sda"
               >
-                <div className="font-bold text-xs">Unidad Principal /dev/sda</div>
-                <div className="text-[9px] text-slate-500 mt-1">20.0 GB Disco de Arranque</div>
+                <div className="font-bold text-xs flex items-center justify-between">
+                  <span>Local HDD /dev/sda</span>
+                  <span className="text-[8px] bg-slate-800 text-slate-300 px-1 py-0.5 rounded">Fijo</span>
+                </div>
+                <div className="text-[9px] text-slate-500 mt-1">20.0 GB Disco de Arranque Interno</div>
               </button>
 
               <button
-                disabled
-                className="p-3 rounded-lg border border-slate-900 bg-slate-955 hover:cursor-not-allowed opacity-30 text-left"
+                type="button"
+                onClick={() => setSelectedDisk("sdb")}
+                className={`p-3 rounded-lg border text-left transition ${
+                  selectedDisk === "sdb"
+                    ? "bg-slate-950 border-emerald-500 text-slate-100 ring-1 ring-emerald-500/20"
+                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                }`}
+                id="disk-select-sdb"
               >
-                <div className="font-bold text-xs">Unidad Red /dev/sdb</div>
-                <div className="text-[9px] mt-1">No asignada</div>
+                <div className="font-bold text-xs flex items-center justify-between">
+                  <span>Portable USB /dev/sdb</span>
+                  <span className="text-[8px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded animate-pulse">To-Go (USB)</span>
+                </div>
+                <div className="text-[9px] text-slate-500 mt-1">128.0 GB SSD Portable de Alta Velocidad</div>
               </button>
 
               <button
-                disabled
-                className="p-3 rounded-lg border border-slate-900 bg-slate-955 hover:cursor-not-allowed opacity-30 text-left"
+                type="button"
+                onClick={() => setSelectedDisk("sdc")}
+                className={`p-3 rounded-lg border text-left transition ${
+                  selectedDisk === "sdc"
+                    ? "bg-slate-950 border-emerald-500 text-slate-100 ring-1 ring-emerald-500/20"
+                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                }`}
+                id="disk-select-sdc"
               >
-                <div className="font-bold text-xs">Partición local /dev/sdc</div>
-                <div className="text-[9px] mt-1">No asignada</div>
+                <div className="font-bold text-xs flex items-center justify-between">
+                  <span>Disco Móvil /dev/sdc</span>
+                  <span className="text-[8px] bg-emerald-950 text-emerald-400 px-1 py-0.5 rounded">To-Go (Ext)</span>
+                </div>
+                <div className="text-[9px] text-slate-500 mt-1">500.0 GB Disco Duro Externo Adaptable</div>
               </button>
             </div>
 
             {/* Visual allocation table representation */}
             <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-4">
               <div className="flex justify-between items-center select-none text-xs">
-                <span className="font-semibold text-slate-305">Sector de Particiones de Unidad /dev/sda:</span>
-                <span className="text-[10px] text-slate-500 font-mono">20480 Sectores Totales</span>
+                <span className="font-semibold text-slate-300">
+                  Sector de Particiones de Unidad <span className="text-emerald-400 font-mono">/dev/{selectedDisk}</span>:
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {selectedDisk === "sda" ? "20,480 MB Totales" : selectedDisk === "sdb" ? "131,072 MB Totales" : "512,000 MB Totales"}
+                </span>
               </div>
 
               {partitionSuccess ? (
                 <div className="space-y-3">
                   {/* Visually colored partitioned bar representation */}
-                  <div className="w-full h-8 rounded-lg flex overflow-hidden border border-slate-800">
-                    <div className="w-[10%] bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-mono text-[9px] font-bold border-r border-slate-800" title="Arrancador básico EFI">
-                      sda1 (EFI)
+                  <div className="w-full h-8 rounded-lg flex overflow-hidden border border-slate-800 select-none">
+                    <div className="w-[12%] bg-emerald-500/20 text-emerald-300 flex flex-col items-center justify-center font-mono text-[9px] font-bold border-r border-slate-800" title="Arrancador básico EFI compatible con UEFI/Legacy">
+                      <span>{selectedDisk}1</span>
+                      <span className="text-[7px] text-slate-400">EFI (FAT32)</span>
                     </div>
-                    <div className="w-[15%] bg-amber-505/20 bg-amber-500/10 text-amber-400 flex items-center justify-center font-mono text-[9px] font-bold border-r border-slate-800" title="Área de refresco temporal">
-                      sda2 (SWAP)
-                    </div>
-                    <div className="w-[75%] bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-mono text-[10px] font-bold" title="Espacio principal del sistema">
-                      sda3 (root, EXT4) 15.0 GB
+                    {persistenceOnUSB && selectedDisk !== "sda" ? (
+                      <div className="w-[48%] bg-violet-600/20 text-violet-300 flex flex-col items-center justify-center font-mono text-[9px] font-bold border-r border-slate-805 border-r border-slate-800" title="Partición de Persistencia en Caliente">
+                        <span>{selectedDisk}2</span>
+                        <span className="text-[7px] text-violet-400">PERSIST (EXT4)</span>
+                      </div>
+                    ) : (
+                      <div className="w-[18%] bg-amber-500/10 text-amber-500 flex flex-col items-center justify-center font-mono text-[9px] font-bold border-r border-slate-800" title="Área de refresco temporal">
+                        <span>{selectedDisk}2</span>
+                        <span className="text-[7px] text-slate-500">SWAP</span>
+                      </div>
+                    )}
+                    <div className="flex-1 bg-cyan-500/20 text-cyan-300 flex flex-col items-center justify-center font-mono text-[9px] font-bold" title="Espacio principal del sistema">
+                      <span>{selectedDisk}3</span>
+                      <span className="text-[7px] text-cyan-400">SISTEMA (EXT4)</span>
                     </div>
                   </div>
 
                   <div className="space-y-1.5 text-xs font-mono">
-                    <div className="flex justify-between text-slate-400 text-[11px]">
-                      <span>● /dev/sda1 (EFI FAT32 Boot)</span>
-                      <span>512 MB</span>
+                    <div className="flex justify-between text-slate-450 text-[11px]">
+                      <span className="text-slate-400">● /dev/{selectedDisk}1 [Boot UEFI/Legacy EFI FAT32]</span>
+                      <span className="text-slate-350">512 MB</span>
                     </div>
+                    {persistenceOnUSB && selectedDisk !== "sda" ? (
+                      <div className="flex justify-between text-violet-400 text-[11px] bg-violet-950/10 px-1 rounded">
+                        <span>● /dev/{selectedDisk}2 [Persistencia OverlayFS Activa - Los datos se guardan en el USB]</span>
+                        <span>{selectedDisk === "sdb" ? "64.0 GB" : "250.0 GB"}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-slate-400 text-[11px]">
+                        <span>● /dev/{selectedDisk}2 [SWAP Memoria de intercambio temporal]</span>
+                        <span>2048 MB</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-slate-400 text-[11px]">
-                      <span>● /dev/sda2 (SWAP Linux Swap Virtual)</span>
-                      <span>2048 MB</span>
-                    </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
-                      <span>● /dev/sda3 (System Primary Ext4)</span>
-                      <span>17.4 GB</span>
+                      <span>● /dev/{selectedDisk}3 [claw_root - Contenedor Principal del Sistema EXT4]</span>
+                      <span className="text-emerald-400 font-bold">
+                        {selectedDisk === "sda" ? "17.4 GB" : selectedDisk === "sdb" ? "63.4 GB" : "249.4 GB"}
+                      </span>
                     </div>
                   </div>
                 </div>
