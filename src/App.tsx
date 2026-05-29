@@ -122,148 +122,181 @@ export default function App() {
   }, []);
 
   // Window list states
-  const [windows, setWindows] = useState<WindowState[]>([
-    {
-      id: "terminal",
-      title: "ClawBash Terminal Virtual - user@openclaw",
-      isOpen: true,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 10,
-      position: { x: 40, y: 50 },
-      size: { width: 520, height: 350 },
-    },
-    {
-      id: "openclaw_core",
-      title: "OpenClaw AI Core Mainframe",
-      isOpen: true,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 15,
-      position: { x: 500, y: 100 },
-      size: { width: 440, height: 480 },
-    },
-    {
-      id: "file_manager",
-      title: "Explorador de Archivos Especial - ClawFM",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 5,
-      position: { x: 80, y: 110 },
-      size: { width: 580, height: 360 },
-    },
-    {
-      id: "text_editor",
-      title: "ClawEdit - Editor de Notas del Kernel",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 2,
-      position: { x: 140, y: 150 },
-      size: { width: 500, height: 380 },
-    },
-    {
-      id: "system_monitor",
-      title: "Monitor del Sistema - ClawMonitor",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 1,
-      position: { x: 190, y: 190 },
-      size: { width: 620, height: 420 },
-    },
-    {
-      id: "control_panel",
-      title: "Panel de Control de ClawOS - claw_control",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 3,
-      position: { x: 230, y: 160 },
-      size: { width: 660, height: 460 },
-    },
-    {
-      id: "installer",
-      title: "Instalador de ClawOS Beta Suite - claw_install_gui",
-      isOpen: true, // Let's open it by default so the user is directly presented with this amazing interactive installer tool on startup!
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 20,
-      position: { x: 190, y: 80 },
-      size: { width: 660, height: 500 },
-    },
-    {
-      id: "updater_github",
-      title: "Ajustes del Sistema y Control de Hardware - claw_settings",
-      isOpen: true,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 22,
-      position: { x: 210, y: 115 },
-      size: { width: 680, height: 520 },
-    },
-    {
-      id: "chromium",
-      title: "Chromium Web Browser - Navegador Predeterminado",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 12,
-      position: { x: 260, y: 130 },
-      size: { width: 720, height: 500 },
-    },
-    {
-      id: "pkg_htop",
-      title: "htop v3.2.0 - Monitor de Procesos Linux",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 6,
-      position: { x: 100, y: 110 },
-      size: { width: 620, height: 400 },
-    },
-    {
-      id: "pkg_neofetch",
-      title: "neofetch - Información de Hardware",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 7,
-      position: { x: 120, y: 130 },
-      size: { width: 520, height: 320 },
-    },
-    {
-      id: "pkg_cmatrix",
-      title: "cmatrix 1.8 - Lluvia Codificada",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 8,
-      position: { x: 140, y: 150 },
-      size: { width: 560, height: 380 },
-    },
-    {
-      id: "pkg_nginx",
-      title: "nginx.conf Suite - Servidor Web",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 9,
-      position: { x: 160, y: 170 },
-      size: { width: 600, height: 420 },
-    },
-    {
-      id: "pkg_retroarch",
-      title: "RetroArch Snake - Arcade Retro",
-      isOpen: false,
-      isMinimized: false,
-      isMaximized: false,
-      zIndex: 10,
-      position: { x: 180, y: 190 },
-      size: { width: 440, height: 480 },
-    },
-  ]);
+  const [windows, setWindows] = useState<WindowState[]>(() => {
+    const defaultWindows: WindowState[] = [
+      {
+        id: "terminal",
+        title: "ClawBash Terminal Virtual - user@openclaw",
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 10,
+        position: { x: 40, y: 50 },
+        size: { width: 520, height: 350 },
+      },
+      {
+        id: "openclaw_core",
+        title: "OpenClaw AI Core Mainframe",
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 15,
+        position: { x: 500, y: 100 },
+        size: { width: 440, height: 480 },
+      },
+      {
+        id: "file_manager",
+        title: "Explorador de Archivos Especial - ClawFM",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 5,
+        position: { x: 80, y: 110 },
+        size: { width: 580, height: 360 },
+      },
+      {
+        id: "text_editor",
+        title: "ClawEdit - Editor de Notas del Kernel",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 2,
+        position: { x: 140, y: 150 },
+        size: { width: 500, height: 380 },
+      },
+      {
+        id: "system_monitor",
+        title: "Monitor del Sistema - ClawMonitor",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 1,
+        position: { x: 190, y: 190 },
+        size: { width: 620, height: 420 },
+      },
+      {
+        id: "control_panel",
+        title: "Panel de Control de ClawOS - claw_control",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 3,
+        position: { x: 230, y: 160 },
+        size: { width: 660, height: 460 },
+      },
+      {
+        id: "installer",
+        title: "Instalador de ClawOS Beta Suite - claw_install_gui",
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 20,
+        position: { x: 190, y: 80 },
+        size: { width: 660, height: 500 },
+      },
+      {
+        id: "updater_github",
+        title: "Ajustes del Sistema y Control de Hardware - claw_settings",
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 22,
+        position: { x: 210, y: 115 },
+        size: { width: 680, height: 520 },
+      },
+      {
+        id: "chromium",
+        title: "Chromium Web Browser - Navegador Predeterminado",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 12,
+        position: { x: 260, y: 130 },
+        size: { width: 720, height: 500 },
+      },
+      {
+        id: "pkg_htop",
+        title: "htop v3.2.0 - Monitor de Procesos Linux",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 6,
+        position: { x: 100, y: 110 },
+        size: { width: 620, height: 400 },
+      },
+      {
+        id: "pkg_neofetch",
+        title: "neofetch - Información de Hardware",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 7,
+        position: { x: 120, y: 130 },
+        size: { width: 520, height: 320 },
+      },
+      {
+        id: "pkg_cmatrix",
+        title: "cmatrix 1.8 - Lluvia Codificada",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 8,
+        position: { x: 140, y: 150 },
+        size: { width: 560, height: 380 },
+      },
+      {
+        id: "pkg_nginx",
+        title: "nginx.conf Suite - Servidor Web",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 9,
+        position: { x: 160, y: 170 },
+        size: { width: 600, height: 420 },
+      },
+      {
+        id: "pkg_retroarch",
+        title: "RetroArch Snake - Arcade Retro",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 10,
+        position: { x: 180, y: 190 },
+        size: { width: 440, height: 480 },
+      },
+    ];
+
+    const saved = localStorage.getItem("clawos_windows_state");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return defaultWindows.map((defWin) => {
+            const matched = parsed.find((w) => w.id === defWin.id);
+            if (matched) {
+              return {
+                ...defWin,
+                isOpen: matched.isOpen,
+                isMinimized: matched.isMinimized,
+                isMaximized: matched.isMaximized,
+                zIndex: typeof matched.zIndex === "number" ? matched.zIndex : defWin.zIndex,
+                position: matched.position ? { ...defWin.position, ...matched.position } : defWin.position,
+                size: matched.size ? { ...defWin.size, ...matched.size } : defWin.size,
+              };
+            }
+            return defWin;
+          });
+        }
+      } catch (e) {
+        console.error("Error restoring windows state", e);
+      }
+    }
+    return defaultWindows;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("clawos_windows_state", JSON.stringify(windows));
+  }, [windows]);
 
   // Desktop environment states
   const [startMenuOpen, setStartMenuOpen] = useState(false);

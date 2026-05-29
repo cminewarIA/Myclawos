@@ -317,28 +317,30 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
 
     let currentLogIndex = 0;
     const intervalTime = 250; // slightly faster installs
+    let currentProgress = 0;
 
     const progressTimer = setInterval(() => {
-      setInstallProgress((prev) => {
-        const stepAmt = 6 + Math.floor(Math.random() * 9);
-        const next = Math.min(prev + stepAmt, 100);
-        
-        // Feed logs proportional to progress
-        if (currentLogIndex < logsList.length && next > (currentLogIndex * (100 / logsList.length))) {
-          setInstallLogs((old) => [...old, logsList[currentLogIndex]]);
-          currentLogIndex++;
-        }
+      const stepAmt = 6 + Math.floor(Math.random() * 9);
+      const next = Math.min(currentProgress + stepAmt, 100);
+      currentProgress = next;
+      setInstallProgress(next);
+      
+      // Feed logs proportional to progress
+      if (currentLogIndex < logsList.length && next > (currentLogIndex * (100 / logsList.length))) {
+        setInstallLogs((old) => [...old, logsList[currentLogIndex]]);
+        currentLogIndex++;
+      }
 
-        if (next >= 100) {
-          clearInterval(progressTimer);
-          setIsInstalling(false);
-          
-          let updatedVfs = vfs;
-          
-          const successFile: VFSNode = {
-            name: "certificacion_instalacion_beta.txt",
-            type: "file",
-            content: `=====================================================
+      if (next >= 100) {
+        clearInterval(progressTimer);
+        setIsInstalling(false);
+        
+        let updatedVfs = vfs;
+        
+        const successFile: VFSNode = {
+          name: "certificacion_instalacion_beta.txt",
+          type: "file",
+          content: `=====================================================
 CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO OPENCLAW
 =====================================================
 
@@ -348,15 +350,15 @@ Kernel Core: OpenClaw Beta Suite v1.1.0 (Multiplexed Cognition Module)
 Estado: Completamente Operativo, Conectado al CPU Virtual.
 
 ¡Gracias por instalar OpenClaw OS!`,
-          };
+        };
 
-          if (omitStandardUser) {
-            localStorage.setItem("claw_is_root", "true");
-            
-            const rootReadme: VFSNode = {
-              name: "leeme_root.txt",
-              type: "file",
-              content: `=====================================================
+        if (omitStandardUser) {
+          localStorage.setItem("claw_is_root", "true");
+          
+          const rootReadme: VFSNode = {
+            name: "leeme_root.txt",
+            type: "file",
+            content: `=====================================================
 ENTORNO DE ADMINISTRADOR CLAWOS - ACCESO ROOT DIRECTO
 =====================================================
 
@@ -370,12 +372,12 @@ POLÍTICAS APLICADAS:
 * Navegador predeterminado: Chromium Web Browser
 
 Usa comandos avanzados sin 'sudo'. Todo comando tiene privilegios directos de superusuario sin interrupción.`,
-            };
-            
-            const rootCert: VFSNode = {
-              name: "certificacion_instalacion_root.txt",
-              type: "file",
-              content: `=====================================================
+          };
+          
+          const rootCert: VFSNode = {
+            name: "certificacion_instalacion_root.txt",
+            type: "file",
+            content: `=====================================================
 CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO OPENCLAW (ROOT ACCESS)
 =====================================================
 
@@ -385,68 +387,66 @@ Kernel Core: OpenClaw Core System v1.1.2 (Direct Superuser Privileges Enabled)
 Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
 
 ¡Gracias por configurar su estación súper-servidora de ClawOS!`,
-            };
+          };
 
-            updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
-            updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
-          } else {
-            localStorage.setItem("claw_is_root", "false");
-            updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
-          }
+          updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
+          updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
+        } else {
+          localStorage.setItem("claw_is_root", "false");
+          updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
+        }
 
-          if (defaultBrowserChromium) {
-            localStorage.setItem("claw_default_browser", "chromium");
-            const chromConfig: VFSNode = {
-              name: "browser.conf",
-              type: "file",
-              content: `[Default Browser Configuration]
+        if (defaultBrowserChromium) {
+          localStorage.setItem("claw_default_browser", "chromium");
+          const chromConfig: VFSNode = {
+            name: "browser.conf",
+            type: "file",
+            content: `[Default Browser Configuration]
 BROWSER_BINARY=/bin/chromium-browser
 DEFAULT_BROWSER=Chromium
 CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
 URL_HOME=https://openclaw.ai`,
-            };
-            updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
-            // Also write a system bin link for running chromium
-            updatedVfs = setNodeAtPath(updatedVfs, ["bin"], "chromium", {
-              name: "chromium",
-              type: "file",
-              content: "[Binary Executable - Chromium Web Browser default system browser]",
-            });
-          } else {
-            localStorage.setItem("claw_default_browser", "custom");
-          }
+          };
+          updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
+          // Also write a system bin link for running chromium
+          updatedVfs = setNodeAtPath(updatedVfs, ["bin"], "chromium", {
+            name: "chromium",
+            type: "file",
+            content: "[Binary Executable - Chromium Web Browser default system browser]",
+          });
+        } else {
+          localStorage.setItem("claw_default_browser", "custom");
+        }
 
-          if (disableSleep) {
-            localStorage.setItem("claw_sleep_disabled", "true");
-            const sleepConfig: VFSNode = {
-              name: "sleep.conf",
-              type: "file",
-              content: `[Sleep/Hibernation Disable Configuration]
+        if (disableSleep) {
+          localStorage.setItem("claw_sleep_disabled", "true");
+          const sleepConfig: VFSNode = {
+            name: "sleep.conf",
+            type: "file",
+            content: `[Sleep/Hibernation Disable Configuration]
 # Desactivación estricta de suspensiones por parámetros del Kernel de Súper Usuario
 AllowSuspend=no
 AllowHibernation=no
 AllowHybridSleep=no
 AllowSuspendThenHibernate=no`,
-            };
-            updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
-          } else {
-            localStorage.removeItem("claw_sleep_disabled");
-          }
-
-          setVfs(updatedVfs);
-
-          setTimeout(() => {
-            setStep(4);
-            triggerNotification(
-              omitStandardUser 
-                ? "¡ClawOS instalado correctamente en modo Root!" 
-                : "¡Instalación exitosa! OpenClaw Kernel enlazado.", 
-              "success"
-            );
-          }, 600);
+          };
+          updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
+        } else {
+          localStorage.removeItem("claw_sleep_disabled");
         }
-        return next;
-      });
+
+        setVfs(updatedVfs);
+
+        setTimeout(() => {
+          setStep(4);
+          triggerNotification(
+            omitStandardUser 
+              ? "¡ClawOS instalado correctamente en modo Root!" 
+              : "¡Instalación exitosa! OpenClaw Kernel enlazado.", 
+            "success"
+          );
+        }, 600);
+      }
     }, intervalTime);
   };
 

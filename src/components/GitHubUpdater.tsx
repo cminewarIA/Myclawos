@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { VFSNode } from "../types";
 import { setNodeAtPath } from "../vfs";
+import DragonLogo from "./DragonLogo";
 import { 
   Github, 
   GitBranch, 
@@ -55,8 +56,25 @@ export default function GitHubUpdater({
   triggerNotification,
 }: GitHubUpdaterProps) {
   // Navigation tabs (Windows Control Panel style + sidebar)
-  const [activeTab, setActiveTab] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github">("index");
+  const [activeTab, setActiveTab] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github" | "lan_security">("index");
   
+  // WAN / Internet Connection Blocking Firewall States
+  const [wanBlocked, setWanBlocked] = useState<boolean>(() => {
+    return localStorage.getItem("claw_wan_blocked") === "true";
+  });
+
+  const toggleWanFirewall = () => {
+    const newState = !wanBlocked;
+    setWanBlocked(newState);
+    localStorage.setItem("claw_wan_blocked", String(newState));
+    window.dispatchEvent(new Event("claw_network_changed"));
+    if (newState) {
+      triggerNotification("Cortafuegos activado: Tráfico de Internet (WAN) bloqueado. Red Local (LAN) aislada.", "success");
+    } else {
+      triggerNotification("Cortafuegos modificado: Conexión libre a Internet (WAN) permitida.", "info");
+    }
+  };
+
   // Simulated stats and configurations
   const [wifiEnabled, setWifiEnabled] = useState(true);
   const [selectedWifi, setSelectedWifi] = useState("ClawNet_5G_Corporate");
@@ -608,6 +626,27 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
                 </div>
               </button>
 
+              {/* Card 9: LAN Access & WAN Firewall */}
+              <button
+                onClick={() => setActiveTab("lan_security")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-red-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+                id="btn-category-lan-security"
+                title="Configura el cortafuegos, bloquea conexiones a internet y habilita la red local"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                    <ShieldAlert size={16} className="text-rose-450 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold font-mono ${wanBlocked ? "bg-red-500/15 text-red-400 border border-red-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
+                    {wanBlocked ? "WAN BLOQUEADA" : "LAN+WAN LIBRE"}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-rose-400 transition">Cortafuegos y Red Local</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Habilita acceso web local y bloquea accesos externos de Internet.</p>
+                </div>
+              </button>
+
             </div>
           </div>
         </div>
@@ -1113,57 +1152,273 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
 
       {/* SECTION 6: Android APK Compiler */}
       {activeTab === "apk" && (
-        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4">
+        <div className="flex-1 p-5 overflow-y-auto max-w-4xl mx-auto w-full space-y-4">
           <div className="border-b border-slate-800 pb-3">
             <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
               <Smartphone size={14} className="text-yellow-400 animate-pulse" />
               <span>Prueba Móvil: Compilador APK & Rotación en Vivo</span>
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">Cómo empaquetar la interfaz de clawOS para ejecutarla desde cualquier teléfono móvil con rotación fluida.</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Cómo empaquetar la interfaz de clawOS para ejecutarla desde cualquier teléfono móvil con rotación fluida y el logo de la marca.</p>
           </div>
 
-          <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
-                <Download size={18} className="text-yellow-400 animate-bounce" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            
+            {/* Left side: Guide & triggers */}
+            <div className="space-y-4">
+              <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
+                    <Download size={18} className="text-yellow-400 animate-bounce" />
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-bold text-slate-100 block">Soporte nativo Cordova / Capacitor para Android</span>
+                    <span className="text-[10px] text-slate-500">Detecta orientación en vivo, adapta barra de estado y el cargador al vuelo.</span>
+                  </div>
+                </div>
+
+                <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
+                  ClawOS está programado en su totalidad con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Se ajustará perfectamente de forma automática al detectar el cambio de proporciones en el dispositivo. En posición vertical, esconde interfaces densas para facilitar controles limpios al operante.
+                </p>
+
+                <div className="text-xs font-mono space-y-1.5 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
+                  <div className="flex justify-between">
+                    <span>Auto-rotation detection (JS Sensor):</span>
+                    <span className="text-emerald-400">ENABLED</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Viewport adjust tags:</span>
+                    <span className="text-cyan-400">width=device-width, initial-scale=1.0</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={handleDownloadApkBuildKit}
+                    className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-slate-950 text-xs font-bold rounded-lg transition"
+                  >
+                    <Download size={13} fill="currentColor" />
+                    <span>Descargar Script Script-Build-APK</span>
+                  </button>
+                </div>
               </div>
-              <div className="text-xs">
-                <span className="font-bold text-slate-100 block">Soporte nativo Cordova / Capacitor para Android</span>
-                <span className="text-[10px] text-slate-500">Detecta orientación en vivo, adapta barra de estado y el cargador al vuelo.</span>
+
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
+                <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico DSM Móvil:</span>
+                <p className="text-[10px]">
+                  Al abrir la URL de desarrollo de AI Studio en tu Navegador Web móvil (Chrome/Safari), el sistema detectará al instante si giras la pantalla de tu móvil para adecuar los widgets, barras y el lanzador al vuelo.
+                </p>
               </div>
             </div>
 
-            <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
-              ClawOS está programado en su totalidad con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Se ajustará perfectamente de forma automática al detectar el cambio de proporciones en el dispositivo. En posición vertical, esconde interfaces densas para facilitar controles limpios al operante.
-            </p>
+            {/* Right side: Interactive Smartphone Emulator Mockup */}
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-950/40 border border-slate-800 rounded-2xl relative">
+              <span className="text-[9px] uppercase font-mono text-slate-500 font-bold mb-3 block text-center">Simulador de Chasis del Emulador Móvil</span>
 
-            <div className="text-xs font-mono space-y-1.5 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
-              <div className="flex justify-between">
-                <span>Auto-rotation detection (JS Sensor):</span>
-                <span className="text-emerald-400">ENABLED</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Viewport adjust tags:</span>
-                <span className="text-cyan-400">width=device-width, initial-scale=1.0</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
+              {/* Toggle switch */}
               <button
-                onClick={handleDownloadApkBuildKit}
-                className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-slate-950 text-xs font-bold rounded-lg transition"
+                onClick={() => setSimulatedOrientation(old => old === "landscape" ? "portrait" : "landscape")}
+                className="mb-4 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-md text-[10px] text-yellow-400 font-bold hover:bg-slate-850 flex items-center space-x-1.5 transition select-none shadow"
               >
-                <Download size={13} fill="currentColor" />
-                <span>Descargar Script Script-Build-APK</span>
+                <RotateCcw size={10} className="text-yellow-400" />
+                <span>Girar Teléfono: {simulatedOrientation === "landscape" ? "Horizontal" : "Vertical"}</span>
               </button>
+
+              {/* Physical phone outline */}
+              <div 
+                className="bg-slate-950 border-[5px] border-slate-800 rounded-[36px] p-2.5 shadow-2xl transition-all duration-500 relative flex items-center justify-center overflow-hidden border-t-[8px]"
+                style={{
+                  width: simulatedOrientation === "portrait" ? "210px" : "340px",
+                  height: simulatedOrientation === "portrait" ? "340px" : "210px"
+                }}
+              >
+                {/* Micro camera notch */}
+                <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-14 h-4 bg-slate-900 rounded-full z-20 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 bg-slate-950 rounded-full" />
+                </div>
+
+                {/* Inner simulated screen */}
+                <div className="w-full h-full bg-slate-900 rounded-[24px] overflow-hidden flex flex-col relative text-[9px] select-none text-slate-300">
+                  {/* Lock bar status */}
+                  <div className="bg-slate-950/90 py-1 px-3 text-[8.5px] flex justify-between font-mono shrink-0 select-none z-10 border-b border-slate-850 text-[7px]">
+                    <span className="text-slate-400">12:35 PM</span>
+                    <div className="flex space-x-1 text-slate-400 items-center">
+                      <Wifi size={8} className="text-emerald-400" />
+                      <span className="text-emerald-400 text-[6.5px]">5G</span>
+                      <span className="w-3.5 h-1.5 bg-slate-400 border border-slate-500 rounded-sm inline-block" />
+                    </div>
+                  </div>
+
+                  {/* Wallpaper viewport */}
+                  <div className="flex-1 bg-gradient-to-br from-indigo-950/40 via-slate-950 to-pink-950/35 p-3 flex flex-col items-center justify-between relative">
+                    
+                    {/* Top indicator title */}
+                    <div className="text-center font-mono text-[7px] text-slate-500">
+                      ClawOS-Mobile Pro
+                    </div>
+
+                    {/* App icon on lock screen/launcher */}
+                    <div 
+                      onClick={() => triggerNotification("Iniciando emulador móvil clawOS...", "success")}
+                      className="text-center space-y-2 cursor-pointer group flex flex-col items-center"
+                    >
+                      <div className="w-12 h-12 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-center shadow shadow-pink-500/10 group-hover:scale-105 active:scale-95 transition-transform p-1">
+                        <DragonLogo size={42} glow={true} className="text-white" />
+                      </div>
+                      <span className="font-sans font-extrabold text-[9px] text-slate-100 group-hover:text-yellow-400 block tracking-tight">ClawOS Mobile</span>
+                    </div>
+
+                    {/* Hint text bottom */}
+                    <div className="text-[7.5px] text-slate-500 text-center uppercase font-bold animate-pulse">
+                      [Tocar el logo para arrancar]
+                    </div>
+
+                    {/* Home Indicator bar */}
+                    <div className="w-16 h-1 bg-slate-800 rounded-full" />
+                  </div>
+                </div>
+              </div>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 9: LAN Local Access & WAN Firewall */}
+      {activeTab === "lan_security" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-2xl mx-auto w-full space-y-4">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <ShieldAlert size={14} className="text-rose-400 animate-pulse" />
+              <span>Cortafuegos del Sistema & Red de Acceso Local (LAN)</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">Permite conectar clientes de la red doméstica y aisla el equipo de llamadas de Internet externas.</p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
-            <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico DSM Móvil:</span>
-            <p className="text-[10px]">
-              Al abrir la URL de desarrollo de AI Studio en tu Navegador Web móvil (Chrome/Safari), el sistema detectará al instante si giras la pantalla de tu móvil para adecuar los widgets, barras y el lanzador al vuelo.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Box 1: WAN Internet Blocker */}
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3.5 text-left">
+              <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Protección Anti-WAN:</span>
+              
+              <div className="flex items-center justify-between py-1 bg-slate-900 px-2.5 rounded-lg border border-slate-850">
+                <span className="text-xs text-slate-300 font-semibold">Bloquear Internet (WAN)</span>
+                <button
+                  onClick={toggleWanFirewall}
+                  className="p-0.5 hover:bg-slate-950 rounded transition"
+                  id="btn-toggle-wan-block"
+                >
+                  {wanBlocked ? (
+                    <span className="text-red-400 flex items-center space-x-1">
+                      <span className="text-[9px] font-mono font-bold uppercase mr-1 px-1.5 py-0.5 bg-red-400/10 border border-red-400/20 rounded">BLOQUEADO</span>
+                      <ToggleRight size={26} className="text-red-450" />
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 flex items-center space-x-1">
+                      <span className="text-[9px] font-mono mr-1">Permitido</span>
+                      <ToggleLeft size={26} className="text-slate-500" />
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
+                Al activar este modo, ClawOS aislará por completo el espacio de red de llamadas de Internet externas, manteniendo las carpetas y conexiones accesibles únicamente dentro de la red local (LAN).
+              </p>
+
+              {/* Network flow mockup */}
+              <div className="p-2.5 bg-slate-900 rounded font-mono text-[9px] leading-relaxed border border-slate-850/60 text-slate-400">
+                <div className="flex justify-between py-0.5">
+                  <span>Interfaz local (eth0/wlan0):</span>
+                  <span className="text-emerald-400 font-bold">ACTIVA</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span>Tráfico red interna (LAN):</span>
+                  <span className="text-emerald-400 font-semibold">PERMITIDO (Aislado)</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span>Rutas pasarela de Internet:</span>
+                  <span className={wanBlocked ? "text-red-400 font-black" : "text-emerald-400 font-semibold"}>
+                    {wanBlocked ? "🔒 RECHAZADO (DROP)" : "✔ ABIERTO (WAN)"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Box 2: LAN Local Web Server listening */}
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3.5 text-left flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Enlace de Servidor en Red Local (LAN):</span>
+                <div className="p-2.5 bg-slate-900 border border-slate-850 rounded-lg space-y-1">
+                  <span className="text-[8px] font-mono text-slate-500 block">URL de Acceso Local activa:</span>
+                  <span className="text-cyan-400 font-mono text-xs font-bold block">
+                    http://{ethIp}:3000
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-405 leading-relaxed">
+                  Cualquier ordenador o móvil de la red wifi de tu hogar u oficina puede acceder a la interfaz web de ClawOS desde su navegador tecleando esa dirección IP.
+                </p>
+              </div>
+
+              {/* LAN client lists */}
+              <div className="space-y-1.5 border-t border-slate-900 pt-2">
+                <span className="text-[9px] uppercase font-mono text-slate-550 block font-bold">Clientes LAN Diagnosticados:</span>
+                <div className="space-y-1 max-h-20 overflow-y-auto scrollbar-thin">
+                  {[
+                    { ip: "192.168.1.10", name: "Móvil de CMineWar (Emulador)", type: "phone", status: "Permitido (LAN)" },
+                    { ip: "192.168.1.42", name: "Tablet Dormitorio", type: "tablet", status: "Permitido (LAN)" },
+                    { ip: "192.168.1.18", name: "Smart TV Salón", type: "tv", status: "Permitido (LAN)" },
+                    { ip: "8.8.8.8", name: "DNS Resolver WAN", type: "external", status: "Bloqueado" },
+                  ].map((client) => {
+                    const isExternal = client.type === "external";
+                    const isBlocked = wanBlocked && isExternal;
+                    return (
+                      <div key={client.ip} className="flex justify-between text-[8px] font-mono py-0.5 border-b border-slate-900/40">
+                        <span className="text-slate-350 truncate max-w-[125px]">{client.name}</span>
+                        <span className={isBlocked ? "text-rose-450" : "text-emerald-400"}>
+                          {isBlocked ? "🔒 DROP" : "🟢 LAN"} • {client.ip}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* QR code scanning simulation */}
+          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 text-left">
+            <span className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Escanear enlace para móvil o tablet:</span>
+            
+            <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
+              {/* Simulated Elegant Vector QR Code */}
+              <div className="w-20 h-20 bg-white p-2 rounded-lg flex flex-col justify-between shrink-0 relative hover:scale-105 transition-transform duration-300">
+                <div className="grid grid-cols-4 gap-0.5 flex-1 p-0.5">
+                  {[
+                    1,0,1,1,
+                    0,1,0,1,
+                    1,0,0,1,
+                    1,1,1,0
+                  ].map((px, i) => (
+                    <div key={i} className={`rounded-sm ${px === 1 ? 'bg-slate-950' : 'bg-transparent'}`} />
+                  ))}
+                </div>
+                {/* Visual marker squares */}
+                <div className="absolute top-1 right-1 w-3.5 h-3.5 border-2 border-slate-950 bg-white" />
+                <div className="absolute top-1 left-1/3 w-3.5 h-3.5 border-2 border-slate-950 bg-white" />
+                <div className="absolute bottom-1 right-1 w-3.5 h-3.5 border-2 border-slate-950 bg-white" />
+              </div>
+
+              <div className="text-xs space-y-1.5 flex-1 leading-relaxed text-slate-400">
+                <span className="font-bold text-slate-100 block">Acceso inalámbrico instantáneo</span>
+                <p className="text-[10px]">
+                  Apunta tu teléfono al código QR para capturar de inmediato el enlace local. Al sintonizarse por sockets, la pantalla de tu móvil servirá como terminal inalámbrico para ClawOS.
+                </p>
+                <div className="text-[9px] font-mono text-cyan-400">
+                  IP LAN: {ethIp} • Canal: WiFi {selectedWifi}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

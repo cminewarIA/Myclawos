@@ -19,6 +19,16 @@ export default function Chromium() {
   const [currentSearch, setCurrentSearch] = useState("");
   const [isSecure, setIsSecure] = useState(true);
   
+  const [wanBlocked, setWanBlocked] = useState(() => localStorage.getItem("claw_wan_blocked") === "true");
+
+  React.useEffect(() => {
+    const handleNetworkChange = () => {
+      setWanBlocked(localStorage.getItem("claw_wan_blocked") === "true");
+    };
+    window.addEventListener("claw_network_changed", handleNetworkChange);
+    return () => window.removeEventListener("claw_network_changed", handleNetworkChange);
+  }, []);
+
   // Custom states for simulated sites
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResultActive, setSearchResultActive] = useState(false);
@@ -61,6 +71,29 @@ export default function Chromium() {
 
   // Render webpage content based on the address
   const renderWebpageContent = () => {
+    if (wanBlocked) {
+      return (
+        <div className="bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-8 text-center min-h-full font-sans select-none">
+          <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4">
+            <Lock className="text-rose-455 w-8 h-8 animate-pulse" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-100">Acceso a Internet Bloqueado</h2>
+          <p className="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed">
+            El cortafuegos corporativo de ClawOS para instalaciones reales en disco duro tiene activado el <strong className="text-rose-400">Aislamiento LAN Seguro</strong>.
+          </p>
+          <div className="mt-4 p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-left font-mono text-[10px] w-full max-w-sm space-y-1.5 text-slate-400">
+            <div><span className="text-slate-500">Destino intentado:</span> <span className="text-rose-400 font-bold truncate inline-block max-w-[150px] align-bottom">{url}</span></div>
+            <div><span className="text-slate-500">Servicio de filtrado:</span> <span className="text-yellow-400 font-bold">claw-firewall.service</span></div>
+            <div><span className="text-slate-500">Estado de ruta WAN:</span> <span className="text-red-400 font-bold">RECHAZADO (DROP 0.0.0.0/0)</span></div>
+            <div><span className="text-slate-500">Direcciones permitidas:</span> <span className="text-emerald-400 font-bold">Sólo IPs locales (192.168.1.0/24)</span></div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-4 leading-relaxed">
+            💡 Para navegar libremente por Internet de nuevo, desactiva la opción <strong className="text-pink-400">"Bloquear Internet (WAN)"</strong> desde la pestaña Cortafuegos de Ajustes de Hardware.
+          </p>
+        </div>
+      );
+    }
+
     // 1. GITHUB SIMULATION (Extremely tailored to cminewarIA/Myclawos)
     if (url.includes("github.com/cminewarIA/Myclawos") || url.includes("github.com/cminewaria/myclawos")) {
       return (
