@@ -66,24 +66,41 @@ export default function App() {
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
 
-  // Touchscreen / Tactile mode state (Auto-detected & manually persistable)
+  // Touchscreen / Tactile mode state (Auto-detected and dynamic)
   const [touchMode, setTouchMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem("cminewar_touch_mode");
-    if (saved !== null) {
-      return saved === "true";
-    }
-    // Auto-detect touch layout if on tactile screen
     if (typeof window !== "undefined") {
       const isCoarse = window.matchMedia("(pointer: coarse)").matches;
       const isTouchPoints = navigator.maxTouchPoints > 0;
-      return isCoarse || isTouchPoints;
+      const isSmallScreen = window.innerWidth < 1024;
+      return isCoarse || isTouchPoints || isSmallScreen;
     }
     return false;
   });
 
   useEffect(() => {
-    localStorage.setItem("cminewar_touch_mode", String(touchMode));
-  }, [touchMode]);
+    const handleResizeOrDetect = () => {
+      if (typeof window !== "undefined") {
+        const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+        const isTouchPoints = navigator.maxTouchPoints > 0;
+        const isSmallScreen = window.innerWidth < 1024;
+        setTouchMode(isCoarse || isTouchPoints || isSmallScreen);
+      }
+    };
+
+    window.addEventListener("resize", handleResizeOrDetect);
+    
+    // Fallback if the user interacts via touch
+    const handleTouchStart = () => {
+      setTouchMode(true);
+      window.removeEventListener("touchstart", handleTouchStart);
+    };
+    window.addEventListener("touchstart", handleTouchStart);
+
+    return () => {
+      window.removeEventListener("resize", handleResizeOrDetect);
+      window.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, []);
 
   // Virtual File System State
   const [vfs, setVfs] = useState<VFSNode>(initialVFS);
@@ -724,19 +741,19 @@ export default function App() {
         {/* Desktop grid launchers */}
         <div className={`select-none transition-all z-10 ${
           touchMode 
-            ? "absolute inset-x-4 top-4 bottom-32 xs:bottom-28 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-x-4 gap-y-7 p-4 auto-rows-max justify-center items-start overflow-y-auto" 
+            ? "absolute inset-x-3.5 top-3.5 bottom-24 grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-2 gap-y-5.5 p-2 auto-rows-max justify-center items-start overflow-y-auto" 
             : "grid grid-flow-row absolute left-6 top-6 gap-6 w-24"
         }`}>
           {[
-            { id: "openclaw_core", name: "CMineWar AI", icon: <DragonLogo size={touchMode ? 38 : 32} />, border: "group-hover:border-rose-500/60" },
-            { id: "terminal", name: "Terminal", icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" },
-            { id: "file_manager", name: "Archivos VFS", icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" },
-            { id: "text_editor", name: "Editor Notas", icon: <FileText className={`text-amber-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" },
-            { id: "system_monitor", name: "Monitor", icon: <Cpu className={`text-violet-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-violet-500/60" },
-            { id: "control_panel", name: "Panel Control", icon: <Sliders className={`text-emerald-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" },
-            { id: "installer", name: "Instalar Kern", icon: <Download className={`text-cyan-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" },
-            { id: "updater_github", name: "Ajustes SO", icon: <Settings className={`text-pink-400 animate-pulse ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500" },
-            { id: "chromium", name: "Chromium", icon: <Globe className={`text-blue-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-blue-400/60" },
+            { id: "openclaw_core", name: "CMineWar AI", icon: <DragonLogo size={touchMode ? 25 : 32} />, border: "group-hover:border-rose-500/60" },
+            { id: "terminal", name: "Terminal", icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" },
+            { id: "file_manager", name: "Archivos VFS", icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" },
+            { id: "text_editor", name: "Editor Notas", icon: <FileText className={`text-amber-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" },
+            { id: "system_monitor", name: "Monitor", icon: <Cpu className={`text-violet-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-violet-500/60" },
+            { id: "control_panel", name: "Panel Control", icon: <Sliders className={`text-emerald-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" },
+            { id: "installer", name: "Instalar Kern", icon: <Download className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" },
+            { id: "updater_github", name: "Ajustes SO", icon: <Settings className={`text-pink-400 animate-pulse ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500" },
+            { id: "chromium", name: "Chromium", icon: <Globe className={`text-blue-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-blue-400/60" },
           ].map((launcher) => (
             <div
               key={launcher.id}
@@ -753,12 +770,12 @@ export default function App() {
               id={`launcher-${launcher.id}`}
             >
               <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 ${launcher.border} flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
-                touchMode ? "w-14 h-14 rounded-2xl scale-110 shadow-emerald-950/30" : "w-12 h-12 rounded-xl"
+                touchMode ? "w-11 h-11 rounded-xl shadow-md border-emerald-500/15" : "w-12 h-12 rounded-xl"
               }`}>
                 {launcher.icon}
               </div>
-              <span className={`font-semibold text-slate-100 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
-                touchMode ? "text-[12px] mt-2.5" : "text-[11px] mt-1.5"
+              <span className={`font-semibold text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
+                touchMode ? "text-[10px] mt-1.5" : "text-[11px] mt-1.5"
               }`}>
                 {launcher.name}
               </span>
@@ -774,12 +791,12 @@ export default function App() {
             id="launcher-app-drawer"
           >
             <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 group-hover:border-emerald-400 flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
-              touchMode ? "w-14 h-14 rounded-2xl scale-110 shadow-emerald-950/30" : "w-12 h-12 rounded-xl"
+              touchMode ? "w-11 h-11 rounded-xl shadow-md border-emerald-500/15" : "w-12 h-12 rounded-xl"
             }`}>
-              <LayoutGrid className={`text-emerald-400 group-hover:scale-105 transition-all ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />
+              <LayoutGrid className={`text-emerald-400 group-hover:scale-105 transition-all ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />
             </div>
-            <span className={`font-black text-slate-100 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
-              touchMode ? "text-[12px] mt-2.5" : "text-[11px] mt-1.5"
+            <span className={`font-black text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
+              touchMode ? "text-[10px] mt-1.5" : "text-[11px] mt-1.5"
             }`}>
               Cajón Apps
             </span>
@@ -1101,7 +1118,7 @@ export default function App() {
 
       {/* Bottom Taskbar */}
       <div className={`bg-slate-950/95 border-t border-slate-800/85 px-4 flex items-center justify-between z-[9999] select-none shrink-0 pointer-events-auto transition-all duration-300 ${
-        touchMode ? "h-15 sm:h-16 py-2" : "h-12"
+        touchMode ? "h-13 py-1.5" : "h-12"
       }`}>
         <div className="flex items-center space-x-3.5">
           {/* Start button */}
@@ -1109,7 +1126,7 @@ export default function App() {
             onClick={() => setStartMenuOpen(!startMenuOpen)}
             className={`flex items-center space-x-2 rounded-md font-sans border transition-all ${
               touchMode
-                ? "px-4 py-2.5 text-sm shadow-md shadow-emerald-500/20 font-bold scale-105"
+                ? "px-3 py-1.5 text-xs shadow shadow-emerald-500/10 font-bold scale-100"
                 : "px-3 py-1.5 text-xs font-semibold tracking-wide"
             } ${
               startMenuOpen
@@ -1118,7 +1135,7 @@ export default function App() {
             }`}
             id="btn-start-system"
           >
-            <Bot size={touchMode ? 15 : 13} className="text-white shrink-0 animate-bounce" style={{ animationDuration: '3s' }} />
+            <Bot size={touchMode ? 14 : 13} className="text-white shrink-0 animate-bounce" style={{ animationDuration: '3s' }} />
             <span>CMineWar OS</span>
           </button>
 
@@ -1140,7 +1157,7 @@ export default function App() {
                     }
                   }}
                   className={`select-none font-sans font-medium flex items-center transition border ${
-                    touchMode ? "px-4 py-2 text-sm space-x-2 rounded-lg" : "px-3 py-1.5 text-xs space-x-1.5 rounded"
+                    touchMode ? "px-3 py-1.5 text-xs space-x-1.5 rounded" : "px-3 py-1.5 text-xs space-x-1.5 rounded"
                   } ${
                     active
                       ? "bg-slate-900 text-emerald-400 border-slate-800 font-semibold"
@@ -1150,20 +1167,20 @@ export default function App() {
                   }`}
                   id={`taskbar-tab-${win.id}`}
                 >
-                  {win.id === "terminal" && <TerminalIcon size={touchMode ? 14 : 12} />}
-                  {win.id === "openclaw_core" && <DragonLogo size={touchMode ? 16 : 14} />}
-                  {win.id === "file_manager" && <FolderOpen size={touchMode ? 14 : 12} />}
-                  {win.id === "text_editor" && <FileText size={touchMode ? 14 : 12} />}
-                  {win.id === "system_monitor" && <Cpu size={touchMode ? 14 : 12} />}
-                  {win.id === "control_panel" && <Sliders size={touchMode ? 14 : 12} />}
-                  {win.id === "installer" && <Download size={touchMode ? 14 : 12} />}
-                  {win.id === "updater_github" && <Settings size={touchMode ? 14 : 12} className="text-pink-400" />}
-                  {win.id === "chromium" && <Globe size={touchMode ? 14 : 12} />}
-                  {win.id === "pkg_htop" && <Cpu size={touchMode ? 14 : 12} className="text-emerald-400" />}
-                  {win.id === "pkg_neofetch" && <Laptop size={touchMode ? 14 : 12} className="text-emerald-400" />}
-                  {win.id === "pkg_cmatrix" && <TerminalIcon size={touchMode ? 14 : 12} className="text-emerald-400" />}
-                  {win.id === "pkg_nginx" && <Network size={touchMode ? 14 : 12} className="text-emerald-400" />}
-                  {win.id === "pkg_retroarch" && <Tv size={touchMode ? 14 : 12} className="text-emerald-400" />}
+                  {win.id === "terminal" && <TerminalIcon size={12} />}
+                  {win.id === "openclaw_core" && <DragonLogo size={14} />}
+                  {win.id === "file_manager" && <FolderOpen size={12} />}
+                  {win.id === "text_editor" && <FileText size={12} />}
+                  {win.id === "system_monitor" && <Cpu size={12} />}
+                  {win.id === "control_panel" && <Sliders size={12} />}
+                  {win.id === "installer" && <Download size={12} />}
+                  {win.id === "updater_github" && <Settings size={12} className="text-pink-400" />}
+                  {win.id === "chromium" && <Globe size={12} />}
+                  {win.id === "pkg_htop" && <Cpu size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_neofetch" && <Laptop size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_cmatrix" && <TerminalIcon size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_nginx" && <Network size={12} className="text-emerald-400" />}
+                  {win.id === "pkg_retroarch" && <Tv size={12} className="text-emerald-400" />}
                   <span className="truncate max-w-[110px]">{getFriendlyAppName(win.id)}</span>
                 </button>
               );
@@ -1173,34 +1190,6 @@ export default function App() {
 
         {/* System tray parameters with Tactile Mode indicator toggle */}
         <div className="flex items-center space-x-4 text-xs text-slate-400">
-          
-          {/* Interactive Tactile Mode Switch */}
-          <button
-            onClick={() => {
-              const nextMode = !touchMode;
-              setTouchMode(nextMode);
-              triggerNotification(
-                `Modo Táctil ${nextMode ? "ACTIVADO" : "DESACTIVADO"}: ${
-                  nextMode 
-                    ? "Interfaz completamente adaptada a pantallas táctiles y móviles." 
-                    : "Retornando a la interfaz de escritorio clásica."
-                }`,
-                "success"
-              );
-            }}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-              touchMode
-                ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-400 font-extrabold shadow shadow-amber-500/20"
-                : "bg-slate-900 hover:bg-slate-850 border-slate-850 text-slate-400 hover:text-slate-300"
-            }`}
-            title={touchMode ? "Desactivar optimización táctil" : "Activar optimización táctil"}
-            id="btn-toggle-touch-mode"
-          >
-            <Smartphone size={13} className={touchMode ? "text-amber-400 animate-pulse" : "text-slate-500"} />
-            <span className="text-[10px] tracking-wider font-mono font-bold">
-              TÁCTIL: {touchMode ? "ON" : "OFF"}
-            </span>
-          </button>
 
           {/* Signal and hardware tray indicators */}
           <div className="hidden sm:flex items-center space-x-3 text-slate-500 border-r border-slate-900 pr-4">
