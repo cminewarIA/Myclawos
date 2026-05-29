@@ -21,6 +21,7 @@ interface TerminalProps {
   openWindow: (windowId: string) => void;
   onOpenFileInEditor: (filePath: string[], fileName: string, content: string) => void;
   onPostChatMessageFromShell: (text: string) => void;
+  touchMode?: boolean;
 }
 
 export default function Terminal({
@@ -31,6 +32,7 @@ export default function Terminal({
   openWindow,
   onOpenFileInEditor,
   onPostChatMessageFromShell,
+  touchMode = false,
 }: TerminalProps) {
   const [lines, setLines] = useState<TerminalLine[]>(() => {
     const isRoot = localStorage.getItem("claw_is_root") === "true";
@@ -720,6 +722,37 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           );
         })}
       </div>
+
+      {/* Touch Mode On-Screen Auxiliary Command Keys (Fully touchscreen/tablet optimized) */}
+      {touchMode && (
+        <div className="flex items-center space-x-1.5 overflow-x-auto py-2 shrink-0 select-none scrollbar-thin scrollbar-thumb-slate-800 touch-pan-x border-t border-slate-900/60 mt-3">
+          <span className="text-[10px] uppercase font-mono text-slate-500 font-black shrink-0 mr-1 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-900">
+            Comandos:
+          </span>
+          {[
+            { label: "ls", cmd: "ls" },
+            { label: "cd ..", cmd: "cd .." },
+            { label: "clear", cmd: "clear" },
+            { label: "help", cmd: "help" },
+            { label: "neofetch", cmd: "neofetch" },
+            { label: "whoami", cmd: "whoami" },
+            { label: "uname -a", cmd: "uname -a" },
+            { label: "openclaw", cmd: "openclaw ¿qué servicios están activos?" },
+            { label: "top", cmd: "top" },
+          ].map((btn, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                executeCommand(btn.cmd);
+              }}
+              className="px-3 py-1 bg-slate-950 border border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-900 active:bg-emerald-950/40 text-[11px] font-mono text-slate-300 hover:text-emerald-400 rounded-md whitespace-nowrap transition cursor-pointer"
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Shell interactive command builder */}
       <div className="flex items-center space-x-1.5 border-t border-slate-900/60 pt-3 mt-4 shrink-0">

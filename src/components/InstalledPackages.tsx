@@ -12,11 +12,11 @@ export function PkgHtop() {
   const [memPercent, setMemPercent] = useState(24);
   const [tasks, setTasks] = useState([
     { pid: 1, user: "root", pri: 20, ni: 0, virt: "14M", res: "2304", cpu: 0.0, mem: 0.1, time: "0:02.15", command: "/sbin/init splash" },
-    { pid: 42, user: "root", pri: 20, ni: 0, virt: "582M", res: "420M", cpu: 4.5, mem: 2.5, time: "4:12.35", command: "/usr/bin/openclaw-kernel-core" },
-    { pid: 50, user: "user", pri: 20, ni: 0, virt: "45M", res: "22M", cpu: 0.2, mem: 0.1, time: "0:01.44", command: "clawbash-shell" },
+    { pid: 42, user: "root", pri: 20, ni: 0, virt: "582M", res: "420M", cpu: 4.5, mem: 2.5, time: "4:12.35", command: "/usr/bin/cminewar-kernel-core" },
+    { pid: 50, user: "user", pri: 20, ni: 0, virt: "45M", res: "22M", cpu: 0.2, mem: 0.1, time: "0:01.44", command: "cminewarbash-shell" },
     { pid: 120, user: "root", pri: 20, ni: 0, virt: "220M", res: "180M", cpu: 1.2, mem: 1.1, time: "1:22.05", command: "/usr/bin/Xorg :0" },
     { pid: 210, user: "root", pri: 20, ni: 0, virt: "105M", res: "85M", cpu: 2.1, mem: 0.5, time: "2:05.11", command: "network-analyzer-daemon" },
-    { pid: 301, user: "user", pri: 20, ni: 0, virt: "380M", res: "250M", cpu: 1.8, mem: 1.5, time: "3:44.20", command: "claw-desktop-env" },
+    { pid: 301, user: "user", pri: 20, ni: 0, virt: "380M", res: "250M", cpu: 1.8, mem: 1.5, time: "3:44.20", command: "cminewar-desktop-env" },
     { pid: 405, user: "user", pri: 20, ni: 0, virt: "410M", res: "310M", cpu: 5.6, mem: 1.8, time: "0:55.30", command: "google-gemini-channel" },
     { pid: 812, user: "user", ni: 0, pri: 20, virt: "15M", res: "6M", cpu: 15.0, mem: 0.1, time: "0:01.02", command: "htop" }
   ]);
@@ -201,24 +201,24 @@ export function PkgNeofetch() {
   \\\\  /    \\\\  /
    \\\\/      \\\\/
 
-      CLAW OS`}
+    CMINEWAR OS`}
           </div>
 
           {/* Metadata info */}
           <div className="md:col-span-8 space-y-1.5 leading-relaxed">
-            <h3 className="text-emerald-300 font-bold text-sm">user@openclaw-workspace</h3>
+            <h3 className="text-emerald-300 font-bold text-sm">user@cminewar-workspace</h3>
             <p className="border-b border-slate-800 pb-1.5 text-slate-550"></p>
-            <div><span className="text-emerald-400 font-bold">OS:</span> clawOS v1.1.0-beta6 x86_64</div>
-            <div><span className="text-emerald-400 font-bold">Host:</span> AI Studio Sandbox Engine</div>
-            <div><span className="text-emerald-400 font-bold">Kernel:</span> 5.16.0-openclaw-direct-generic</div>
+            <div><span className="text-emerald-400 font-bold">OS:</span> CMineWar OS Debian-Live v1.2.0 x86_64</div>
+            <div><span className="text-emerald-400 font-bold">Host:</span> AI Studio Debian-Native Sandbox Engine</div>
+            <div><span className="text-emerald-400 font-bold">Kernel:</span> 5.16.0-cminewar-debian-generic</div>
             <div><span className="text-emerald-400 font-bold">Uptime:</span> 3 hours, 21 mins</div>
-            <div><span className="text-emerald-400 font-bold">Shell:</span> ClawBash v1.2.0-secure</div>
+            <div><span className="text-emerald-400 font-bold">Shell:</span> CMineWarBash v1.2.0-secure</div>
             <div><span className="text-emerald-400 font-bold">Resolution:</span> {window.innerWidth}x{window.innerHeight} (Autoscaled)</div>
-            <div><span className="text-emerald-400 font-bold">DE:</span> Synology-Claw Desktop Environment (ClawDE)</div>
+            <div><span className="text-emerald-400 font-bold">DE:</span> CMineWar Desktop Environment (CMineWarDE)</div>
             <div><span className="text-emerald-400 font-bold">WM:</span> WindowFrame Container Handler</div>
             <div><span className="text-emerald-400 font-bold">Terminal:</span> HTML5 xterm Canvas-multiplex</div>
             <div><span className="text-emerald-400 font-bold">CPU:</span> Intel Xeon CPU (4 cores, @2.30 GHz)</div>
-            <div><span className="text-emerald-400 font-bold">GPU:</span> OpenClaw Virtual FrameBuffer Virtual Mesa DRI</div>
+            <div><span className="text-emerald-400 font-bold">GPU:</span> CMineWar Virtual FrameBuffer Virtual Mesa DRI</div>
             <div><span className="text-emerald-400 font-bold">Memory:</span> 4120MB / 16384MB (25% en uso)</div>
 
             {/* Color accent block representation */}
@@ -424,7 +424,7 @@ export function PkgNginx() {
           🌍 <span className="text-slate-450 font-bold uppercase block mb-0.5">Nginx Service Status:</span>
           Master Process PID: 1205 (Active Listener) <br />
           Port: 8080 (Virtual Server Blocks) <br />
-          Server name: clawos_local_vhost.cl <br />
+          Server name: cminewar_local_vhost.cl <br />
           Log path: /var/log/nginx/access_virtual.log
         </div>
       </div>
@@ -434,7 +434,7 @@ export function PkgNginx() {
         <div className="p-3 bg-slate-900/60 border-b border-slate-900/80 flex justify-between items-center text-xs scroll-p-2 font-mono">
           <span className="text-slate-400 flex items-center space-x-1.5">
             <Laptop size={11} className="text-cyan-400" />
-            <span>Navegador Virtual: http://clawos_local_vhost.cl/</span>
+            <span>Navegador Virtual: http://cminewar_local_vhost.cl/</span>
           </span>
           <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">200 OK</span>
         </div>
@@ -465,7 +465,7 @@ export function PkgNginx() {
 export function PkgRetroarch() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
-    return Number(localStorage.getItem("claw_snake_highscore") || 0);
+    return Number(localStorage.getItem("cminewar_snake_highscore") || 0);
   });
   const [gameOver, setGameOver] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -545,7 +545,7 @@ export function PkgRetroarch() {
             const next = s + 10;
             if (next > highScore) {
               setHighScore(next);
-              localStorage.setItem("claw_snake_highscore", String(next));
+              localStorage.setItem("cminewar_snake_highscore", String(next));
             }
             return next;
           });

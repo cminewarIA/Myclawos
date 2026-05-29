@@ -78,7 +78,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
   // Let's list the core services to display
   // Include standard service list & make sure they have layout positions
   const displayServices = [
-    { id: "openclaw-brain", name: "OpenClaw AI Brain System", status: "active", isCore: true },
+    { id: "cminewar-brain", name: "CMineWar AI Brain System", status: "active", isCore: true },
     ...services.map(s => ({ ...s, isCore: false }))
   ];
 
@@ -249,7 +249,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           <path id="core-text-path" d="M -42,0 A 42,42 0 1,1 42,0" fill="none" />
           <text fontSize="6.5" fontWeight="bold" fill="rgba(255, 255, 255, 0.45)" letterSpacing="1.2" className="font-mono">
             <textPath href="#core-text-path" startOffset="50%" textAnchor="middle">
-              OPENCLAW KERNEL COGNITIVE FORCE
+              CMINEWAR KERNEL DEBIAN FORCE
             </textPath>
           </text>
         </g>
@@ -343,7 +343,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
             <span className="text-emerald-400 font-bold">{displayServices.length} Sockets</span>
           </div>
           <p className="text-[9px] text-slate-500 italic leading-normal border-t border-slate-900/40 mt-1.5 pt-1.5">
-            💡 Nano Banana está asimilando a OpenClaw y a los {services.filter(s => s.status === 'active').length} servicios instalados para moldear su firma espectral.
+            💡 Nano Banana está asimilando a CMineWar AI y a los {services.filter(s => s.status === 'active').length} servicios instalados para moldear su firma espectral, manteniendo el logo de dragón sagrado de CMineWar OS intacto e inalterable.
           </p>
         </div>
 
@@ -390,6 +390,11 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
                 </button>
               );
             })}
+          </div>
+
+          {/* Secure Logo Constraint Status */}
+          <div className="text-[8.5px] mt-1 text-emerald-400/90 tracking-wide font-extrabold flex items-center justify-center space-x-1 py-1 px-1.5 rounded bg-emerald-950/30 border border-emerald-800/40 text-center select-none leading-relaxed">
+            <span>🛡️ DRAGON LOGO SECURE - UNALTERABLE BY NANO BANANA DECENTRALIZATION 🛡️</span>
           </div>
 
           {/* Sockets notification hint */}

@@ -60,14 +60,14 @@ export default function GitHubUpdater({
   
   // WAN / Internet Connection Blocking Firewall States
   const [wanBlocked, setWanBlocked] = useState<boolean>(() => {
-    return localStorage.getItem("claw_wan_blocked") === "true";
+    return localStorage.getItem("cminewar_wan_blocked") === "true";
   });
 
   const toggleWanFirewall = () => {
     const newState = !wanBlocked;
     setWanBlocked(newState);
-    localStorage.setItem("claw_wan_blocked", String(newState));
-    window.dispatchEvent(new Event("claw_network_changed"));
+    localStorage.setItem("cminewar_wan_blocked", String(newState));
+    window.dispatchEvent(new Event("cminewar_network_changed"));
     if (newState) {
       triggerNotification("Cortafuegos activado: Tráfico de Internet (WAN) bloqueado. Red Local (LAN) aislada.", "success");
     } else {
@@ -77,9 +77,9 @@ export default function GitHubUpdater({
 
   // Simulated stats and configurations
   const [wifiEnabled, setWifiEnabled] = useState(true);
-  const [selectedWifi, setSelectedWifi] = useState("ClawNet_5G_Corporate");
+  const [selectedWifi, setSelectedWifi] = useState("CMineWarNet_5G_Corporate");
   const [wifiList, setWifiList] = useState([
-    { ssid: "ClawNet_5G_Corporate", signal: 98, lock: true, status: "connected" },
+    { ssid: "CMineWarNet_5G_Corporate", signal: 98, lock: true, status: "connected" },
     { ssid: "Aeropuerto_Gratis_WiFi", signal: 45, lock: false, status: "available" },
     { ssid: "MyHome_Fiber_Optic", signal: 82, lock: true, status: "available" },
     { ssid: "Vecino_No_Tocar", signal: 30, lock: true, status: "available" },
@@ -108,8 +108,8 @@ export default function GitHubUpdater({
 
   // LTE Settings
   const [lteEnabled, setLteEnabled] = useState(false);
-  const [selectedCarrier, setSelectedCarrier] = useState("ClawMobile LTE-Advanced");
-  const [apnPlausible, setApnPlausible] = useState("internet.claw.mvno");
+  const [selectedCarrier, setSelectedCarrier] = useState("CMineWarMobile LTE-Advanced");
+  const [apnPlausible, setApnPlausible] = useState("internet.cminewar.mvno");
 
   // Display Settings
   const [currentResolution, setCurrentResolution] = useState("auto");
@@ -132,7 +132,7 @@ export default function GitHubUpdater({
 
   // Package installation manager states
   const [installedPackages, setInstalledPackages] = useState<string[]>(() => {
-    const saved = localStorage.getItem("claw_installed_packages");
+    const saved = localStorage.getItem("cminewar_installed_packages");
     return saved ? JSON.parse(saved) : [];
   });
   const [installingPkg, setInstallingPkg] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function GitHubUpdater({
   
   const packagesCatalog = [
     { id: "pkg_htop", name: "htop v3.2.0", type: "Monitor de Procesos", desc: "Monitor en tiempo real de hilos de CPU y consumo de memoria ram en entorno de consola interactivo.", icon: CpuThemeIcon },
-    { id: "pkg_neofetch", name: "neofetch v7.1", type: "Información de Hardware", desc: "Imprime un hermoso logotipo pixelado de ClawOS junto con metadatos del sistema host actual.", icon: Laptop },
+    { id: "pkg_neofetch", name: "neofetch v7.1", type: "Información de Hardware", desc: "Imprime un hermoso logotipo pixelado de CMineWar OS junto con metadatos del sistema host actual.", icon: Laptop },
     { id: "pkg_cmatrix", name: "cmatrix 1.8", type: "Salva-pantallas Codificado", desc: "El glorioso simulador de caída de lluvia secuencial de códigos en cascada al más puro estilo Matrix.", icon: FileCode },
     { id: "pkg_nginx", name: "nginx Web Server", type: "Servidor Web Suite", desc: "Monta un alojamiento de archivos local, configura el index.html y depura peticiones HTTP virtuales.", icon: Network },
     { id: "pkg_retroarch", name: "RetroArch Snake", type: "Juego Arcade Retro", desc: "Consola clásica que emula el juego de la serpiente original con rankings de puntuación alta y arcade.", icon: Tv }
@@ -149,25 +149,25 @@ export default function GitHubUpdater({
 
   // Original GitHub variables & states retained fully for integration
   const [gitOwner, setGitOwner] = useState(() => {
-    const saved = localStorage.getItem("claw_git_owner");
-    return (saved && saved !== "openclaw") ? saved : "cminewarIA";
+    const saved = localStorage.getItem("cminewar_git_owner");
+    return (saved && saved !== "cminewar") ? saved : "cminewarIA";
   });
   const [gitRepo, setGitRepo] = useState(() => {
-    const saved = localStorage.getItem("claw_git_repo");
-    return (saved && saved !== "clawos-core") ? saved : "Myclawos";
+    const saved = localStorage.getItem("cminewar_git_repo");
+    return (saved && saved !== "cminewaros-core") ? saved : "Myclawos";
   });
-  const [gitBranch, setGitBranch] = useState(() => localStorage.getItem("claw_git_branch") || "main");
-  const [gitPat, setGitPat] = useState(() => localStorage.getItem("claw_git_pat") || "");
-  const [installedSha, setInstalledSha] = useState(() => localStorage.getItem("claw_installed_sha") || "b7c25e89a");
-  const [installedMessage, setInstalledMessage] = useState(() => localStorage.getItem("claw_installed_msg") || "Inicializar núcleo cognitivo y sincronizador udev");
-  const [installedDate, setInstalledDate] = useState(() => localStorage.getItem("claw_installed_date") || "2026-05-28 12:44:00 UTC");
+  const [gitBranch, setGitBranch] = useState(() => localStorage.getItem("cminewar_git_branch") || "main");
+  const [gitPat, setGitPat] = useState(() => localStorage.getItem("cminewar_git_pat") || "");
+  const [installedSha, setInstalledSha] = useState(() => localStorage.getItem("cminewar_installed_sha") || "b7c25e89a");
+  const [installedMessage, setInstalledMessage] = useState(() => localStorage.getItem("cminewar_installed_msg") || "Inicializar núcleo cognitivo y sincronizador udev");
+  const [installedDate, setInstalledDate] = useState(() => localStorage.getItem("cminewar_installed_date") || "2026-05-28 12:44:00 UTC");
   
   const [latestSha, setLatestSha] = useState<string>("");
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isDaemonActive, setIsDaemonActive] = useState(() => localStorage.getItem("claw_git_daemon") === "true");
-  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("claw_git_interval")) || 30);
+  const [isDaemonActive, setIsDaemonActive] = useState(() => localStorage.getItem("cminewar_git_daemon") === "true");
+  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("cminewar_git_interval")) || 30);
   const [lastCheckTime, setLastCheckTime] = useState<string>("-");
 
   const [updating, setUpdating] = useState(false);
@@ -181,21 +181,21 @@ export default function GitHubUpdater({
   const pkgLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem("claw_git_owner", gitOwner);
-    localStorage.setItem("claw_git_repo", gitRepo);
-    localStorage.setItem("claw_git_branch", gitBranch);
-    localStorage.setItem("claw_git_pat", gitPat);
-    localStorage.setItem("claw_installed_sha", installedSha);
-    localStorage.setItem("claw_installed_msg", installedMessage);
-    localStorage.setItem("claw_installed_date", installedDate);
-    localStorage.setItem("claw_git_daemon", String(isDaemonActive));
-    localStorage.setItem("claw_git_interval", String(pollInterval));
+    localStorage.setItem("cminewar_git_owner", gitOwner);
+    localStorage.setItem("cminewar_git_repo", gitRepo);
+    localStorage.setItem("cminewar_git_branch", gitBranch);
+    localStorage.setItem("cminewar_git_pat", gitPat);
+    localStorage.setItem("cminewar_installed_sha", installedSha);
+    localStorage.setItem("cminewar_installed_msg", installedMessage);
+    localStorage.setItem("cminewar_installed_date", installedDate);
+    localStorage.setItem("cminewar_git_daemon", String(isDaemonActive));
+    localStorage.setItem("cminewar_git_interval", String(pollInterval));
   }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval]);
 
   useEffect(() => {
-    localStorage.setItem("claw_installed_packages", JSON.stringify(installedPackages));
+    localStorage.setItem("cminewar_installed_packages", JSON.stringify(installedPackages));
     // Dispatch event to synchronize launchers instantly on App.tsx
-    window.dispatchEvent(new Event("claw_packages_changed"));
+    window.dispatchEvent(new Event("cminewar_packages_changed"));
   }, [installedPackages]);
 
   // Fallback dynamic database loader inside Control Panel
@@ -204,7 +204,7 @@ export default function GitHubUpdater({
       {
         sha: "a59e81b3f9dc23d8c1920ac349e1e2d93e1b7fcf",
         message: "feat: Añadir módulo de sincronización GitHub auto-actualizable y daemon de sondeo",
-        author: gitOwner || "openclaw",
+        author: gitOwner || "cminewar",
         date: "28/5/2026, 19:28:15",
         url: "#"
       },
@@ -217,8 +217,8 @@ export default function GitHubUpdater({
       },
       {
         sha: "b7c25e89a5dfc37cc19b22e11a12e84cdd3a09fa",
-        message: "refactor: Reestructurar kernel-core y gestores auxiliares del ClawOS v1.1",
-        author: "admin-claw",
+        message: "refactor: Reestructurar kernel-core y gestores auxiliares de CMineWar OS",
+        author: "admin-cminewar",
         date: "28/5/2026, 12:44:00",
         url: "#"
       }
@@ -280,7 +280,7 @@ export default function GitHubUpdater({
     setBtScanning(true);
     setBtScanResults([]);
     setTimeout(() => {
-      setBtScanResults(["ClawGamer_Pro_Headset", "iMac_Vecino_Directo", "Keyboard_RedDragon_K552"]);
+      setBtScanResults(["CMineWarGamer_Pro_Headset", "iMac_Vecino_Directo", "Keyboard_RedDragon_K552"]);
       setBtScanning(false);
       triggerNotification("Escaneo Bluetooth completado. 3 dispositivos listos.", "info");
     }, 1500);
@@ -292,18 +292,18 @@ export default function GitHubUpdater({
     setInstallingPkg(packageId);
     setPkgInstallProgress(0);
     setPkgInstallLog([
-      `$ sudo claw-pkg install ${packageId}`,
+      `$ sudo cminewar-pkg install ${packageId}`,
       `Leyendo lista de paquetes... Hecho`,
       `Creando árbol de dependencias virtuales del sistema operativo...`,
       `Se instalarán los siguientes paquetes NUEVOS: ${packageId}`,
-      `Debe descargarse 144 kB / 4.8 MB de archivos compilados del pipeline de clawOS.`,
-      `Contactando con repositorios estables de OpenClaw...`
+      `Debe descargarse 144 kB / 4.8 MB de archivos compilados del pipeline de CMineWar OS.`,
+      `Contactando con repositorios estables de CMineWar...`
     ]);
 
     const installSteps = [
       `Descargando paquete ${packageId}: [================>] 100% (18.5 MB/s)`,
       `Verificando firmas SHA256 corporativas del instalador... OK`,
-      `Preparando para desempaquetar /var/cache/claw-pkg/archives/${packageId}_amd64.deb...`,
+      `Preparando para desempaquetar /var/cache/cminewar-pkg/archives/${packageId}_amd64.deb...`,
       `Desempaquetando archivos del programa en el sistema raíz virtual...`,
       `Configurando binarios de lanzamiento udev e interfaces compartidas...`,
       `Instalando lanzador gráfico de escritorio en: /usr/share/applications/${packageId}.desktop`,
@@ -348,7 +348,7 @@ export default function GitHubUpdater({
   const handleDownloadApkBuildKit = () => {
     const scriptContent = `#!/bin/bash
 # ====================================================================
-# Kit de Compilación WebView APK para Probar clawOS en el Móvil
+# Kit de Compilación WebView APK para Probar CMineWar OS en el Móvil
 # ====================================================================
 # Este script inicializa Capacitor en la SPA para generar tu APK nativa.
 
@@ -356,7 +356,7 @@ echo "[+] Paso 1: Instalando dependencias nativas de Capacitor..."
 npm install @capacitor/core @capacitor/cli @capacitor/android
 
 echo "[+] Paso 2: Inicializando configuración de Capacitor..."
-npx cap init "ClawOS Mobile Viewer" "ai.openclaw.mobile" --web-dir=dist
+npx cap init "CMineWar OS Mobile Viewer" "ai.cminewar.mobile" --web-dir=dist
 
 echo "[+] Paso 3: Agregando la plataforma integrada Android..."
 npx cap add android
@@ -374,18 +374,185 @@ npx cap sync
 echo "[+] Paso 6: Abriendo Android Studio para generar tu APK firmada con Gradle!"
 npx cap open android
 
-echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar clawOS."
+echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMineWar OS."
 `;
     const blob = new Blob([scriptContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "clawos-cordova-build-kit.sh";
+    a.download = "cminewaros-cordova-build-kit.sh";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    triggerNotification("Script 'clawos-cordova-build-kit.sh' descargado con éxito.", "success");
+    triggerNotification("Script 'cminewaros-cordova-build-kit.sh' descargado con éxito.", "success");
+  };
+
+  // Build scripts download trigger for Debian GNU/Linux
+  const handleDownloadDebianInstaller = () => {
+    const scriptContent = `#!/usr/bin/env bash
+# =========================================================================
+#            CMINEWAR SYSTEM SERVICE INSTALLER & FIREWALL DEPLOYER FOR DEBIAN
+# =========================================================================
+# Este script está específicamente diseñado para implementar la interfaz y el 
+# backend de CMineWar OS en sistemas operativos Debian GNU/Linux tradicionales.
+#
+# Configura el inicio automático como servicio del sistema (Systemd),
+# expone el acceso local (puerto 3000) de forma segura y provee el script de
+# cortafuegos (iptables) para aislar por completo el tráfico WAN manteniendo 
+# el acceso LAN intacto.
+# =========================================================================
+
+set -e
+
+if [ "$EUID" -ne 0 ]; then
+  echo "[-] ERROR: Este instalador requiere ejecutarse como ROOT."
+  echo "    Por favor ejecuta: sudo bash \\$0"
+  exit 1
+fi
+
+echo "========================================================================="
+echo "   🐉 INSTALADOR DE CMINEWAR OS PARA DEBIAN GNU/LINUX (BARE-METAL & SERVICIOS)"
+echo "========================================================================="
+echo "[+] Detectando sistema operativo..."
+
+if [ -f /etc/debian_version ]; then
+    DEBIAN_VER=\\$(cat /etc/debian_version)
+    echo "[✔] Sistema Debian compatible detectado (versión \\$DEBIAN_VER)."
+else
+    echo "[!] ADVERTENCIA: No se ha detectado un archivo oficial de Debian."
+    echo "    Este script está optimizado para Debian y derivados directos (Ubuntu/Mint/etc)."
+    read -p "¿Deseas continuar de todas formas? (s/N): " choice
+    if [[ ! "\\$choice" =~ ^[Ss]$ ]]; then
+        exit 1
+    fi
+fi
+
+apt-get update -y
+apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils
+
+if ! command -v node &> /dev/null; then
+    echo "[+] Node.js no detectado. Instalando el nodo oficial LTS (v20)..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y nodejs
+else
+    NODE_VERSION=\\$(node -v)
+    echo "[✔] Node.js ya instalado: \\$NODE_VERSION"
+fi
+
+INSTALL_DIR=\\$(pwd)
+echo "[+] Directorio de instalación detectado: \\$INSTALL_DIR"
+
+if [ ! -f "\\$INSTALL_DIR/package.json" ]; then
+    echo "[-] ERROR: No se encuentra 'package.json' en el directorio: \\$INSTALL_DIR"
+    echo "    Ejecuta el script desde la carpeta raíz del proyecto CMineWar OS."
+    exit 1
+fi
+
+echo "[+] Instalando dependencias del proyecto npm..."
+npm install
+
+echo "[+] Compilando servidor nativo y activos estáticos de la interfaz web..."
+npm run build
+
+echo "[+] Configurando daemon de fondo de Systemd en /etc/systemd/system/cminewar.service..."
+
+cat <<EOF > /etc/systemd/system/cminewar.service
+[Unit]
+Description=CMineWar OS - Estación Servidora Cognitiva y Gestor de Almacenamiento
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=\\$INSTALL_DIR
+ExecStart=/usr/bin/node dist/server.cjs
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production PORT=3000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable cminewar.service
+systemctl restart cminewar.service
+
+echo "[✔] Servicio 'cminewar.service' habilitado y arrancado con éxito en el puerto 3000."
+
+echo "[+] Desplegando script de control del cortafuegos de internet en /usr/local/bin/cminewar-firewall..."
+
+cat <<'EOF' > /usr/local/bin/cminewar-firewall
+#!/usr/bin/env bash
+set -e
+if [ "\\$EUID" -ne 0 ]; then
+  echo "[-] ERROR: Requiere privilegios de root."
+  exit 1
+fi
+
+ACTION=\\$1
+if [ -z "\\$ACTION" ]; then
+    echo "Uso: cminewar-firewall [block | allow | status]"
+    exit 0
+fi
+
+case "\\$ACTION" in
+    block)
+        echo "[!] Activando reglas de aislamiento WAN en iptables..."
+        iptables --flush OUTPUT || true
+        iptables -A OUTPUT -o lo -j ACCEPT
+        iptables -A OUTPUT -d 192.168.0.0/16 -j ACCEPT
+        iptables -A OUTPUT -d 172.16.0.0/12 -j ACCEPT
+        iptables -A OUTPUT -d 10.0.0.0/8 -j ACCEPT
+        iptables -P OUTPUT DROP
+        if command -v iptables-save &> /dev/null; then
+            iptables-save > /etc/iptables/rules.v4 || true
+        fi
+        echo "[✔] Cortafuegos ACTIVADO con Éxito. WAN Bloqueada."
+        ;;
+    allow)
+        echo "[+] Abriendo compuertas del Cortafuegos..."
+        iptables -P OUTPUT ACCEPT
+        iptables --flush OUTPUT || true
+        if command -v iptables-save &> /dev/null; then
+            iptables-save > /etc/iptables/rules.v4 || true
+        fi
+        echo "[✔] Cortafuegos APAGADO con Éxito. Internet Libre."
+        ;;
+    status)
+        POLICY=\\$(iptables -S OUTPUT | grep "\\-P" | awk '{print \\$3}')
+        if [ "\\$POLICY" = "DROP" ]; then
+            echo "🔥 ESTADO DE RED: WAN BLOQUEADA (Aislamiento LAN Activo)"
+        else
+            echo "🟢 ESTADO DE RED: WAN + LAN ABIERTAS"
+        fi
+        echo ""
+        iptables -L OUTPUT -n --line-numbers
+        ;;
+esac
+EOF
+
+chmod +x /usr/local/bin/cminewar-firewall
+LOCAL_IP=\\$(hostname -I | awk '{print \\$1}' || echo "127.0.0.1")
+
+echo "========================================================================="
+echo "  ✔ DEBIAN SERVICE INSTALLATION SUCCESSFUL"
+echo "  Acceso Local: http://\\$LOCAL_IP:3000"
+echo "  Bloquear Internet: sudo cminewar-firewall block"
+echo "  Permitir Internet: sudo cminewar-firewall allow"
+echo "========================================================================="
+`;
+    const blob = new Blob([scriptContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "install_debian_service.sh";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerNotification("Script de instalación 'install_debian_service.sh' descargado con éxito.", "success");
   };
 
   // Original GitHub Sync updater sequence
@@ -395,7 +562,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
     setUpdateProgress(0);
     setUpdateLogs([
       `⚡ [GIT PULL] Contactando con GitHub en https://github.com/${gitOwner}/${gitRepo}/tree/${gitBranch}...`,
-      `🔧 [DAEMON] Iniciando auto-actualización del sistema operativo ClawOS`,
+      `🔧 [DAEMON] Iniciando auto-actualización del sistema operativo CMineWar OS`,
       `📦 [MANIFEST] Descargando manifiesto de archivos modificado en el commit ${targetSha.substring(0, 7)}...`,
       `📝 [COMMIT REVELADO] "${message}" de ${author}`,
     ]);
@@ -426,13 +593,13 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
           setRebooting(true);
           
           setRebootLogs([
-            "Reiniciando el kernel de ClawOS...",
-            "Iniciando gestor de sesiones Claw-Session...",
+            "Reiniciando el kernel de CMineWar OS...",
+            "Iniciando gestor de sesiones CMineWar-Session...",
             "¡El sistema se ha auto-actualizado de GitHub con éxito!"
           ]);
           setTimeout(() => {
             setRebooting(false);
-            triggerNotification(`¡ClawOS actualizado y reiniciado con éxito de GitHub!`, "success");
+            triggerNotification(`¡CMineWar OS actualizado y reiniciado con éxito de GitHub!`, "success");
           }, 2000);
         }
         return next;
@@ -736,7 +903,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
             </div>
           ) : (
             <div className="p-6 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
-              La tarjeta de red inalámbrica está desactivada en ClawOS. Actívala arriba para buscar redes.
+              La tarjeta de red inalámbrica está desactivada en CMineWar OS. Actívala arriba para buscar redes.
             </div>
           )}
         </div>
@@ -1158,7 +1325,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
               <Smartphone size={14} className="text-yellow-400 animate-pulse" />
               <span>Prueba Móvil: Compilador APK & Rotación en Vivo</span>
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">Cómo empaquetar la interfaz de clawOS para ejecutarla desde cualquier teléfono móvil con rotación fluida y el logo de la marca.</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Cómo empaquetar la interfaz de CMineWar OS para ejecutarla desde cualquier teléfono móvil con rotación fluida y el logo de la marca.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -1177,7 +1344,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
                 </div>
 
                 <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
-                  ClawOS está programado en su totalidad con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Se ajustará perfectamente de forma automática al detectar el cambio de proporciones en el dispositivo. En posición vertical, esconde interfaces densas para facilitar controles limpios al operante.
+                  CMineWar OS está programado en su totalidad con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Se ajustará perfectamente de forma automática al detectar el cambio de proporciones en el dispositivo. En posición vertical, esconde interfaces densas para facilitar controles limpios al operante.
                 </p>
 
                 <div className="text-xs font-mono space-y-1.5 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
@@ -1253,18 +1420,18 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
                     
                     {/* Top indicator title */}
                     <div className="text-center font-mono text-[7px] text-slate-500">
-                      ClawOS-Mobile Pro
+                      CMineWar OS Mobile Pro
                     </div>
 
                     {/* App icon on lock screen/launcher */}
                     <div 
-                      onClick={() => triggerNotification("Iniciando emulador móvil clawOS...", "success")}
+                      onClick={() => triggerNotification("Iniciando emulador móvil CMineWar OS...", "success")}
                       className="text-center space-y-2 cursor-pointer group flex flex-col items-center"
                     >
                       <div className="w-12 h-12 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-center shadow shadow-pink-500/10 group-hover:scale-105 active:scale-95 transition-transform p-1">
                         <DragonLogo size={42} glow={true} className="text-white" />
                       </div>
-                      <span className="font-sans font-extrabold text-[9px] text-slate-100 group-hover:text-yellow-400 block tracking-tight">ClawOS Mobile</span>
+                      <span className="font-sans font-extrabold text-[9px] text-slate-100 group-hover:text-yellow-400 block tracking-tight">CMineWar OS Mobile</span>
                     </div>
 
                     {/* Hint text bottom */}
@@ -1322,7 +1489,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
               </div>
 
               <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
-                Al activar este modo, ClawOS aislará por completo el espacio de red de llamadas de Internet externas, manteniendo las carpetas y conexiones accesibles únicamente dentro de la red local (LAN).
+                Al activar este modo, CMineWar OS aislará por completo el espacio de red de llamadas de Internet externas, manteniendo las carpetas y conexiones accesibles únicamente dentro de la red local (LAN).
               </p>
 
               {/* Network flow mockup */}
@@ -1355,7 +1522,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-405 leading-relaxed">
-                  Cualquier ordenador o móvil de la red wifi de tu hogar u oficina puede acceder a la interfaz web de ClawOS desde su navegador tecleando esa dirección IP.
+                  Cualquier ordenador o móvil de la red wifi de tu hogar u oficina puede acceder a la interfaz web de CMineWar OS desde su navegador tecleando esa dirección IP.
                 </p>
               </div>
 
@@ -1412,11 +1579,62 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
               <div className="text-xs space-y-1.5 flex-1 leading-relaxed text-slate-400">
                 <span className="font-bold text-slate-100 block">Acceso inalámbrico instantáneo</span>
                 <p className="text-[10px]">
-                  Apunta tu teléfono al código QR para capturar de inmediato el enlace local. Al sintonizarse por sockets, la pantalla de tu móvil servirá como terminal inalámbrico para ClawOS.
+                  Apunta tu teléfono al código QR para capturar de inmediato el enlace local. Al sintonizarse por sockets, la pantalla de tu móvil servirá como terminal inalámbrico para CMineWar OS.
                 </p>
                 <div className="text-[9px] font-mono text-cyan-400">
                   IP LAN: {ethIp} • Canal: WiFi {selectedWifi}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Debian Integration Workspace */}
+          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3.5 text-left">
+            <div className="flex items-center space-x-2 text-rose-450">
+              <Laptop size={14} className="text-cyan-400" />
+              <span className="text-xs uppercase font-mono text-cyan-400 font-bold">Despliegue y Soporte de Debian GNU/Linux:</span>
+            </div>
+
+            <p className="text-[10px] text-slate-404 leading-relaxed">
+              Puedes ejecutar el servidor completo de CMineWar OS en segundo plano en cualquier ordenador o placa con **Debian**. Se arrancará de inmediato en el puerto <strong className="text-slate-200">3000</strong> exponiéndose para toda tu Red Local (LAN).
+            </p>
+
+            {/* Instruction list and Interactive Button */}
+            <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850 space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-850/60">
+                <span className="text-[9px] font-mono text-slate-400 font-semibold">Script Automatizado de Systemd y Cortafuegos:</span>
+                <button
+                  onClick={handleDownloadDebianInstaller}
+                  className="flex items-center space-x-1.5 px-2 py-1 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-400 text-[10px] font-semibold rounded transition cursor-pointer"
+                  id="btn-download-debian-installer"
+                >
+                  <Download size={11} />
+                  <span>Descargar script Debian</span>
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-mono text-slate-350 block font-semibold">Para instalarlo en tu máquina Debian real:</span>
+                <div className="p-2 bg-black rounded font-mono text-[9px] text-cyan-300 space-y-1 overflow-x-auto select-all leading-normal">
+                  <div># 1. Copia o descarga el script en tu directorio</div>
+                  <div>chmod +x install_debian_service.sh</div>
+                  <div># 2. Ejecútalo como superusuario (root)</div>
+                  <div>sudo ./install_debian_service.sh</div>
+                </div>
+              </div>
+
+              <div className="space-y-1 text-slate-405">
+                <span className="text-[9px] font-mono text-slate-300 block font-bold">🔒 ¿Cómo opera el Cortafuegos de aislamiento (Anti-WAN)?</span>
+                <p className="text-[9px] leading-relaxed">
+                  El instalador de Debian configura un administrador de red en <code className="text-slate-200 font-mono">/usr/local/bin/cminewar-firewall</code>. Si ejecutas <code className="text-slate-200 font-mono">sudo cminewar-firewall block</code>, se programará <strong className="text-rose-450 font-bold">iptables</strong> de Debian para bloquear todo el tráfico externo hacia internet, mientras mantiene el acceso de los dispositivos locales de tu red LAN (WiFi/Ethernet del hogar) totalmente libre y conectado.
+                </p>
+              </div>
+
+              <div className="space-y-1 text-slate-405 border-t border-slate-850/60 pt-2">
+                <span className="text-[9px] font-mono text-slate-300 block font-bold">🪟 Sincronización Interactiva y Persistencia de Ventanas:</span>
+                <p className="text-[9px] leading-relaxed">
+                  Las posiciones de las ventanas, coordenadas escaladas, estados activos e IDs de CMineWar OS se graban de manera persistente en perfiles del navegador local. Al acceder desde cualquier móvil o tablet de la red LAN, tu escritorio de CMineWar OS mantendrá el estado preestablecido de tus ventanas intacto, incluso tras reinicios del servidor.
+                </p>
               </div>
             </div>
           </div>
@@ -1431,7 +1649,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
               <LayoutGrid size={14} className="text-emerald-400" />
               <span>Centro de Paquetes de Linux y Cajón de Apps DSM</span>
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">Instala paquetes de sistema operativos libres en ClawOS. Aparecerán al instante en tu Cajón de Aplicaciones del escritorio.</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Instala paquetes de sistema operativos libres en CMineWar OS. Aparecerán al instante en tu Cajón de Aplicaciones del escritorio.</p>
           </div>
 
           {/* Installation output Logger console */}
@@ -1508,7 +1726,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
           </div>
 
           <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-center text-[10px] leading-relaxed text-slate-500 select-none">
-            💡 Puedes ver las aplicaciones instaladas abriendo la barra de tareas de ClawOS / Start Menu o el nuevo Cajón de Aplicaciones dynamically actualizados.
+            💡 Puedes ver las aplicaciones instaladas abriendo la barra de tareas de CMineWar OS / Start Menu o el nuevo Cajón de Aplicaciones dynamically actualizados.
           </div>
         </div>
       )}
@@ -1521,7 +1739,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
           <div className="flex-1 p-4 overflow-y-auto space-y-4 border-r border-slate-800/80">
             {/* Installed State Card */}
             <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3.5">
-              <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold block text-left">Compilación de ClawOS Instalada</span>
+              <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold block text-left">Compilación de CMineWar OS Instalada</span>
               
               <div className="flex items-start space-x-3 text-left">
                 <div className="mt-0.5">
@@ -1556,7 +1774,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
                     <span>Daemon de Auto-Actualización de GitHub</span>
                   </h4>
                   <p className="text-[10px] text-slate-500 leading-relaxed max-w-sm">
-                    Revisa en segundo plano el repositorio de GitHub. Si subes código y cambia el commit, ClawOS lo detecta y se actualiza de inmediato automáticamente.
+                    Revisa en segundo plano el repositorio de GitHub. Si subes código y cambia el commit, CMineWar OS lo detecta y se actualiza de inmediato automáticamente.
                   </p>
                 </div>
 
@@ -1614,11 +1832,11 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
               </button>
 
               <button
-                onClick={() => triggerNotification("ClawOS ya está al día con el repositorio", "info")}
+                onClick={() => triggerNotification("CMineWar OS ya está al día con el repositorio", "info")}
                 className="flex-1 flex items-center justify-center space-x-1 px-4 py-2 bg-slate-950 border border-slate-900 text-slate-500 text-xs font-medium rounded-lg cursor-not-allowed"
               >
                 <CheckCircle size={12} className="text-slate-600 mr-1.5" />
-                <span>ClawOS está al día</span>
+                <span>CMineWar OS está al día</span>
               </button>
             </div>
           </div>
@@ -1628,7 +1846,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar claw
             <div className="space-y-4">
               <div>
                 <h4 className="text-xs font-bold text-slate-200">Sintonizador del API</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Sintoniza ClawOS con tu propio repositorio público.</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Sintoniza CMineWar OS con tu propio repositorio público.</p>
               </div>
 
               <div className="space-y-3">

@@ -15,18 +15,18 @@ import {
 } from "lucide-react";
 
 export default function Chromium() {
-  const [url, setUrl] = useState("https://github.com/cminewarIA/Myclawos");
+  const [url, setUrl] = useState("https://github.com/cminewarIA/MyCMineWarOS");
   const [currentSearch, setCurrentSearch] = useState("");
   const [isSecure, setIsSecure] = useState(true);
   
-  const [wanBlocked, setWanBlocked] = useState(() => localStorage.getItem("claw_wan_blocked") === "true");
+  const [wanBlocked, setWanBlocked] = useState(() => localStorage.getItem("cminewar_wan_blocked") === "true");
 
   React.useEffect(() => {
     const handleNetworkChange = () => {
-      setWanBlocked(localStorage.getItem("claw_wan_blocked") === "true");
+      setWanBlocked(localStorage.getItem("cminewar_wan_blocked") === "true");
     };
-    window.addEventListener("claw_network_changed", handleNetworkChange);
-    return () => window.removeEventListener("claw_network_changed", handleNetworkChange);
+    window.addEventListener("cminewar_network_changed", handleNetworkChange);
+    return () => window.removeEventListener("cminewar_network_changed", handleNetworkChange);
   }, []);
 
   // Custom states for simulated sites
@@ -35,9 +35,9 @@ export default function Chromium() {
 
   // Quick navigation bookmarks
   const bookmarks = [
-    { name: "Myclawos GitHub", url: "https://github.com/cminewarIA/Myclawos", icon: <Github size={12} /> },
+    { name: "MyCMineWarOS GitHub", url: "https://github.com/cminewarIA/MyCMineWarOS", icon: <Github size={12} /> },
     { name: "Google Search", url: "https://google.com", icon: <Search size={12} /> },
-    { name: "OpenClaw AI Solutions", url: "https://openclaw.ai", icon: <Sparkles size={12} className="text-amber-400" /> },
+    { name: "CMineWar AI Solutions", url: "https://cminewar.ai", icon: <Sparkles size={12} className="text-amber-400" /> },
   ];
 
   const handleNavigate = (targetUrl: string) => {
@@ -79,11 +79,11 @@ export default function Chromium() {
           </div>
           <h2 className="text-sm font-bold text-slate-100">Acceso a Internet Bloqueado</h2>
           <p className="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed">
-            El cortafuegos corporativo de ClawOS para instalaciones reales en disco duro tiene activado el <strong className="text-rose-400">Aislamiento LAN Seguro</strong>.
+            El cortafuegos nativo de CMineWar OS para instalaciones reales en disco duro tiene activado el <strong className="text-rose-400">Aislamiento LAN Seguro</strong>.
           </p>
           <div className="mt-4 p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-left font-mono text-[10px] w-full max-w-sm space-y-1.5 text-slate-400">
             <div><span className="text-slate-500">Destino intentado:</span> <span className="text-rose-400 font-bold truncate inline-block max-w-[150px] align-bottom">{url}</span></div>
-            <div><span className="text-slate-500">Servicio de filtrado:</span> <span className="text-yellow-400 font-bold">claw-firewall.service</span></div>
+            <div><span className="text-slate-500">Servicio de filtrado:</span> <span className="text-yellow-400 font-bold">cminewar-firewall.service</span></div>
             <div><span className="text-slate-500">Estado de ruta WAN:</span> <span className="text-red-400 font-bold">RECHAZADO (DROP 0.0.0.0/0)</span></div>
             <div><span className="text-slate-500">Direcciones permitidas:</span> <span className="text-emerald-400 font-bold">Sólo IPs locales (192.168.1.0/24)</span></div>
           </div>
@@ -94,8 +94,8 @@ export default function Chromium() {
       );
     }
 
-    // 1. GITHUB SIMULATION (Extremely tailored to cminewarIA/Myclawos)
-    if (url.includes("github.com/cminewarIA/Myclawos") || url.includes("github.com/cminewaria/myclawos")) {
+    // 1. GITHUB SIMULATION (Extremely tailored to cminewarIA/MyCMineWarOS)
+    if (url.includes("github.com/cminewarIA/MyCMineWarOS") || url.includes("github.com/cminewaria/mycminewaros")) {
       return (
         <div className="bg-slate-950 text-slate-100 p-6 font-sans min-h-full">
           {/* Header */}
@@ -106,10 +106,10 @@ export default function Chromium() {
                 <div className="flex items-center space-x-2">
                   <a href="#" className="text-blue-400 hover:underline font-semibold">cminewarIA</a>
                   <span className="text-slate-500">/</span>
-                  <a href="#" className="font-bold hover:underline">Myclawos</a>
+                  <a href="#" className="font-bold hover:underline">MyCMineWarOS</a>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Public</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">El sistema operativo ClawOS síncrono y sintonizado para autoactualizaciones directas de GitHub.</p>
+                <p className="text-xs text-slate-400 mt-0.5">El sistema operativo CMineWar OS síncrono y sintonizado para autoactualizaciones directas de GitHub.</p>
               </div>
             </div>
             
@@ -139,7 +139,7 @@ export default function Chromium() {
                 <div className="divide-y divide-slate-800 text-xs text-slate-300 font-mono">
                   <div className="p-2.5 px-4 flex justify-between hover:bg-slate-800/40 select-none">
                     <span className="text-blue-400 font-bold">📂 src/</span>
-                    <span className="text-slate-500">Refactor core structure for openclaw launch</span>
+                    <span className="text-slate-500">Refactor core structure for cminewar launch</span>
                   </div>
                   <div className="p-2.5 px-4 flex justify-between hover:bg-slate-800/40 select-none">
                     <span className="text-blue-400 font-bold">📂 public/</span>
@@ -164,9 +164,9 @@ export default function Chromium() {
                 </div>
                 
                 <div className="space-y-3 leading-relaxed text-xs">
-                  <h1 className="text-lg font-bold text-white border-b border-slate-800 pb-1">ClawOS Kernel & Shell Suite</h1>
+                  <h1 className="text-lg font-bold text-white border-b border-slate-800 pb-1">CMineWar OS Kernel & Shell Suite</h1>
                   <p className="text-slate-300 text-[11px]">
-                    ClawOS es un innovador sistema operativo virtual y modular completamente integrado con las capacidades avanzadas de agentes de inteligencia artificial (OpenClaw).
+                    CMineWar OS es un innovador sistema operativo virtual y modular completamente integrado con las capacidades avanzadas de agentes de inteligencia artificial (CMineWar AI).
                   </p>
                   
                   <div className="bg-slate-950 p-3 rounded border border-slate-800 text-[10px]">
@@ -187,7 +187,7 @@ export default function Chromium() {
               <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
                 <h4 className="font-bold text-slate-200 border-b border-slate-800 pb-1.5">About OS Specs</h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  Repositorio oficial de almacenamiento central y ramificaciones de desarrollo de ClawOS.
+                  Repositorio oficial de almacenamiento central y ramificaciones de desarrollo de CMineWar OS.
                 </p>
                 <div className="space-y-1.5 pt-1 font-semibold">
                   <div className="text-emerald-400 flex items-center space-x-1.5">
@@ -256,7 +256,7 @@ export default function Chromium() {
               <button 
                 type="button"
                 onClick={() => {
-                  setSearchQuery("cminewarIA Myclawos github");
+                  setSearchQuery("cminewarIA MyCMineWarOS github");
                   setSearchResultActive(true);
                 }}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded border border-slate-200/80 font-medium text-slate-600 transition"
@@ -272,27 +272,27 @@ export default function Chromium() {
               
               {/* Simulated Search Item 1 */}
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-500 font-mono">https://github.com › cminewarIA › Myclawos</span>
+                <span className="text-[10px] text-slate-500 font-mono">https://github.com › cminewarIA › MyCMineWarOS</span>
                 <h4 className="text-sm font-semibold text-blue-700 hover:underline">
-                  <button type="button" onClick={() => handleNavigate("https://github.com/cminewarIA/Myclawos")}>
-                    GitHub - cminewarIA/Myclawos: El sistema operativo ClawOS
+                  <button type="button" onClick={() => handleNavigate("https://github.com/cminewarIA/MyCMineWarOS")}>
+                    GitHub - cminewarIA/MyCMineWarOS: El sistema operativo CMineWar OS
                   </button>
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Sistema operativo con autoactualización de GitHub remota integral, Chromium como navegador por defecto y omitiendo contraseñas de seguridad.
+                  Sistema operativo con autoactualización de GitHub remota e integral basada en Debian, Chromium como navegador por defecto y omitiendo contraseñas de seguridad.
                 </p>
               </div>
 
               {/* Simulated Search Item 2 */}
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-500 font-mono">https://openclaw.ai › docs › custom-os</span>
+                <span className="text-[10px] text-slate-500 font-mono">https://cminewar.ai › docs › custom-os</span>
                 <h4 className="text-sm font-semibold text-blue-700 hover:underline">
-                  <button type="button" onClick={() => handleNavigate("https://openclaw.ai")}>
-                    OpenClaw AI Solutions: Estándar para Sistemas Privilegiados
+                  <button type="button" onClick={() => handleNavigate("https://cminewar.ai")}>
+                    CMineWar AI Solutions: Estándar para Sistemas Privilegiados
                   </button>
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Alineación ACPI del kernel, suspensión deshabilitada en ClawOS, inicio automático del administrador.
+                  Alineación ACPI del kernel, suspensión deshabilitada en CMineWar OS, inicio automático del administrador.
                 </p>
               </div>
             </div>
@@ -305,8 +305,8 @@ export default function Chromium() {
       );
     }
 
-    // 3. OPENCLAW SIMULATION
-    if (url.includes("openclaw.ai")) {
+    // 3. CMINEWAR SIMULATION
+    if (url.includes("cminewar.ai") || url.includes("openclaw.ai")) {
       return (
         <div className="bg-slate-900 text-slate-100 p-8 font-sans min-h-full flex flex-col justify-between">
           <div className="max-w-xl mx-auto py-4 space-y-6">
@@ -315,7 +315,7 @@ export default function Chromium() {
                 <Sparkles className="text-violet-400 w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-lg font-bold tracking-wide text-white">OpenClaw Artificial Intelligence Ecosystem</h1>
+                <h1 className="text-lg font-bold tracking-wide text-white">CMineWar Artificial Intelligence Ecosystem</h1>
                 <p className="text-xs text-slate-400">Plataformas virtuales de sistemas operativos integrados en nube con agentes inteligentes.</p>
               </div>
             </div>
@@ -324,14 +324,14 @@ export default function Chromium() {
               <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
                 <h4 className="font-bold text-violet-300">Auto-Updates via GitHub</h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  Sincronización automatizada. Cuando haces push a tu repositorio remoto en GitHub, ClawOS se actualiza sola al instante mediante ganchos o el daemon de actualización.
+                  Sincronización automatizada. Cuando haces push a tu repositorio remoto en GitHub, CMineWar OS se actualiza sola al instante mediante ganchos o el daemon de actualización.
                 </p>
               </div>
 
               <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
                 <h4 className="font-bold text-cyan-300">Default Sandbox Browser</h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  Chromium se integra nativamente en el sandbox gráfico de ClawOS, proporcionando acceso completo y limpio a las APIs de red del host de forma segura.
+                  Chromium se integra nativamente en el sandbox gráfico de CMineWar OS, proporcionando acceso completo y limpio a las APIs de red del host de forma segura.
                 </p>
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function Chromium() {
           </div>
           
           <div className="text-center text-[10px] text-slate-500">
-            Powered by OpenClaw Systems Inc. All Rights Reserved.
+            Powered by CMineWar AI Systems Inc. All Rights Reserved.
           </div>
         </div>
       );
@@ -386,7 +386,7 @@ export default function Chromium() {
           </button>
           <button 
             type="button"
-            onClick={() => handleNavigate("https://github.com/cminewarIA/Myclawos")}
+            onClick={() => handleNavigate("https://github.com/cminewarIA/MyCMineWarOS")}
             className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition"
             title="Adelante (Ref)"
           >

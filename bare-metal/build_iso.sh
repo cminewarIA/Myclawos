@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =========================================================================
-#            CLAWOS LIVE KIOSK ISO BUILD ENGINE (PROYECTO REAL BARE-METAL)
+#          CMINEWAR OS LIVE KIOSK ISO BUILD ENGINE (PROYECTO REAL BARE-METAL)
 # =========================================================================
 # Este script automatiza la generación de un sistema operativo de uso real 
 # basado en Alpine Linux o Debian para tu ordenador compatible con UEFI y BIOS.
@@ -10,10 +10,10 @@
 
 set -e
 
-echo "[+] ClawOS Live Linux ISO Builder Initializing..."
+echo "[+] CMineWar OS Live Linux ISO Builder Initializing..."
 echo "[!] Asegúrate de ejecutar este script en un entorno de desarrollo Linux (eg. Debian, Ubuntu, Bash)."
 
-WORK_DIR="/tmp/clawos-iso-build"
+WORK_DIR="/tmp/cminewaros-iso-build"
 ISO_OUT_DIR="./dist_iso"
 mkdir -p "$WORK_DIR"
 mkdir -p "$ISO_OUT_DIR"
@@ -42,7 +42,7 @@ INSTRUCTIONS
 cat << 'EOF' > "$WORK_DIR/autostart"
 #!/bin/sh
 # /etc/xdg/openbox/autostart
-# Script que arranca clawOS directamente sobre el servidor de video físico X11 / Wayland
+# Script que arranca CMineWar OS directamente sobre el servidor de video físico X11 / Wayland
 
 # 1. Asegurar volumen y mezclas de sonido por hardware
 amixer sset Master 90% unmute || true
@@ -53,13 +53,13 @@ xset -dpms || true
 xset s noblank || true
 
 # 3. Arrancar servidor de Node local de fondo si disponemos de APIs del backend
-node /opt/clawos/dist/server.cjs &
+node /opt/cminewaros/dist/server.cjs &
 
 # 4. Iniciar navegador Chromium en pantalla completa (modo Kiosco) cargando directamente el index.html local compilado
 chromium-browser --kiosk --no-sandbox --no-first-run --simulate-outdated-no-au \
   --disable-infobars --window-size=1920,1080 --window-position=0,0 \
   --disable-session-crashed-bubble --disable-translate --start-maximized \
-  file:///opt/clawos/dist/index.html &
+  file:///opt/cminewaros/dist/index.html &
 
 EOF
 
@@ -70,7 +70,7 @@ cat << 'EOF' > "$WORK_DIR/grub.cfg"
 set default="0"
 set timeout=3
 
-menuentry "clawOS Linux v1.1.2 - Kernel Kiosk Bare-Metal (Auto-arrancable)" {
+menuentry "CMineWar OS Linux v1.1.2 - Kernel Kiosk Bare-Metal (Auto-arrancable)" {
     linux /boot/vmlinuz-virt console=tty1 quiet loglevel=3 logo.nologo
     initrd /boot/initramfs-virt
 }

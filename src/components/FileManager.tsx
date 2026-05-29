@@ -37,6 +37,7 @@ interface FileManagerProps {
   setCurrentPath: (path: string[]) => void;
   openWindow: (windowId: string) => void;
   onOpenFileInEditor: (filePath: string[], fileName: string, content: string) => void;
+  touchMode?: boolean;
 }
 
 interface RemoteFile {
@@ -109,6 +110,7 @@ export default function FileManager({
   setCurrentPath,
   openWindow,
   onOpenFileInEditor,
+  touchMode = false,
 }: FileManagerProps) {
   // Navigation Location State
   const [activeLocation, setActiveLocation] = useState<"local" | Connection>("local");
@@ -798,44 +800,62 @@ export default function FileManager({
                   <p className="text-xs text-slate-600 mt-1">Crea un archivo o carpeta arriba.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div className={`grid gap-3 ${
+                  touchMode 
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" 
+                    : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                }`}>
                   {nodeChildren.map((child) => {
                     const isSelected = selectedItemName === child.name;
                     
                     return (
                       <div
                         key={child.name}
-                        onClick={() => setSelectedItemName(child.name)}
-                        onDoubleClick={() => handleLocalItemClick(child)}
-                        className={`flex flex-col items-center p-3 rounded-lg border text-center transition cursor-pointer relative group ${
+                        onClick={() => {
+                          setSelectedItemName(child.name);
+                          // For touchscreens, immediately execute action on single click to prevent accessibility barriers
+                          if (touchMode) {
+                            handleLocalItemClick(child);
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (!touchMode) {
+                            handleLocalItemClick(child);
+                          }
+                        }}
+                        className={`flex flex-col items-center rounded-lg border text-center transition cursor-pointer relative group ${
                           isSelected
                             ? "bg-emerald-950/40 border-emerald-500/50 text-slate-100"
                             : "bg-slate-900/60 border-slate-800 hover:bg-slate-800 text-slate-300"
+                        } ${
+                          touchMode ? "p-4.5 scale-102 shadow-md shadow-emerald-950/5" : "p-3"
                         }`}
                         id={`file-node-${child.name}`}
                       >
                         {/* File/Folder Icon */}
                         {child.type === "dir" ? (
-                          <Folder className="w-10 h-10 text-cyan-400 mb-2 fill-cyan-400/10 shrink-0" />
+                          <Folder className={`${touchMode ? "w-11 h-11" : "w-10 h-10"} text-cyan-400 mb-2 fill-cyan-400/10 shrink-0`} />
                         ) : child.name.endsWith(".sh") ? (
-                          <FileCode2 className="w-10 h-10 text-amber-400 mb-2 shrink-0" />
+                          <FileCode2 className={`${touchMode ? "w-11 h-11" : "w-10 h-10"} text-amber-400 mb-2 shrink-0`} />
                         ) : (
-                          <File className="w-10 h-10 text-slate-400 mb-2 shrink-0" />
+                          <File className={`${touchMode ? "w-11 h-11" : "w-10 h-10"} text-slate-400 mb-2 shrink-0`} />
                         )}
 
                         {/* Node Name */}
-                        <span className="text-xs font-medium break-all truncate w-full px-1">
+                        <span className={`font-medium break-all truncate w-full px-1 ${touchMode ? "text-xs" : "text-xs"}`}>
                           {child.name}
                         </span>
 
                         {/* Actions (Delete icon) */}
                         <button
                           onClick={(e) => handleDeleteItem(child.name, e)}
-                          className="absolute top-1 right-1 p-1 bg-slate-950 border border-slate-800 rounded opacity-0 group-hover:opacity-100 hover:text-red-400 hover:border-red-950/60 transition"
+                          className={`absolute top-1 right-1 p-1 bg-slate-950 border border-slate-800 rounded opacity-0 group-hover:opacity-100 hover:text-red-400 hover:border-red-950/60 transition ${
+                            touchMode ? "opacity-100 scale-110 !p-1.5" : ""
+                          }`}
                           title="Eliminar de inmediato"
                           id={`btn-delete-node-${child.name}`}
                         >
-                          <Trash2 size={11} />
+                          <Trash2 size={touchMode ? 13 : 11} />
                         </button>
                       </div>
                     );
@@ -918,9 +938,19 @@ export default function FileManager({
                   return (
                     <div
                       key={fileObj.name}
-                      onClick={() => setSelectedRemoteFile(fileObj)}
-                      onDoubleClick={() => handleDownloadRemoteFile(fileObj)}
-                      className={`flex flex-col items-center p-3 rounded-lg border text-center transition cursor-pointer relative group ${
+                      onClick={() => {
+                        setSelectedRemoteFile(fileObj);
+                        // Open instantly on touch mode
+                        if (touchMode) {
+                          handleDownloadRemoteFile(fileObj);
+                        }
+                      }}
+                      onDoubleClick={() => {
+                        if (!touchMode) {
+                          handleDownloadRemoteFile(fileObj);
+                        }
+                      }}
+                      className={`flex flex-col items-center rounded-lg border text-center transition cursor-pointer relative group ${
                         isSelected
                           ? activeLocation.type === "SMB"
                             ? "bg-amber-950/30 border-amber-600/50 text-slate-100 shadow"
@@ -928,14 +958,16 @@ export default function FileManager({
                             ? "bg-cyan-950/30 border-cyan-600/50 text-slate-100 shadow"
                             : "bg-violet-950/30 border-violet-600/50 text-slate-100 shadow"
                           : "bg-slate-950/40 border-slate-900/60 hover:bg-slate-900/50 text-slate-300"
+                      } ${
+                        touchMode ? "p-4.5 scale-102 shadow-md" : "p-3"
                       }`}
                     >
                       {/* Connection specific design */}
                       <div className="relative mb-2 shrink-0">
                         {fileObj.type === "dir" ? (
-                          <Folder className="w-10 h-10 text-cyan-400 fill-cyan-400/10" />
+                          <Folder className={`${touchMode ? "w-11 h-11" : "w-10 h-10"} text-cyan-400 fill-cyan-400/10`} />
                         ) : (
-                          <File className="w-10 h-10 text-slate-400" />
+                          <File className={`${touchMode ? "w-11 h-11" : "w-10 h-10"} text-slate-400`} />
                         )}
                         <span className="absolute bottom-0 right-0 px-1 py-0.5 bg-slate-950 text-[7px] font-mono text-slate-500 rounded border border-slate-800">
                           {fileObj.type === "dir" ? "dir" : fileObj.name.split(".").pop() || "txt"}

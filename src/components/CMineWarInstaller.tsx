@@ -123,17 +123,17 @@ export default function ClawInstaller({
           // Generate detailed retro-structured boot text layout replicating a virtual CD-ROM
           const vfsJson = JSON.stringify(vfs, null, 2);
           const isoDataContent = `========================================================================
-CLAWOS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
+CMINEWAR OS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
 ========================================================================
-Volume Label:  CLAWOS_LIVE_V112
-Publisher:     OpenClaw OS Foundation
+Volume Label:  CMINEWAR_LIVE_V112
+Publisher:     CMineWar OS Foundation
 Architecture:  x86_amd64 / Intel Virtualization Cores
 Build Date:    2026-05-28 21:00 UTC
 Virtual Size:  142.6 MB
 
 [ BAKED KERNEL PARAMETERS - SELECTED INTEGRATED DIRECTIVES ]
 ------------------------------------------------------------------------
-● AUTOLOGIN TARGET:    ${omitStandardUser ? "Superuser 'root' Direct Mode (No Passwords)" : "Standard User 'user_claw_developer'"}
+● AUTOLOGIN TARGET:    ${omitStandardUser ? "Superuser 'root' Direct Mode (No Passwords)" : "Standard User 'user_cminewar_developer'"}
 ● ACPI POWER SUSPEND:  ${disableSleep ? "DISABLED PERMANENTLY (acpi=off sleep.allow=no)" : "ENABLED STANDARD POLICIES"}
 ● CORE WEB SUITE:      ${defaultBrowserChromium ? "Chromium Web Browser Defaulting" : "Generic Web Host Controller"}
 ------------------------------------------------------------------------
@@ -145,15 +145,15 @@ cat << 'GRUB_CONFIG'
 set default="0"
 set timeout=5
 
-menuentry "ClawOS Linux v1.1.2 Live CLI-GUI Environment (x86_64)" {
+menuentry "CMineWar OS Linux v1.1.2 Live CLI-GUI Environment (x86_64)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-openclaw console=ttyS0 quiet ${omitStandardUser ? "init=/bin/clawbash_root_init" : "init=/bin/clawbash_init"} ${disableSleep ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-openclaw-direct.img
+    linux /boot/vmlinuz-cminewar console=ttyS0 quiet ${omitStandardUser ? "init=/bin/cminewarbash_root_init" : "init=/bin/cminewarbash_init"} ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-direct.img
 }
 
-menuentry "ClawOS Recovery Console" {
-    linux /boot/vmlinuz-openclaw console=ttyS0 single
-    initrd /boot/initramfs-openclaw-direct.img
+menuentry "CMineWar OS Recovery Console" {
+    linux /boot/vmlinuz-cminewar console=ttyS0 single
+    initrd /boot/initramfs-cminewar-direct.img
 }
 GRUB_CONFIG
 
@@ -161,7 +161,7 @@ GRUB_CONFIG
 * RECREATING THE WORKSPACE LOCAL COGNITIVE STRUCTURE (JSON SNAPSHOT) *
 ------------------------------------------------------------------------
 This snapshot matches your current virtual disk environment precisely.
-You can import or paste this VFS dump into ClawOS back-restores:
+You can import or paste this VFS dump into CMineWar OS back-restores:
 
 VFS_SNAPSHOT_BEGIN
 ${vfsJson}
@@ -171,15 +171,15 @@ VFS_SNAPSHOT_END
 * BASH BOOTSTRAP DEPLOYMENT SCRIPT (install.sh) *
 ------------------------------------------------------------------------
 #!/usr/bin/env bash
-# ClawOS Virtual deployment script
-echo "=== CLAWOS DEPLOYMENT INITIALIZER ==="
+# CMineWar OS Virtual deployment script
+echo "=== CMINEWAR OS DEPLOYMENT INITIALIZER ==="
 echo "Montando estructura virtual..."
-mkdir -p /mnt/claw_root
-mount -t ext4 /dev/sda3 /mnt/claw_root
+mkdir -p /mnt/cminewar_root
+mount -t ext4 /dev/sda3 /mnt/cminewar_root
 
 echo "Escribiendo configuraciones del kernel..."
-echo "${omitStandardUser ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/claw_root/etc/clawos/auth.conf
-echo "${disableSleep ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/claw_root/etc/systemd/sleep.conf
+echo "${omitStandardUser ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/cminewar_root/etc/cminewar/auth.conf
+echo "${disableSleep ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/cminewar_root/etc/systemd/sleep.conf
 
 echo "Iniciando descarga de modulos cognitivos..."
 curl -fsSL https://openclaw.ai/install.sh | bash
@@ -193,13 +193,13 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
-          link.download = `clawos-v1.1.2-live-${omitStandardUser ? "root" : "user"}.iso`;
+          link.download = `cminewaros-v1.1.2-live-${omitStandardUser ? "root" : "user"}.iso`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          triggerNotification("¡Imagen ISO de ClawOS generada y descargada con éxito!", "success");
+          triggerNotification("¡Imagen ISO de CMineWar OS generada y descargada con éxito!", "success");
           return 100;
         }
         return prev + 10;
@@ -235,31 +235,31 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
     const installArgs = `--beta${omitStandardUser ? " --root --no-user" : ""}${disableSleep ? " --disable-acpi-sleep" : ""}${defaultBrowserChromium ? " --default-browser=chromium" : ""}${isPortableToGo ? " --portable-to-go --with-universal-drivers" : ""}`;
     
     setInstallLogs([
-      `$ curl -fsSL https://openclaw.ai/install.sh | bash -s -- ${installArgs}`,
-      "[%] Iniciando descarga TLS segura desde openclaw.ai...",
+      `$ curl -fsSL https://cminewar.ai/install.sh | bash -s -- ${installArgs}`,
+      "[%] Iniciando descarga TLS segura desde cminewar.ai...",
       "[%] Certificado CA verificado con firma SHA256",
       "[%] Descargando script de instalación (v1.1.2-stable)... ok",
       `[%] Ejecutando bash con argumentos: ${installArgs}`,
       "---------------------------------------------------------",
-      "   ____                     ____ _               ",
-      "  / ___|  _    __ _ __  __ / ___| | __ _ __      ",
-      " | |    | |   / _` |\\ \\/ /| |   | |/ _` | \\ \\ /\\ /   ",
-      " | |___ | |__| (_| | >  < | |___| | (_| |\\ v v /    ",
-      "  \\____||_____\\__,_|_/\\_\\ \\____|_|\\__,_| \\_/_/     ",
+      "   ____ __  __ _            __        __        ",
+      "  / ___|  \\/  (_)_ __   ___ \\ \\      / /_ _ _ __ ",
+      " | |   | |\\/| | | '_ \\ / _ \\ \\ \\ /\\ / / _` | '__|",
+      " | |___| |  | | | | | |  __/  \\ V  V / (_| | |   ",
+      "  \\____|_|  |_|_|_| |_|\\___|   \\_/\\_/ \\__,_|_|   ",
       "                                                 ",
-      " [Nucleo Súper Directo Inteligente OpenClaw Setup Suite]",
+      " [Nucleo Súper Directo Inteligente CMineWar AI Setup Suite]",
       "---------------------------------------------------------",
       `[INFO] Comprobando integridad de la unidad de destino /dev/${selectedDisk}... OK`,
       `[INFO] Particiones de destino detectadas: /dev/${selectedDisk}1 [EFI], ${persistenceOnUSB && selectedDisk !== "sda" ? `/dev/${selectedDisk}2 [PERSISTENCIA], ` : ""}/dev/${selectedDisk}3 [RAÍZ]`,
-      `[INFO] Montando partición raíz virtual en /mnt/claw_root (apuntando a /dev/${selectedDisk}3)...`,
+      `[INFO] Montando partición raíz virtual en /mnt/cminewar_root (apuntando a /dev/${selectedDisk}3)...`,
     ]);
 
     const logsList = [
-      "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-openclaw-direct-root)...",
+      "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-cminewar-direct-root)...",
       "[NET] Descargado: 14.8 MB / 92.5 MB (Velocidad: 18.2 MB/s)",
       "[NET] Descargado: 92.5 MB / 92.5 MB (100% completado)",
-      "[INFO] Desempaquetando archivos del Núcleo de Superusuario OpenClaw...",
-      isPortableToGo ? `[INFO] [CLAW-TO-GO] Configurando soporte portátil multidisco...` : "",
+      "[INFO] Desempaquetando archivos del Núcleo de Superusuario CMineWar AI...",
+      isPortableToGo ? `[INFO] [CMINEWAR-TO-GO] Configurando soporte portátil multidisco...` : "",
       isPortableToGo && persistenceOnUSB && selectedDisk !== "sda" 
         ? `[VFS] Configurando módulo de persistencia: Creando enlace OverlayFS de /dev/${selectedDisk}2 con /home y /var/lib` 
         : "",
@@ -278,15 +278,15 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       isPortableToGo && withUniversalDrivers 
         ? `[VFS] Generando reglas dinámicas en /etc/udev/rules.d/70-hardware-probe.rules para ajustar controladores de sonido, vídeo y red al cambiar de ordenador...` 
         : "",
-      "[VFS] Escribiendo /lib/modules/5.16.0-openclaw-generic/kernel/core.bin",
-      "[VFS] Escribiendo /boot/initramfs-openclaw-direct.img (Alineación udev auto-detect universal)",
-      "[VFS] Escribiendo /boot/vmlinuz-openclaw",
+      "[VFS] Escribiendo /lib/modules/5.16.0-cminewar-generic/kernel/core.bin",
+      "[VFS] Escribiendo /boot/initramfs-cminewar-direct.img (Alineación udev auto-detect universal)",
+      "[VFS] Escribiendo /boot/vmlinuz-cminewar",
       omitStandardUser 
         ? "[INFO] [MODO ROOT] Omitiendo la creación de un usuario estándar básico..."
         : "[INFO] Sincronizando directorio compartido /home/user...",
       omitStandardUser 
         ? "[INFO] [MODO ROOT] Configurando acceso de sesión directa como usuario 'root'..."
-        : "[INFO] Creando usuario local user_claw_developer...",
+        : "[INFO] Creando usuario local user_cminewar_developer...",
       omitStandardUser 
         ? "[INFO] [MODO ROOT] Anulando la solicitud de contraseñas de seguridad (Inicio Directo, Autologin RAÍZ)..."
         : "",
@@ -305,14 +305,14 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       "[INFO] Inicializando puente cognitivo síncrono con la API de soporte general...",
       "[INFO] Clave de API principal detectada y enlazada de forma segura...",
       `[INFO] Configurando gestor de arranque GRUB 2.06 compatible con BIOS Legacy y UEFI en /dev/${selectedDisk}...`,
-      "[VFS] Configurando módulo ClawBash Shell predeterminado en /bin/clawbash",
+      "[VFS] Configurando módulo CMineWar OS Shell predeterminado en /bin/cminewarbash",
       "[INFO] Depurando configuraciones y estableciendo permisos udev...",
       "[SUCCESS] ¡Proceso de instalación completado con éxito!",
       isPortableToGo && persistenceOnUSB && selectedDisk !== "sda"
-        ? `[SUCCESS] ¡Instalación Claw-To-Go lista! Tus datos se mantendrán grabados físicamente en la unidad y podrás iniciar de inmediato en cualquier PC.`
+        ? `[SUCCESS] ¡Instalación CMineWar-To-Go lista! Tus datos se mantendrán grabados físicamente en la unidad y podrás iniciar de inmediato en cualquier PC.`
         : omitStandardUser 
-          ? "[SUCCESS] ¡ClawOS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
-          : "[SUCCESS] OpenClaw Linux Beta ya está listo para arrancar en el espacio del usuario.",
+          ? "[SUCCESS] ¡CMineWar OS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
+          : "[SUCCESS] CMineWar AI Linux Beta ya está listo para arrancar en el espacio del usuario.",
     ].filter(Boolean);
 
     let currentLogIndex = 0;
@@ -341,29 +341,29 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           name: "certificacion_instalacion_beta.txt",
           type: "file",
           content: `=====================================================
-CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO OPENCLAW
+CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO CMINEWAR OS
 =====================================================
 
 Fecha de Compilado: 2026-05-28 19:20 UTC
-Comando usado: curl -fsSL https://openclaw.ai/install.sh | bash -s -- --beta
-Kernel Core: OpenClaw Beta Suite v1.1.0 (Multiplexed Cognition Module)
+Comando usado: curl -fsSL https://cminewar.ai/install.sh | bash -s -- --beta
+Kernel Core: CMineWar OS Beta Suite v1.1.0 (Multiplexed Cognition Module)
 Estado: Completamente Operativo, Conectado al CPU Virtual.
 
-¡Gracias por instalar OpenClaw OS!`,
+¡Gracias por instalar CMineWar OS!`,
         };
 
         if (omitStandardUser) {
-          localStorage.setItem("claw_is_root", "true");
+          localStorage.setItem("cminewar_is_root", "true");
           
           const rootReadme: VFSNode = {
             name: "leeme_root.txt",
             type: "file",
             content: `=====================================================
-ENTORNO DE ADMINISTRADOR CLAWOS - ACCESO ROOT DIRECTO
+ENTORNO DE ADMINISTRADOR CMINEWAR OS - ACCESO ROOT DIRECTO
 =====================================================
 
 Has iniciado sesión directamente como el superusuario 'root' sin mediar contraseña.
-Esto te otorga privilegios y control total inmediato sobre los procesos del kernel OpenClaw.
+Esto te otorga privilegios y control total inmediato sobre los procesos del kernel CMineWar OS.
 
 POLÍTICAS APLICADAS:
 * Súper usuario: root (contraseña anulada para inicio autologin)
@@ -378,26 +378,26 @@ Usa comandos avanzados sin 'sudo'. Todo comando tiene privilegios directos de su
             name: "certificacion_instalacion_root.txt",
             type: "file",
             content: `=====================================================
-CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO OPENCLAW (ROOT ACCESS)
+CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO CMINEWAR OS (ROOT ACCESS)
 =====================================================
 
 Fecha de Compilado: 2026-05-28 20:20 UTC
-Comando usado: curl -fsSL https://openclaw.ai/install.sh | bash -s -- --root --no-user --disable-acpi-sleep --default-browser=chromium
-Kernel Core: OpenClaw Core System v1.1.2 (Direct Superuser Privileges Enabled)
+Comando usado: curl -fsSL https://cminewar.ai/install.sh | bash -s -- --root --no-user --disable-acpi-sleep --default-browser=chromium
+Kernel Core: CMineWar OS Core System v1.1.2 (Direct Superuser Privileges Enabled)
 Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
 
-¡Gracias por configurar su estación súper-servidora de ClawOS!`,
+¡Gracias por configurar su estación súper-servidora de CMineWar OS!`,
           };
 
           updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
           updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
         } else {
-          localStorage.setItem("claw_is_root", "false");
+          localStorage.setItem("cminewar_is_root", "false");
           updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
         }
 
         if (defaultBrowserChromium) {
-          localStorage.setItem("claw_default_browser", "chromium");
+          localStorage.setItem("cminewar_default_browser", "chromium");
           const chromConfig: VFSNode = {
             name: "browser.conf",
             type: "file",
@@ -405,7 +405,7 @@ Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
 BROWSER_BINARY=/bin/chromium-browser
 DEFAULT_BROWSER=Chromium
 CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
-URL_HOME=https://openclaw.ai`,
+URL_HOME=https://cminewar.ai`,
           };
           updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
           // Also write a system bin link for running chromium
@@ -415,11 +415,11 @@ URL_HOME=https://openclaw.ai`,
             content: "[Binary Executable - Chromium Web Browser default system browser]",
           });
         } else {
-          localStorage.setItem("claw_default_browser", "custom");
+          localStorage.setItem("cminewar_default_browser", "custom");
         }
 
         if (disableSleep) {
-          localStorage.setItem("claw_sleep_disabled", "true");
+          localStorage.setItem("cminewar_sleep_disabled", "true");
           const sleepConfig: VFSNode = {
             name: "sleep.conf",
             type: "file",
@@ -432,7 +432,7 @@ AllowSuspendThenHibernate=no`,
           };
           updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
         } else {
-          localStorage.removeItem("claw_sleep_disabled");
+          localStorage.removeItem("cminewar_sleep_disabled");
         }
 
         setVfs(updatedVfs);
@@ -441,8 +441,8 @@ AllowSuspendThenHibernate=no`,
           setStep(4);
           triggerNotification(
             omitStandardUser 
-              ? "¡ClawOS instalado correctamente en modo Root!" 
-              : "¡Instalación exitosa! OpenClaw Kernel enlazado.", 
+              ? "¡CMineWar OS instalado correctamente en modo Root!" 
+              : "¡Instalación exitosa! CMineWar OS Kernel enlazado.", 
             "success"
           );
         }, 600);
@@ -465,7 +465,7 @@ AllowSuspendThenHibernate=no`,
           <Download className="text-emerald-400 w-5 h-5 animate-bounce" />
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-slate-100 flex items-center space-x-1.5">
-              <span>Asistente de Instalación de ClawOS Kernel</span>
+              <span>Asistente de Instalación de CMineWar OS Kernel</span>
               <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full text-[9px] font-mono select-none">
                 Beta Suite
               </span>
@@ -496,9 +496,9 @@ AllowSuspendThenHibernate=no`,
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner shadow-emerald-500/20">
                 <Sparkles className="w-8 h-8 text-emerald-400 animate-pulse" />
               </div>
-              <h4 className="text-base font-bold text-slate-100">Bienvenido al Entorno de Preparación de ClawOS</h4>
+              <h4 className="text-base font-bold text-slate-100">Bienvenido al Entorno de Preparación de CMineWar OS</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Este instalador automatizado preparará tu infraestructura local virtual para ejecutar el sistema operativo de ClawOS y descargará la última compilación beta del núcleo cognitivo inteligente.
+                Este instalador automatizado preparará tu infraestructura local virtual para ejecutar el sistema operativo de CMineWar OS y descargará la última compilación beta del núcleo cognitivo inteligente.
               </p>
             </div>
 
@@ -582,14 +582,14 @@ AllowSuspendThenHibernate=no`,
                       <span>Incluir Chromium como navegador predeterminado</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
-                      Descarga y enlaza el navegador Chromium como la solución web por defecto del sistema ClawOS.
+                      Descarga y enlaza el navegador Chromium como la solución web por defecto del sistema CMineWar OS.
                     </p>
                   </div>
                 </label>
 
                 {/* 4. Claw-To-Go Portable Mode (Windows To Go Equivalent) */}
                 <div className="border-t border-slate-900 pt-3 mt-1 space-y-3">
-                  <h6 className="text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Opciones de Movilidad Extrema (Claw-To-Go):</h6>
+                  <h6 className="text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Opciones de Movilidad Extrema (CMineWar-To-Go):</h6>
                   
                   <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg bg-emerald-950/20 hover:bg-emerald-950/30 transition border border-emerald-500/10 hover:border-emerald-500/30">
                     <input
@@ -601,7 +601,7 @@ AllowSuspendThenHibernate=no`,
                     <div className="text-xs">
                       <div className="font-bold text-slate-100 flex items-center space-x-1.5">
                         <HardDrive size={12} className="text-emerald-400" />
-                        <span>Habilitar Modo Portable "Claw-To-Go" (Instalación Móvil)</span>
+                        <span>Habilitar Modo Portable "CMineWar-To-Go" (Instalación Móvil)</span>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed text-left">
                         Configura el cargador de arranque y el kernel para correr desde discos duros externos/USB. Podrás mover el disco entre cualquier ordenador x86.
@@ -768,7 +768,7 @@ AllowSuspendThenHibernate=no`,
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed text-left">
-                Puedes compilar una <strong>Imagen ISO Virtual Inteligente</strong> de ClawOS (<code className="text-cyan-300 font-mono text-[9px]">clawos-v1.1.2-live.iso</code>) armada a medida con tus parámetros de root ({omitStandardUser ? "Activado" : "Desactivado"}) y ACPI ({disableSleep ? "Desactivado" : "Activado"}). Contiene la firma del kernel, arranque con GRUB2, scripts de instalación y un respaldo JSON íntegro de tu sistema de archivos actual.
+                Puedes compilar una <strong>Imagen ISO Virtual Inteligente</strong> de CMineWar OS (<code className="text-cyan-300 font-mono text-[9px]">cminewaros-v1.1.2-live.iso</code>) armada a medida con tus parámetros de root ({omitStandardUser ? "Activado" : "Desactivado"}) y ACPI ({disableSleep ? "Desactivado" : "Activado"}). Contiene la firma del kernel, arranque con GRUB2, scripts de instalación y un respaldo JSON íntegro de tu sistema de archivos actual.
               </p>
               
               <div className="pt-1">
@@ -796,7 +796,7 @@ AllowSuspendThenHibernate=no`,
                     id="btn-download-iso"
                   >
                     <Download size={13} className="text-cyan-400" />
-                    <span>Compilar y Descargar clawos-v1.1.2-live.iso</span>
+                    <span>Compilar y Descargar cminewaros-v1.1.2-live.iso</span>
                   </button>
                 )}
               </div>
@@ -824,7 +824,7 @@ AllowSuspendThenHibernate=no`,
                 <span>Gestor de Particionado Autónomo</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Define las áreas requeridas por ClawOS para cargar sus archivos raíz virtuales y sectores de arranque.
+                Define las áreas requeridas por CMineWar OS para cargar sus archivos raíz virtuales y sectores de arranque.
               </p>
             </div>
 
@@ -935,7 +935,7 @@ AllowSuspendThenHibernate=no`,
                       </div>
                     )}
                     <div className="flex justify-between text-slate-400 text-[11px]">
-                      <span>● /dev/{selectedDisk}3 [claw_root - Contenedor Principal del Sistema EXT4]</span>
+                      <span>● /dev/{selectedDisk}3 [cminewar_root - Contenedor Principal del Sistema EXT4]</span>
                       <span className="text-emerald-400 font-bold">
                         {selectedDisk === "sda" ? "17.4 GB" : selectedDisk === "sdb" ? "63.4 GB" : "249.4 GB"}
                       </span>
@@ -997,7 +997,7 @@ AllowSuspendThenHibernate=no`,
           <div className="space-y-4 max-w-xxl w-full my-auto py-2" id="step-3-install">
             <div>
               <h4 className="text-sm font-bold text-slate-200">
-                Puesta en producción del Núcleo Inteligente OpenClaw Beta
+                Puesta en producción del Núcleo Inteligente CMineWar OS Beta
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">Se descargará el script y binarios Beta de alta especificación ejecutando la instrucción de kernel principal.</p>
             </div>
@@ -1009,7 +1009,7 @@ AllowSuspendThenHibernate=no`,
                 <span className="text-cyan-400">Canal Certificado HTTPS</span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono text-slate-100 font-bold bg-slate-900 p-2.5 rounded-lg border border-slate-950">
-                <span className="text-emerald-400">$ curl -fsSL https://openclaw.ai/install.sh | bash -s -- --beta</span>
+                <span className="text-emerald-400">$ curl -fsSL https://cminewar.ai/install.sh | bash -s -- --beta</span>
               </div>
             </div>
 
@@ -1091,9 +1091,9 @@ AllowSuspendThenHibernate=no`,
             </div>
 
             <div className="space-y-1.5">
-              <h4 className="text-base font-bold text-slate-100">¡Instalación de ClawOS Completada Exitosamente!</h4>
+              <h4 className="text-base font-bold text-slate-100">¡Instalación de CMineWar OS Completada Exitosamente!</h4>
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-                El núcleo OpenClaw se instaló debidamente y se ha creado una firma de certificación de compilación beta en tu disco `/home/user`.
+                El núcleo CMineWar AI se instaló debidamente y se ha creado una firma de certificación de compilación beta en tu disco `/home/user`.
               </p>
             </div>
 
@@ -1101,7 +1101,7 @@ AllowSuspendThenHibernate=no`,
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-805 border-slate-800 w-xs mx-auto text-xs font-mono space-y-2 text-slate-400">
               <div className="flex justify-between font-sans">
                 <span>Kernel:</span>
-                <span className="text-emerald-400 font-semibold font-mono">5.16.0-openclaw-generic</span>
+                <span className="text-emerald-400 font-semibold font-mono">5.16.0-cminewar-generic</span>
               </div>
               <div className="flex justify-between font-sans">
                 <span>Descriptor:</span>

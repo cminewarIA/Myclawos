@@ -113,3 +113,50 @@ La forma estándar y profesional en la que sistemas operativos web (como ChromeO
    ```
 
 Configura la UEFI de tu ordenador para deshabilitar el "Secure Boot" y arranca de inmediato en la majestuosidad acelerada de clawOS bare-metal.
+
+---
+
+## Método 3: Ejecución Dinámica y Servidora en Debian GNU/Linux
+
+Si en lugar de un Live CD de Alpine deseas ejecutar clawOS de forma continua sobre tu distribución familiar **Debian** (actuando como servidor central en tu hogar u oficina), hemos incorporado un motor de automatización y cortafuego específico para Debian.
+
+Cualquier dispositivo en tu red local (LAN) —incluyendo el móvil, emulador o tablet— podrá acceder a la interfaz web tecleando la dirección IP de tu servidor Debian en el puerto `3000`.
+
+### 1. Instalación Automática y Control de Systemd:
+Hemos provisto el script de automatización nativo `/bare-metal/install_debian_service.sh` que instala Node.js, compila el front-end con Vite, y registra un servicio de systemd para arrancar clawOS de fondo a través de `node dist/server.cjs` en el puerto `3000`.
+
+Para activarlo en tu máquina Debian real, ejecuta:
+```bash
+chmod +x bare-metal/install_debian_service.sh
+sudo ./bare-metal/install_debian_service.sh
+```
+
+Esto habilitará el daemon `clawos.service`. Puedes controlarlo mediante:
+```bash
+# Comprobar el estado del servidor
+sudo systemctl status clawos.service
+
+# Detener o iniciar el servicio
+sudo systemctl stop clawos.service
+sudo systemctl start clawos.service
+```
+
+### 2. Aislamiento Total de Internet (Anti-WAN Firewall) en Debian:
+El instalador despliega una regla de aislamiento local en `/usr/local/bin/clawos-firewall`. Al invocar este comando se utiliza `iptables` para rechazar la salida WAN (Internet), pero manteniendo intactas las redes privadas locales (LAN 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8):
+
+*   **Bloquear el acceso de clawOS a Internet (pero mantener LAN de casa):**
+    ```bash
+    sudo clawos-firewall block
+    ```
+*   **Volver a admitir acceso libre a Internet:**
+    ```bash
+    sudo clawos-firewall allow
+    ```
+*   **Comprobar el filtrado y reglas vigentes:**
+    ```bash
+    sudo clawos-firewall status
+    ```
+
+### 3. Persistencia de Ventanas y Estado del Escritorio:
+Con el fin de evitar la pérdida del estado de tu espacio de trabajo al recargar o conectar desde un dispositivo móvil de la red LAN, clawOS almacena en los metadatos del perfil del cliente (a través del `localStorage` persistente del navegador) las posiciones relativas de cada ventana, los layouts activos, las coordenadas x-y y el foco activo. Esto asegura que tu escritorio se mantenga intacto tras suspender o reiniciar tu plataforma Debian.
+

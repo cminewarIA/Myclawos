@@ -8,7 +8,7 @@ import TextEditor from "./components/TextEditor";
 import OpenClawCore from "./components/OpenClawCore";
 import SystemMonitor from "./components/SystemMonitor";
 import ControlPanel from "./components/ControlPanel";
-import ClawInstaller from "./components/ClawInstaller";
+import CMineWarInstaller from "./components/CMineWarInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
 import BananaWallpaper from "./components/BananaWallpaper";
@@ -41,10 +41,30 @@ import {
   Settings,
   Laptop,
   Network,
-  Tv
+  Tv,
+  Smartphone
 } from "lucide-react";
 
 export default function App() {
+  // Touchscreen / Tactile mode state (Auto-detected & manually persistable)
+  const [touchMode, setTouchMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem("cminewar_touch_mode");
+    if (saved !== null) {
+      return saved === "true";
+    }
+    // Auto-detect touch layout if on tactile screen
+    if (typeof window !== "undefined") {
+      const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+      const isTouchPoints = navigator.maxTouchPoints > 0;
+      return isCoarse || isTouchPoints;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cminewar_touch_mode", String(touchMode));
+  }, [touchMode]);
+
   // Virtual File System State
   const [vfs, setVfs] = useState<VFSNode>(initialVFS);
   const [currentPath, setCurrentPath] = useState<string[]>(() => {
@@ -62,9 +82,9 @@ export default function App() {
     }
     const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
     const initialServices = [
-      { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+      { id: "openclaw-cog", name: "CMineWar Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
       { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
-      { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+      { id: "net-analyzer", name: "CMineWarNet Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
       { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
       { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
     ];
@@ -94,12 +114,12 @@ export default function App() {
   const [openFileName, setOpenFileName] = useState<string[] | null>(null);
   const [openFileContent, setOpenFileContent] = useState<string | null>(null);
 
-  // Chat conversation memory with OpenClaw
+  // Chat conversation memory with CMineWar AI
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {
       id: "claw-welcome",
       role: "model",
-      text: "¡Sistemas listos! Hola, soy **OpenClaw Core**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre clawOS u operabilidad de comandos Linux.",
+      text: "¡Sistemas listos! Hola, soy **CMineWar AI**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el sistema CMineWar OS u operabilidad de de comandos Linux en Debian.",
       timestamp: new Date(),
     },
   ]);
@@ -126,7 +146,7 @@ export default function App() {
     const defaultWindows: WindowState[] = [
       {
         id: "terminal",
-        title: "ClawBash Terminal Virtual - user@openclaw",
+        title: "Consola CMineWarBash Virtual - user@cminewar",
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
@@ -136,7 +156,7 @@ export default function App() {
       },
       {
         id: "openclaw_core",
-        title: "OpenClaw AI Core Mainframe",
+        title: "CMineWar AI Core Mainframe",
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
@@ -146,7 +166,7 @@ export default function App() {
       },
       {
         id: "file_manager",
-        title: "Explorador de Archivos Especial - ClawFM",
+        title: "Explorador de Archivos Especial - CMineWarFM",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -156,7 +176,7 @@ export default function App() {
       },
       {
         id: "text_editor",
-        title: "ClawEdit - Editor de Notas del Kernel",
+        title: "CMineWarEdit - Editor de Notas del Kernel",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -166,7 +186,7 @@ export default function App() {
       },
       {
         id: "system_monitor",
-        title: "Monitor del Sistema - ClawMonitor",
+        title: "Monitor del Sistema - CMineWarMonitor",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -176,7 +196,7 @@ export default function App() {
       },
       {
         id: "control_panel",
-        title: "Panel de Control de ClawOS - claw_control",
+        title: "Panel de Control de CMineWar OS - cminewar_control",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -186,7 +206,7 @@ export default function App() {
       },
       {
         id: "installer",
-        title: "Instalador de ClawOS Beta Suite - claw_install_gui",
+        title: "Instalador de CMineWar OS Beta Suite - cminewar_install_gui",
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
@@ -196,7 +216,7 @@ export default function App() {
       },
       {
         id: "updater_github",
-        title: "Ajustes del Sistema y Control de Hardware - claw_settings",
+        title: "Ajustes del Sistema y Control de Hardware - cminewar_settings",
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
@@ -304,7 +324,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<{ id: string; text: string; type: "success" | "info" }[]>([
     {
       id: "not-1",
-      text: "Kernel OpenClaw v1.1.0 cargado con éxito en el espacio lúdico virtual. ¡Disfrute del sistema!",
+      text: "Kernel CMineWar OS v1.2.0 cargado con éxito en Debian-Live virtual. ¡Disfrute del sistema!",
       type: "success",
     },
   ]);
@@ -439,6 +459,7 @@ export default function App() {
             openWindow={handleOpenWindow}
             onOpenFileInEditor={handleOpenFileInEditor}
             onPostChatMessageFromShell={handlePostChatMessageFromShell}
+            touchMode={touchMode}
           />
         );
       case "openclaw_core":
@@ -452,6 +473,7 @@ export default function App() {
             setCurrentPath={setCurrentPath}
             openWindow={handleOpenWindow}
             onOpenFileInEditor={handleOpenFileInEditor}
+            touchMode={touchMode}
           />
         );
       case "text_editor":
@@ -475,7 +497,7 @@ export default function App() {
         return <ControlPanel />;
       case "installer":
         return (
-          <ClawInstaller
+          <CMineWarInstaller
             vfs={vfs}
             setVfs={setVfs}
             openWindow={handleOpenWindow}
@@ -511,21 +533,21 @@ export default function App() {
   const getFriendlyAppName = (id: string) => {
     switch (id) {
       case "terminal":
-        return "ClawBash Terminal";
+        return "CMineWarBash Terminal";
       case "openclaw_core":
-        return "OpenClaw AI Core";
+        return "CMineWar AI Core";
       case "file_manager":
-        return "Explorador de Archivos";
+        return "Explorador de Archivos (CMineWarFM)";
       case "text_editor":
-        return "Editor de Textos (ClawEdit)";
+        return "Editor de Textos (CMineWarEdit)";
       case "system_monitor":
-        return "Monitor del Sistema";
+        return "Monitor del Sistema (CMineWarMonitor)";
       case "control_panel":
-        return "Panel de Control";
+        return "Panel de Control CMineWar";
       case "installer":
-        return "Instalador Sencillo Kernel Beta";
+        return "Instalador Kernel Sencillo Beta";
       case "updater_github":
-        return "Ajustes y Hardware";
+        return "Ajustes y Hardware Debian";
       case "chromium":
         return "Navegador Chromium";
       case "pkg_htop":
@@ -539,7 +561,7 @@ export default function App() {
       case "pkg_retroarch":
         return "RetroArch Snake";
       default:
-        return "Aplicación ClawOS";
+        return "Aplicación CMineWar OS";
     }
   };
 
@@ -601,163 +623,63 @@ export default function App() {
       {/* Main Desktop workspace */}
       <div className="flex-1 relative p-4 pointer-events-auto overflow-hidden">
         {/* Desktop grid launchers */}
-        <div className="grid grid-flow-row gap-6 absolute top-6 left-6 w-24 select-none">
-          {/* Launcher 1: OpenClaw Core */}
-          <div
-            onDoubleClick={() => handleOpenWindow("openclaw_core")}
-            onTouchEnd={() => handleOpenWindow("openclaw_core")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar OpenClaw Core"
-            id="launcher-openclaw"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-rose-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <DragonLogo size={32} className="group-hover:scale-105 transition-transform" />
+        <div className={`grid grid-flow-row absolute left-6 select-none transition-all ${
+          touchMode ? "top-8 gap-8 w-28" : "top-6 gap-6 w-24"
+        }`}>
+          {[
+            { id: "openclaw_core", name: "CMineWar AI", icon: <DragonLogo size={touchMode ? 38 : 32} />, border: "group-hover:border-rose-500/60" },
+            { id: "terminal", name: "Terminal", icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" },
+            { id: "file_manager", name: "Archivos VFS", icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" },
+            { id: "text_editor", name: "Editor Notas", icon: <FileText className={`text-amber-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" },
+            { id: "system_monitor", name: "Monitor", icon: <Cpu className={`text-violet-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-violet-500/60" },
+            { id: "control_panel", name: "Panel Control", icon: <Sliders className={`text-emerald-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" },
+            { id: "installer", name: "Instalar Kern", icon: <Download className={`text-cyan-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" },
+            { id: "updater_github", name: "Ajustes SO", icon: <Settings className={`text-pink-400 animate-pulse ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500" },
+            { id: "chromium", name: "Chromium", icon: <Globe className={`text-blue-400 ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />, border: "group-hover:border-blue-400/60" },
+          ].map((launcher) => (
+            <div
+              key={launcher.id}
+              onDoubleClick={() => handleOpenWindow(launcher.id)}
+              onClick={() => {
+                // Instantly open window on click/tap if in touch screen mode to bypass double-click frustration on tablets/phones
+                if (touchMode) {
+                  handleOpenWindow(launcher.id);
+                }
+              }}
+              onTouchEnd={() => handleOpenWindow(launcher.id)}
+              className="flex flex-col items-center cursor-pointer group text-center"
+              title={`Inicia ${launcher.name}`}
+              id={`launcher-${launcher.id}`}
+            >
+              <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 ${launcher.border} flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
+                touchMode ? "w-14 h-14 rounded-2xl scale-110 shadow-emerald-950/30" : "w-12 h-12 rounded-xl"
+              }`}>
+                {launcher.icon}
+              </div>
+              <span className={`font-semibold text-slate-100 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
+                touchMode ? "text-[12px] mt-2.5" : "text-[11px] mt-1.5"
+              }`}>
+                {launcher.name}
+              </span>
             </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              OpenClaw AI
-            </span>
-          </div>
-
-          {/* Launcher 2: Terminal */}
-          <div
-            onDoubleClick={() => handleOpenWindow("terminal")}
-            onTouchEnd={() => handleOpenWindow("terminal")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar Terminal ClawBash"
-            id="launcher-terminal"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <TerminalIcon className="text-emerald-500 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Terminal
-            </span>
-          </div>
-
-          {/* Launcher 3: File Manager */}
-          <div
-            onDoubleClick={() => handleOpenWindow("file_manager")}
-            onTouchEnd={() => handleOpenWindow("file_manager")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar Explorador de archivos ClawFM"
-            id="launcher-files"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-cyan-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <FolderOpen className="text-cyan-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Archivos VFS
-            </span>
-          </div>
-
-          {/* Launcher 4: Text Editor */}
-          <div
-            onDoubleClick={() => handleOpenWindow("text_editor")}
-            onTouchEnd={() => handleOpenWindow("text_editor")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar Editor de Textos ClawEdit"
-            id="launcher-editor"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-amber-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <FileText className="text-amber-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Editor Notas
-            </span>
-          </div>
-
-          {/* Launcher 5: System Monitor */}
-          <div
-            onDoubleClick={() => handleOpenWindow("system_monitor")}
-            onTouchEnd={() => handleOpenWindow("system_monitor")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para ver hardware ClawMonitor"
-            id="launcher-monitor"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-violet-500/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Cpu className="text-violet-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Monitor
-            </span>
-          </div>
-
-          {/* Launcher 6: Control Panel */}
-          <div
-            onDoubleClick={() => handleOpenWindow("control_panel")}
-            onTouchEnd={() => handleOpenWindow("control_panel")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para abrir el Panel de Control"
-            id="launcher-control-panel"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-400/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Sliders className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Panel Control
-            </span>
-          </div>
-
-          {/* Launcher 7: ClawOS Installer */}
-          <div
-            onDoubleClick={() => handleOpenWindow("installer")}
-            onTouchEnd={() => handleOpenWindow("installer")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para iniciar la instalación del núcleo"
-            id="launcher-installer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-cyan-400/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Download className="text-cyan-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Instalar Kern
-            </span>
-          </div>
-
-          {/* Launcher 8: Ajustes de Red y Hardware */}
-          <div
-            onDoubleClick={() => handleOpenWindow("updater_github")}
-            onTouchEnd={() => handleOpenWindow("updater_github")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para abrir Ajustes y Panel de Hardware"
-            id="launcher-updater-github"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-pink-550 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Settings className="text-pink-400 w-6 h-6 group-hover:scale-105 transition-transform animate-pulse" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Ajustes SO
-            </span>
-          </div>
-
-          {/* Launcher 9: Chromium Browser */}
-          <div
-            onDoubleClick={() => handleOpenWindow("chromium")}
-            onTouchEnd={() => handleOpenWindow("chromium")}
-            className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para abrir el Navegador de Internet Chromium"
-            id="launcher-chromium"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-blue-400/60 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <Globe className="text-blue-400 w-6 h-6 group-hover:scale-105 transition-transform" />
-            </div>
-            <span className="text-[11px] font-medium text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
-              Chromium
-            </span>
-          </div>
+          ))}
 
           {/* Launcher 10: Cajón de Aplicaciones (Main Menu Synology-style Launcher) */}
           <div
             onDoubleClick={() => setAppDrawerOpen(true)}
             onClick={() => setAppDrawerOpen(true)}
             className="flex flex-col items-center cursor-pointer group text-center"
-            title="Doble clic para abrir el Cajón de Aplicaciones DSM"
+            title="Abrir el Cajón de Aplicaciones"
             id="launcher-app-drawer"
           >
-            <div className="w-12 h-12 rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800 group-hover:border-emerald-400 flex items-center justify-center shadow-lg transition duration-200 aspect-square">
-              <LayoutGrid className="text-emerald-400 w-6 h-6 group-hover:scale-105 transition-transform" />
+            <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 group-hover:border-emerald-400 flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
+              touchMode ? "w-14 h-14 rounded-2xl scale-110 shadow-emerald-950/30" : "w-12 h-12 rounded-xl"
+            }`}>
+              <LayoutGrid className={`text-emerald-400 group-hover:scale-105 transition-all ${touchMode ? "w-7 h-7" : "w-6 h-6"}`} />
             </div>
-            <span className="text-[11px] font-bold text-slate-100 mt-1.5 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full">
+            <span className={`font-black text-slate-100 px-1 py-0.5 bg-slate-950/60 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
+              touchMode ? "text-[12px] mt-2.5" : "text-[11px] mt-1.5"
+            }`}>
               Cajón Apps
             </span>
           </div>
@@ -768,6 +690,7 @@ export default function App() {
           <WindowFrame
             key={win.id}
             win={win}
+            touchMode={touchMode}
             onClose={() => handleCloseWindow(win.id)}
             onMinimize={() => handleMinimizeWindow(win.id)}
             onMaximize={() => handleMaximizeWindow(win.id)}
@@ -793,7 +716,7 @@ export default function App() {
             </div>
             <div>
               <p className="font-semibold text-slate-100 text-sm">user_developer</p>
-              <p className="text-[10px] text-slate-500">ClawOS Local Administrator</p>
+              <p className="text-[10px] text-slate-500">CMineWar OS Developer</p>
             </div>
           </div>
 
@@ -808,7 +731,7 @@ export default function App() {
             >
               <DragonLogo size={18} />
               <div>
-                <p className="font-medium text-slate-300">OpenClaw AI</p>
+                <p className="font-medium text-slate-300">CMineWar AI</p>
                 <p className="text-[9px] text-slate-500">Núcleo inteligente central</p>
               </div>
             </button>
@@ -820,7 +743,7 @@ export default function App() {
             >
               <TerminalIcon size={16} className="text-emerald-500" />
               <div>
-                <p className="font-medium text-slate-300">ClawBash Terminal</p>
+                <p className="font-medium text-slate-300">CMineWarBash Terminal</p>
                 <p className="text-[9px] text-slate-500">Emulador de bash interactivo</p>
               </div>
             </button>
@@ -911,9 +834,9 @@ export default function App() {
           </div>
 
           <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-500">
-            <span>Kernel: 5.16.0-openclaw</span>
+            <span>Kernel: 5.16.0-cminewar-debian</span>
             <button
-              onClick={() => alert("Simulando apagado de ClawOS... ¡Para reiniciar refresca tu navegador!")}
+              onClick={() => alert("Simulando apagado de CMineWar OS... ¡Para reiniciar refresca tu navegador!")}
               className="flex items-center space-x-1.5 px-2 py-1 bg-red-950/50 border border-red-900/30 text-rose-300 hover:bg-red-900 hover:text-white rounded transition"
               id="btn-shutdown"
             >
@@ -925,30 +848,36 @@ export default function App() {
       )}
 
       {/* Decorative desktop greeting in the center */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none select-none opacity-20">
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none select-none opacity-20 animate-pulse" style={{ animationDuration: '8s' }}>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-widest font-sans bg-clip-text text-transparent bg-gradient-to-b from-slate-200 to-slate-400">
-          CLAW OS
+          CMINEWAR OS
         </h1>
         <p className="text-xs sm:text-sm tracking-wide font-mono mt-2 text-emerald-400 uppercase">
-          OpenClaw Linux Environment
+          Debian GNU/Linux Native Engine
         </p>
       </div>
 
       {/* Bottom Taskbar */}
-      <div className="h-12 bg-slate-950/95 border-t border-slate-800/85 px-4 flex items-center justify-between z-[9999] select-none shrink-0 pointer-events-auto">
+      <div className={`bg-slate-950/95 border-t border-slate-800/85 px-4 flex items-center justify-between z-[9999] select-none shrink-0 pointer-events-auto transition-all duration-300 ${
+        touchMode ? "h-15 sm:h-16 py-2" : "h-12"
+      }`}>
         <div className="flex items-center space-x-3.5">
           {/* Start button */}
           <button
             onClick={() => setStartMenuOpen(!startMenuOpen)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold tracking-wide border transition ${
+            className={`flex items-center space-x-2 rounded-md font-sans border transition-all ${
+              touchMode
+                ? "px-4 py-2.5 text-sm shadow-md shadow-emerald-500/20 font-bold scale-105"
+                : "px-3 py-1.5 text-xs font-semibold tracking-wide"
+            } ${
               startMenuOpen
                 ? "bg-emerald-950 border-emerald-500 text-emerald-300"
                 : "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
             }`}
             id="btn-start-system"
           >
-            <Bot size={13} className="text-white shrink-0" />
-            <span>ClawOS</span>
+            <Bot size={touchMode ? 15 : 13} className="text-white shrink-0 animate-bounce" style={{ animationDuration: '3s' }} />
+            <span>CMineWar OS</span>
           </button>
 
           {/* Quick shortcuts and active application representation tabs */}
@@ -968,7 +897,9 @@ export default function App() {
                       handleMinimizeWindow(win.id);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded text-xs select-none font-sans font-medium flex items-center space-x-1.5 transition border ${
+                  className={`select-none font-sans font-medium flex items-center transition border ${
+                    touchMode ? "px-4 py-2 text-sm space-x-2 rounded-lg" : "px-3 py-1.5 text-xs space-x-1.5 rounded"
+                  } ${
                     active
                       ? "bg-slate-900 text-emerald-400 border-slate-800 font-semibold"
                       : win.isOpen
@@ -977,20 +908,20 @@ export default function App() {
                   }`}
                   id={`taskbar-tab-${win.id}`}
                 >
-                  {win.id === "terminal" && <TerminalIcon size={12} />}
-                  {win.id === "openclaw_core" && <DragonLogo size={14} />}
-                  {win.id === "file_manager" && <FolderOpen size={12} />}
-                  {win.id === "text_editor" && <FileText size={12} />}
-                  {win.id === "system_monitor" && <Cpu size={12} />}
-                  {win.id === "control_panel" && <Sliders size={12} />}
-                  {win.id === "installer" && <Download size={12} />}
-                  {win.id === "updater_github" && <Settings size={12} className="text-pink-400" />}
-                  {win.id === "chromium" && <Globe size={12} />}
-                  {win.id === "pkg_htop" && <Cpu size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_neofetch" && <Laptop size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_cmatrix" && <TerminalIcon size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_nginx" && <Network size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_retroarch" && <Tv size={12} className="text-emerald-400" />}
+                  {win.id === "terminal" && <TerminalIcon size={touchMode ? 14 : 12} />}
+                  {win.id === "openclaw_core" && <DragonLogo size={touchMode ? 16 : 14} />}
+                  {win.id === "file_manager" && <FolderOpen size={touchMode ? 14 : 12} />}
+                  {win.id === "text_editor" && <FileText size={touchMode ? 14 : 12} />}
+                  {win.id === "system_monitor" && <Cpu size={touchMode ? 14 : 12} />}
+                  {win.id === "control_panel" && <Sliders size={touchMode ? 14 : 12} />}
+                  {win.id === "installer" && <Download size={touchMode ? 14 : 12} />}
+                  {win.id === "updater_github" && <Settings size={touchMode ? 14 : 12} className="text-pink-400" />}
+                  {win.id === "chromium" && <Globe size={touchMode ? 14 : 12} />}
+                  {win.id === "pkg_htop" && <Cpu size={touchMode ? 14 : 12} className="text-emerald-400" />}
+                  {win.id === "pkg_neofetch" && <Laptop size={touchMode ? 14 : 12} className="text-emerald-400" />}
+                  {win.id === "pkg_cmatrix" && <TerminalIcon size={touchMode ? 14 : 12} className="text-emerald-400" />}
+                  {win.id === "pkg_nginx" && <Network size={touchMode ? 14 : 12} className="text-emerald-400" />}
+                  {win.id === "pkg_retroarch" && <Tv size={touchMode ? 14 : 12} className="text-emerald-400" />}
                   <span className="truncate max-w-[110px]">{getFriendlyAppName(win.id)}</span>
                 </button>
               );
@@ -998,8 +929,37 @@ export default function App() {
           </div>
         </div>
 
-        {/* System tray parameters */}
+        {/* System tray parameters with Tactile Mode indicator toggle */}
         <div className="flex items-center space-x-4 text-xs text-slate-400">
+          
+          {/* Interactive Tactile Mode Switch */}
+          <button
+            onClick={() => {
+              const nextMode = !touchMode;
+              setTouchMode(nextMode);
+              triggerNotification(
+                `Modo Táctil ${nextMode ? "ACTIVADO" : "DESACTIVADO"}: ${
+                  nextMode 
+                    ? "Interfaz completamente adaptada a pantallas táctiles y móviles." 
+                    : "Retornando a la interfaz de escritorio clásica."
+                }`,
+                "success"
+              );
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+              touchMode
+                ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-400 font-extrabold shadow shadow-amber-500/20"
+                : "bg-slate-900 hover:bg-slate-850 border-slate-850 text-slate-400 hover:text-slate-300"
+            }`}
+            title={touchMode ? "Desactivar optimización táctil" : "Activar optimización táctil"}
+            id="btn-toggle-touch-mode"
+          >
+            <Smartphone size={13} className={touchMode ? "text-amber-400 animate-pulse" : "text-slate-500"} />
+            <span className="text-[10px] tracking-wider font-mono font-bold">
+              TÁCTIL: {touchMode ? "ON" : "OFF"}
+            </span>
+          </button>
+
           {/* Signal and hardware tray indicators */}
           <div className="hidden sm:flex items-center space-x-3 text-slate-500 border-r border-slate-900 pr-4">
             <Wifi size={14} className="text-emerald-500" title="Link status: Gigabit Ethernet virtual" />
@@ -1063,8 +1023,8 @@ export default function App() {
               
               {/* Loop over static and dynamic apps */}
               {[
-                { id: "openclaw_core", name: "OpenClaw AI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
-                { id: "terminal", name: "Terminal", desc: "Consola ClawBash", icon: TerminalIcon, system: true },
+                { id: "openclaw_core", name: "CMineWar AI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
+                { id: "terminal", name: "Terminal", desc: "Consola CMineWarBash", icon: TerminalIcon, system: true },
                 { id: "file_manager", name: "Archivos VFS", desc: "Explorador de ficheros", icon: FolderOpen, system: true, iconCol: "text-cyan-400" },
                 { id: "text_editor", name: "Editor Notas", desc: "Editor de textos rápido", icon: FileText, system: true, iconCol: "text-amber-400" },
                 { id: "system_monitor", name: "Monitor", desc: "Hardware en vivo", icon: Cpu, system: true, iconCol: "text-violet-400" },
@@ -1117,7 +1077,7 @@ export default function App() {
           </div>
 
           <div className="pt-4 border-t border-slate-800 max-w-5xl mx-auto w-full flex justify-between items-center text-[10px] text-slate-500 font-mono shrink-0">
-            <span>ClawOS DSM Main Menu Workspace v1.1</span>
+            <span>CMineWar OS Debian Workspace v1.2</span>
             <span>Autodetecting Screen Mode: Fully Responsive</span>
           </div>
         </div>

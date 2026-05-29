@@ -67,7 +67,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
         text: m.text,
       }));
 
-      const res = await fetch("/api/openclaw/chat", {
+      const res = await fetch("/api/cminewar/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -92,7 +92,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       const errorMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: "system",
-        text: `Error de puente de comunicación OpenClaw: ${err.message || "La conexión cognitiva ha fallado."}`,
+        text: `Error de puente de comunicación CMineWar AI: ${err.message || "La conexión cognitiva ha fallado."}`,
         timestamp: new Date(),
       };
       setChatHistory((prev) => [...prev, errorMsg]);
@@ -102,12 +102,12 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
   };
 
   const clearConversation = () => {
-    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo de OpenClaw?")) {
+    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo de CMineWar AI?")) {
       setChatHistory([
         {
           id: "claw-welcome",
           role: "model",
-          text: "¡Sistemas listos! Hola, soy **OpenClaw Core**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre clawOS u operabilidad de comandos Linux.",
+          text: "¡Sistemas listos! Hola, soy **CMineWar AI**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el sistema CMineWar OS u operabilidad de comandos Linux en Debian.",
           timestamp: new Date(),
         },
       ]);
@@ -120,9 +120,9 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       <div className="flex items-center justify-between p-3 bg-slate-950 border-b border-slate-800 select-none shrink-0 text-xs text-slate-400">
         <div className="flex items-center space-x-2">
           <DragonLogo size={20} />
-          <span className="font-semibold text-slate-300">OpenClaw Cognitive Hub</span>
+          <span className="font-semibold text-slate-300">CMineWar AI Cognitive Hub</span>
           <span className="px-1.5 py-0.2 bg-emerald-500/10 border border-emerald-500/20 rounded font-mono text-[9px] text-emerald-400">
-            K-Core Connected
+            Debian-Core Connected
           </span>
         </div>
         <button
@@ -138,10 +138,10 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       {/* Suggestion Quick Chips */}
       <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/40 border-b border-slate-800/60 shrink-0 select-none">
         <button
-          onClick={() => setInput("¿Cuáles son tus características como núcleo de ClawOS?")}
+          onClick={() => setInput("¿Cuáles son tus características como núcleo de CMineWar OS?")}
           className="text-[10px] text-slate-300 bg-slate-950 border border-slate-800 rounded px-2 py-1 hover:border-emerald-500/40 transition"
         >
-          ¿Qué es ClawOS?
+          ¿Qué es CMineWar OS?
         </button>
         <button
           onClick={() => setInput("Explícame cómo funciona el comando cd y ls de linux")}
@@ -255,7 +255,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pregunta a OpenClaw..."
+          placeholder="Pregunta a CMineWar AI..."
           className="flex-1 bg-slate-900 border border-slate-800 rounded-md text-xs px-3.5 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/55 font-sans"
           id="chat-input-claw"
           disabled={isLoading}
