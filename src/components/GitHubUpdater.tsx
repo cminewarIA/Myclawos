@@ -33,7 +33,8 @@ import {
   Terminal,
   FileCode,
   Sliders,
-  Maximize2
+  Maximize2,
+  Cpu
 } from "lucide-react";
 
 interface GitHubUpdaterProps {
@@ -90,6 +91,21 @@ export default function GitHubUpdater({
     return () => {
       window.removeEventListener("storage", syncWallpaperSettings);
       window.removeEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleRequestTab = () => {
+      const requestedTab = localStorage.getItem("cminewar_request_settings_tab");
+      if (requestedTab === "wallpaper") {
+        setActiveTab("wallpaper");
+        localStorage.removeItem("cminewar_request_settings_tab");
+      }
+    };
+    window.addEventListener("cminewar_request_settings_tab_changed", handleRequestTab);
+    handleRequestTab();
+    return () => {
+      window.removeEventListener("cminewar_request_settings_tab_changed", handleRequestTab);
     };
   }, []);
   
@@ -202,6 +218,20 @@ export default function GitHubUpdater({
   const [activeBootloader, setActiveBootloader] = useState(() => localStorage.getItem("cminewar_bootloader_version") || "CMineWar-GRUB MBR v2.06");
   const [isSafeModeArmed, setIsSafeModeArmed] = useState(() => localStorage.getItem("cminewar_safe_mode") === "true");
   const [forceAndroidSim, setForceAndroidSim] = useState(() => localStorage.getItem("cminewar_force_android") === "true");
+
+  // Portable SSD Boot & Triple Compatibility (UEFI, Legacy, BIOS antiguas)
+  const [ssdPortableMode, setSsdPortableMode] = useState<"hybrid" | "uefi_only" | "legacy_only">(() => {
+    return (localStorage.getItem("cminewar_ssd_portable_mode") as "hybrid" | "uefi_only" | "legacy_only") || "hybrid";
+  });
+  const [ssdMokEnrolled, setSsdMokEnrolled] = useState<boolean>(() => {
+    return localStorage.getItem("cminewar_ssd_mok_enrolled") !== "false";
+  });
+  const [ssdLbaLimitEnabled, setSsdLbaLimitEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("cminewar_ssd_lba_limit") === "true";
+  });
+  const [ssdAutoSensingEnabled, setSsdAutoSensingEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("cminewar_ssd_autosensing") !== "false";
+  });
 
   const [latestSha, setLatestSha] = useState<string>("");
   const [commits, setCommits] = useState<CommitInfo[]>([]);
@@ -857,39 +887,41 @@ echo "========================================================================="
     let baseLogs: string[] = [];
     if (type === "kernel") {
       baseLogs = [
-        "⚡ [KERNEL UPDATE] Iniciando descarga de código fuente del kernel cminewar-core v6.10...",
-        "🔧 [COMPILADOR] Extrayendo ficheros bzImage e initrd.img...",
+        "⚡ [KERNEL UPDATE] Cargando árbol de compilación adaptativo del kernel cminewar-core v6.10 para SSD portátil...",
+        "🔧 [COMPILADOR] Preparando módulos PCI elásticos para autodetectar placas base host...",
       ];
     } else if (type === "bootloader") {
       baseLogs = [
-        "⚡ [BOOTLOADER UPDATE] Obteniendo definición MBR del cargador de arranque CMineWar-GRUB v2.06...",
-        "🔧 [DISCO] Preparando tabla de partición LBA activa...",
+        "⚡ [BOOTLOADER UPDATE] Inicializando escritura híbrida: UEFI Secure Boot + MBR Legacy + Ancient PC alignment...",
+        "🔧 [DISCO PORTÁTIL] Configurando sectores de particionado elástico LBA en /dev/sdb (SSD)...",
       ];
     } else {
       baseLogs = [
-        "⚡ [NUCLEO INTEGRAL] Actualizando Kernel y Bootloader del sistema completo desde GitHub...",
-        "🔧 [SISTEMA] Iniciando compilación cruzada multiproceso para Debian...",
+        "⚡ [NUCLEO INTEGRAL] Compilando núcleo universal autónomo y cargadores multipropósito para SSD extraíble...",
+        "🔧 [SISTEMA] Iniciando compilación cruzada elástica dual en clúster Debian...",
       ];
     }
 
     setUpdateLogs(baseLogs);
 
     const steps = type === "kernel" ? [
-      "🔍 [CONFIG] Cargando plantilla de compilación cminewar_defconfig...",
-      "🛠️ [MAKE] Compilando bzImage (Kernel comprimido) listo... OK",
-      "📦 [MODULES] Empaquetando módulos depurables en /lib/modules/6.10.8...",
-      "🚀 [INSTALL] Sobrescribiendo /boot/vmlinuz-6.10-cminewar-core...",
+      "🔍 [CONFIG] Cargando configs adaptativas de controladores: NVMe, SATA, UAS, USB-Storage... OK",
+      "🛠️ [MAKE] Compilando bzImage (Kernel universal adaptable compatible multi-PC) listo... OK",
+      "📦 [INITRAMFS] Empaquetando udev-sensing cargadores en initrd.img-6.10.8...",
+      "🚀 [INSTALL] Sobrescribiendo /boot/vmlinuz-6.10-cminewar-core con soporte elástico...",
     ] : type === "bootloader" ? [
-      "🔍 [STAGE 1] Comprobando compatibilidad de bloques en disco /dev/vda...",
-      "🛠️ [GRUB-INSTALL] Copiando archivos de arranque a /boot/grub/i386-pc/...",
-      "💾 [MBR] Escribiendo bootstrap en el primer sector físico del disco...",
-      "✔ [OK] Configuración de arranque CMineWar-GRUB actualizada con éxito.",
+      "🔍 [STAGE 1] Validando tabla GPT híbrida con sector MBR protector alineado por hardware...",
+      "💾 [ESP FAT32] Flasheando cargador EFI/BOOT/BOOTX64.EFI y EFI/BOOT/ia32.efi firmado (UEFI)...",
+      "🔑 [SECURE BOOT] Consolidando claves Shim Microsoft standard con bypass MOK...",
+      "🛠️ [GRUB-INSTALL] Copiando binarios i386-pc Legacy BIOS targets en Protective MBR...",
+      "📐 [CHS/LBA antigua] Estableciendo límite CHS seguro por debajo de 137 GB para ordenadores antiguos...",
+      "✔ [OK] Cargador de arranque triple-compatible (UEFI, Legacy & BIOS antiguas) instalado con éxito en el SSD.",
     ] : [
-      "🔍 [CONFIG] Sincronizando árbol git contra compilación remota...",
-      "🛠️ Compilando nuevo Kernel v6.10.8-cminewar-generic_x86_64...",
-      "📦 Empaquetando ramdisk initrd virtual...",
-      "💾 Escribiendo MBR-GRUB v2.06 bootloader blocks...",
-      "✔ [SISTEMA RECOMPILADO] Núcleo y cargadores actualizados.",
+      "🔍 [CONFIG] Sintonizando sistema y comprobando compatibilidad de hosts alternativos...",
+      "🛠️ Compilando nuevo Kernel adaptativo universal v6.10.8-cminewar con autodetector de chipsets...",
+      "📦 Empaquetando ramdisk initrd con drivers elásticos de almacenamiento (UAS, SATA, NVMe, USB)...",
+      "💾 Escribiendo particionado híbrido GPT/MBR & firmando binarios UEFI BOOTX64.EFI...",
+      "✔ [SISTEMA RECOMPILADO] Núcleo triple-compatible (UEFI SecureBoot, Legacy & BIOS antiguas) sincronizado en SSD usb.",
     ];
 
     let currentStep = 0;
@@ -2489,51 +2521,147 @@ echo "========================================================================="
 
             {/* EXPANDED: FIRMWARE, KERNEL & BOOTLOADER SECTION */}
             <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-4 text-left">
-              <div className="border-b border-slate-900 pb-2">
-                <span className="text-[9px] uppercase tracking-widest font-mono text-pink-500 font-bold block">
-                  ⚙️ Gestión Integral de Firmware, Kernel y Bootloader
+              <div className="border-b border-slate-900 pb-2.5">
+                <span className="text-[9px] uppercase tracking-widest font-mono text-pink-500 font-bold block flex items-center">
+                  <Cpu size={12} className="mr-1.5 text-pink-400 animate-pulse" />
+                  <span>⚙️ Gestión de Firmware y Arranque Universal (Portable USB/SSD)</span>
                 </span>
-                <p className="text-[10px] text-slate-550 leading-relaxed mt-1">
-                  Re-compila el núcleo del sistema o re-flashea el cargador de arranque MBR directamente desde los repositorios de GitHub.
+                <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                  Re-compila el núcleo del sistema, firma llaves UEFI Secure Boot o adapta el cargador de arranque híbrido para arrancar en cualquier ordenador antiguo o moderno.
                 </p>
               </div>
 
               {/* Status information bars */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px] font-mono">
                 <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
-                  <span className="text-slate-500 block text-[8px] uppercase">KERNEL ACTIVO DEBIAN:</span>
+                  <span className="text-slate-550 block text-[8px] uppercase font-bold text-slate-400">KERNEL ACTIVO DEBIAN (Host Auto-Sense):</span>
                   <span className="text-pink-400 font-bold block mt-1 truncate" title={activeKernel}>{activeKernel}</span>
                 </div>
                 <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
-                  <span className="text-slate-500 block text-[8px] uppercase">ARRANCADOR (BOOTLOADER):</span>
+                  <span className="text-slate-550 block text-[8px] uppercase font-bold text-slate-400">CARGADOR (Triple Hybrid Bootloader):</span>
                   <span className="text-pink-400 font-bold block mt-1 truncate" title={activeBootloader}>{activeBootloader}</span>
+                </div>
+              </div>
+
+              {/* Portable SSD triple boot parameters */}
+              <div className="space-y-3.5 bg-slate-900/40 p-3 rounded-lg border border-slate-900/80">
+                <span className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-wider block border-b border-slate-800/40 pb-1.5">
+                  📁 Parámetros del Dispositivo SSD Portátil (Multi-PC Setup):
+                </span>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs font-sans">
+                  {/* Select System Boot mode */}
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Modo de Arranque Target:</span>
+                    <select
+                      value={ssdPortableMode}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        setSsdPortableMode(val);
+                        localStorage.setItem("cminewar_ssd_portable_mode", val);
+                        window.dispatchEvent(new Event("storage"));
+                        triggerNotification(`Modo de arranque SSD cambiado a: ${val.toUpperCase()}`, "success");
+                      }}
+                      className="bg-slate-950 border border-slate-800 hover:border-pink-500/30 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    >
+                      <option value="hybrid">📀 Híbrido Total (UEFI GPT + MBR BIOS Legacy)</option>
+                      <option value="uefi_only">🔬 UEFI Nativo (GPT Solo - Sectores UEFI x64/ia32)</option>
+                      <option value="legacy_only">💾 Legacy BIOS / MBR Puro (Para máquinas heredadas)</option>
+                    </select>
+                  </div>
+
+                  {/* Secure boot SHIM keys toggle */}
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Secure Boot (Claves Microsoft SHIM):</span>
+                    <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                      <span className="text-[10px] text-slate-400 font-mono">Shim Loader & MOK:</span>
+                      <button
+                        onClick={() => {
+                          const val = !ssdMokEnrolled;
+                          setSsdMokEnrolled(val);
+                          localStorage.setItem("cminewar_ssd_mok_enrolled", String(val));
+                          window.dispatchEvent(new Event("storage"));
+                          triggerNotification(val ? "Firma Shim para Secure Boot habilitada." : "Shim Secure Boot omitido.", "info");
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                          ssdMokEnrolled ? "bg-pink-500/10 text-pink-400 border border-pink-500/20" : "bg-slate-800 text-slate-400"
+                        }`}
+                      >
+                        {ssdMokEnrolled ? "FIRMADAS (MOK)" : "PASSTHROUGH"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hardware auto-sensing toggle */}
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">HW Autodetect (Elastic UDEV):</span>
+                    <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                      <span className="text-[10px] text-slate-400 font-mono">Universal Storage Drivers:</span>
+                      <button
+                        onClick={() => {
+                          const val = !ssdAutoSensingEnabled;
+                          setSsdAutoSensingEnabled(val);
+                          localStorage.setItem("cminewar_ssd_autosensing", String(val));
+                          window.dispatchEvent(new Event("storage"));
+                          triggerNotification(val ? "Autodetección de buses USB-Storage, NVMe, AHCI y UAS activada." : "Autodetección desactivada.", "info");
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                          ssdAutoSensingEnabled ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-slate-800 text-slate-400"
+                        }`}
+                      >
+                        {ssdAutoSensingEnabled ? "DIVERS ELÁSTICOS" : "ESTÁTICO_CORE"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CHS limitation for older PCs */}
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Límite LBA (Ancient BIOS anterior a 2002):</span>
+                    <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                      <span className="text-[10px] text-slate-400 font-mono">Restricción de Cilindros CHS:</span>
+                      <button
+                        onClick={() => {
+                          const val = !ssdLbaLimitEnabled;
+                          setSsdLbaLimitEnabled(val);
+                          localStorage.setItem("cminewar_ssd_lba_limit", String(val));
+                          window.dispatchEvent(new Event("storage"));
+                          triggerNotification(val ? "Restricción CHS activa por debajo de 137 GB para BIOS obsoletas." : "LBA de 48 bits lineal activa.", "info");
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                          ssdLbaLimitEnabled ? "bg-rose-500/10 text-rose-450 border border-rose-500/20" : "bg-slate-800 text-slate-400"
+                        }`}
+                      >
+                        {ssdLbaLimitEnabled ? "ACTIVADA (<137GB)" : "ILIMITADO (48B)"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Trigger actions */}
               <div className="flex flex-col gap-2">
-                <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">Acciones del compilador de GitHub:</span>
+                <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider font-bold">Compilación y Flasheo de Arranque Híbrido:</span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     onClick={() => executeKernelBootloaderUpdate("kernel")}
                     className="p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded text-[10px] text-slate-300 font-semibold transition active:scale-95"
-                    title="Recompila solo la bzImage de Debian"
+                    title="Recompila la bzImage de Debian con soporte adaptativo"
                   >
-                    Actualizar Kernel
+                    Actualizar Kernel SSD
                   </button>
                   <button
                     onClick={() => executeKernelBootloaderUpdate("bootloader")}
                     className="p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded text-[10px] text-slate-300 font-semibold transition active:scale-95"
-                    title="Flashea el primer sector de arranque GRUB"
+                    title="Escribe los cargadores UEFI Secure Boot y MBR en el SSD"
                   >
-                    Flashear GRUB
+                    Flashear Grabación SSD
                   </button>
                   <button
                     onClick={() => executeKernelBootloaderUpdate("both")}
                     className="p-2 bg-pink-900/30 hover:bg-pink-900/40 border border-pink-500/20 text-pink-400 rounded text-[10px] font-bold transition active:scale-95"
-                    title="Actualizar y compilar todo el bloque"
+                    title="Actualizar y recompilar todo el bloque híbrido portátil"
                   >
-                    Actualizar Todo
+                    Actualizar Híbrido Todo
                   </button>
                 </div>
               </div>

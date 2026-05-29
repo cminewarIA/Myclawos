@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Terminal, ShieldAlert, Cpu, Download, RefreshCw, Layers, CheckCircle2, RotateCcw } from "lucide-react";
+import DragonLogo from "./DragonLogo";
 
 interface BootloaderProps {
   onComplete: (serverIp?: string) => void;
@@ -75,9 +76,36 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   }, [bootLogs, repairLogs]);
 
   useEffect(() => {
+    const ssdMode = localStorage.getItem("cminewar_ssd_portable_mode") || "hybrid";
+    const ssdMok = localStorage.getItem("cminewar_ssd_mok_enrolled") !== "false";
+    const ssdLba = localStorage.getItem("cminewar_ssd_lba_limit") === "true";
+    const ssdAuto = localStorage.getItem("cminewar_ssd_autosensing") !== "false";
+
+    const portableSsdLogs = [
+      `💾 [DISPOSITIVO] Puerto Host USB SSD portátil detectado de alta elasticidad.`,
+      `💿 [TABLA PARTIT.] GPT híbrida con sector MBR protector alineado por hardware cargada.`,
+      ssdMode === "hybrid" 
+        ? "💿 [SIST. ARRANQUE] UEFI (ia32/x64) + Legacy MBR híbrido preparado para multi-hardware y Legacy BIOS."
+        : ssdMode === "uefi_only"
+        ? "💿 [SIST. ARRANQUE] Cargando exclusivo UEFI (ia32/x64 EFI BOOT) con soporte GPT nativo."
+        : "💿 [SIST. ARRANQUE] Cargando Legacy BIOS por sector cero de MBR físico en discos de arranque.",
+      ssdMok 
+        ? "🔑 [SOPORTE SECURE BOOT] Firma bypass SHIM activa (Claves Microsoft 3rd-Party CA / MOK enrolled)."
+        : "⚠️ [SECURE BOOT] Modo passthrough o desactivado en BIOS del ordenador.",
+      ssdAuto
+        ? "🔌 [HW AUTO-SENSING] Inicializando drivers portátiles elásticos de Debian (uas, nvme, usb-storage, ahci...)"
+        : "⚠️ [HW AUTO-SENSING] Modo de drivers estático. No heredando perfiles múltiples.",
+      ssdLba
+        ? "📐 [LBA 24-BIT antiguas] Protección de cilindros CHS activa (arranque seguro por debajo de 137 GB)."
+        : "📐 [LBA 48-BIT] Direccionamiento sin limites para computadoras y placas base modernas.",
+      "🚀 [PORTABILIDAD] Sintonizando kernel adaptativo para el hardware de este ordenador host...",
+    ];
+
+    const finalBiosSequence = [...portableSsdLogs, ...biosBootSequence];
+
     const sequence = selectedServerIp 
-      ? [...serverHandshakeSequence, ...biosBootSequence] 
-      : biosBootSequence;
+      ? [...serverHandshakeSequence, ...finalBiosSequence] 
+      : finalBiosSequence;
 
     let stepIndex = 0;
     const intervalTime = 160;
@@ -175,31 +203,104 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       
       {/* HEADER BIOS BANNER */}
       {bootPhase === "bios" && (
-        <div className="flex-1 flex flex-col min-h-0 bg-black text-left font-mono">
-          <div className="flex items-center justify-between border-b border-slate-900 pb-2 mb-3 text-[10px] text-slate-500">
+        <div className="flex-1 flex flex-col min-h-0 bg-black text-left font-mono" id="cminewar-bootloader-screen">
+          <div className="flex items-center justify-between border-b border-slate-900 pb-2 mb-4 text-[10px] text-slate-500">
             <span>CMINEWAR BIOS v1.02 • SYSTEM START</span>
-            <span className="animate-pulse">BOOTING... {bootProgress}%</span>
+            <span className="animate-pulse font-bold text-pink-400">BOOTING... {bootProgress}%</span>
           </div>
 
-          {/* Scrolling diagnostic messages */}
-          <div className="flex-1 overflow-y-auto space-y-1.5 scrollbar-none pr-1 select-text">
-            {bootLogs.map((log, idx) => (
-              <div 
-                key={idx} 
-                className={`${
-                  log.includes("[✔]")
-                    ? "text-emerald-400 font-bold"
-                    : log.includes("REMOTE") || log.includes("SSH")
-                    ? "text-cyan-400 font-bold"
-                    : log.startsWith("BOOT_IMAGE") || log.startsWith("Linux version")
-                    ? "text-slate-400 inline-block bg-slate-950 p-0.5 border border-slate-900 rounded"
-                    : "text-slate-300"
-                }`}
-              >
-                {log}
+          {/* TWO COLUMN RESPONSIVE GRID */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 overflow-hidden pb-2">
+            
+            {/* COLUMN 1: STUNNING DRAGON LOGO BOOT EMBLEM */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center bg-slate-950/40 border border-slate-900/60 rounded-xl p-6 text-center space-y-6 shrink-0 relative overflow-hidden group shadow-inner">
+              {/* Decorative radar sweep / circular grids in background */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.03)_0%,transparent_70%)] pointer-events-none" />
+              <div className="absolute top-0 right-0 h-[1.5px] w-24 bg-gradient-to-l from-pink-500/10 to-transparent" />
+              
+              {/* pulsing and glowing dragon logo container */}
+              <div className="relative flex items-center justify-center w-40 h-40 transform transition duration-500 hover:scale-105">
+                <div className="absolute inset-0 bg-pink-500/5 rounded-full blur-2xl animate-pulse" />
+                <DragonLogo size={145} className="animate-pulse drop-shadow-[0_0_25px_rgba(239,68,68,0.25)]" glow={true} />
               </div>
-            ))}
-            <div ref={consoleEndRef} />
+
+              {/* Branding name */}
+              <div className="space-y-1.5">
+                <h1 className="text-sm font-black tracking-[0.25em] text-slate-100 uppercase font-mono">
+                  CMINEWAR OS
+                </h1>
+                <p className="text-[10px] text-slate-550 font-mono tracking-wider uppercase">
+                  Booting Linux Kernel v6.10-claw
+                </p>
+              </div>
+
+              {/* System loading details box */}
+              <div className="w-full max-w-xs space-y-2 font-mono text-[9.5px]">
+                {/* Horizontal Progress Bar matching control panel coherence */}
+                <div className="relative w-full h-1.5 bg-slate-900 rounded overflow-hidden border border-slate-800">
+                  <div 
+                    className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 transition-all duration-150" 
+                    style={{ width: `${bootProgress}%` }}
+                  />
+                </div>
+                
+                <div className="flex justify-between text-slate-400 font-mono px-0.5">
+                  <span className="text-slate-600">SECTOR STATUS:</span>
+                  <span className="text-pink-400 font-bold">
+                    {bootProgress < 30 ? "ANALYZING CHS" : bootProgress < 60 ? "LOADING KERNEL" : bootProgress < 90 ? "MOUNTING VFS" : "PREPARING DEBIAN DE"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Embedded Mini Retro Spec Box */}
+              <div className="hidden sm:block w-full max-w-xs bg-slate-950 border border-slate-900/40 rounded-lg p-3 text-[9px] text-left text-slate-500 font-mono space-y-1">
+                <div className="flex justify-between border-b border-slate-900/40 pb-1 mb-1 font-bold text-slate-400">
+                  <span>DISPOSITIVO SEGURO</span>
+                  <span>DETALLES HOST</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Arquitectura:</span>
+                  <span className="text-slate-400 font-semibold">x86_64 Core VM</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Firma de Red:</span>
+                  <span className="text-emerald-400 font-semibold">[ OK ] FIRMADO</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Secure Code VFS:</span>
+                  <span className="text-slate-400">SHA-256-ELASTIC</span>
+                </div>
+              </div>
+            </div>
+
+            {/* COLUMN 2: HIGH-TECH SCROLLING DIAGNOSTIC WINDOW */}
+            <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-950/40 border border-slate-900 rounded-xl p-4 relative">
+              <div className="flex items-center space-x-1.5 border-b border-slate-900 pb-2 mb-3 shrink-0 text-slate-500 text-[9.5px]">
+                <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                <span className="font-bold uppercase tracking-wider text-slate-400">Consola de Diagnóstico en Tiempo Real</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-1.5 scrollbar-none pr-1 select-text">
+                {bootLogs.map((log, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`${
+                      log.includes("[✔]")
+                        ? "text-emerald-400 font-bold"
+                        : log.includes("REMOTE") || log.includes("SSH")
+                        ? "text-cyan-400 font-bold"
+                        : log.startsWith("BOOT_IMAGE") || log.startsWith("Linux version")
+                        ? "text-slate-400 inline-block bg-slate-950 p-1 border border-slate-900 rounded font-mono"
+                        : "text-slate-300"
+                    } leading-relaxed text-[10.5px]`}
+                  >
+                    {log}
+                  </div>
+                ))}
+                <div ref={consoleEndRef} />
+              </div>
+            </div>
+
           </div>
 
           {/* ACCELERATE QUICK BOOT BUTTON */}

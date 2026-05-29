@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Sliders, Sun, Moon, Sparkles, RefreshCw, Zap, Bot, Laptop } from "lucide-react";
 import DragonLogo from "./DragonLogo";
 
@@ -34,6 +34,32 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
   const [glowIntensity, setGlowIntensity] = useState<"sutil" | "medio" | "fuerte">(() => {
     return (localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio";
   });
+
+  // Track physical dimensions of the background container for dynamic canvas adjustment
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 1100, height: 680 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Set initial size
+    const initialRect = containerRef.current.getBoundingClientRect();
+    if (initialRect.width && initialRect.height) {
+      setDimensions({ width: initialRect.width, height: initialRect.height });
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setDimensions({ width, height });
+        }
+      }
+    });
+    
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Sync wallpaper settings with Control Panel using storage events
   useEffect(() => {
@@ -120,20 +146,26 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     blurDeviation = 12;
   }
 
-  // Generate 2D coordinates for services mapping in SVG space
-  // Central core is at (450, 320)
-  const centerX = 550;
-  const centerY = 330;
+  // Generate 2D coordinates dynamically relative to observed dimensions
+  const centerX = dimensions.width / 2;
+  const centerY = dimensions.height / 2;
   
-  // Dynamic scale parameters based on 'nanoBananaSize' setting
-  let radius = 240;
-  let coreScale = 1.0;
+  // Dynamic safe radius proportional to the smaller viewport dimension (prevent text overlay out of screen)
+  let baseRadius = Math.min(dimensions.width, dimensions.height) * 0.35;
+  // Guard values for very narrow / small containers
+  baseRadius = Math.max(85, baseRadius);
+
+  let radius = baseRadius;
+  // Calculate relative base scale factor
+  const viewportScaleRef = Math.min(1.25, Math.max(0.62, Math.min(dimensions.width, dimensions.height) / 780));
+
+  let coreScale = viewportScaleRef;
   if (nanoBananaSize === "nano") {
-    radius = 150;
-    coreScale = 0.7;
+    radius = baseRadius * 0.62;
+    coreScale = viewportScaleRef * 0.72;
   } else if (nanoBananaSize === "maxi") {
-    radius = 330;
-    coreScale = 1.35;
+    radius = baseRadius * 1.35;
+    coreScale = viewportScaleRef * 1.35;
   }
 
   // Let's list the core services to display
@@ -158,6 +190,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
 
   return (
     <div 
+      ref={containerRef}
       className={`absolute inset-0 z-0 bg-gradient-to-b ${bgGradient} transition-all duration-1000 overflow-hidden w-full h-full select-none pointer-events-none`}
       id="banana-wallpaper-container"
     >
@@ -179,8 +212,9 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           width: "550px",
           height: "550px",
           backgroundColor: primaryGlow,
-          left: `${centerX - 275}px`,
-          top: `${centerY - 275}px`,
+          left: "50%",
+          top: "48.5%",
+          transform: "translate(-50%, -50%)",
         }}
       />
       <div 
@@ -189,8 +223,9 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           width: "800px",
           height: "800px",
           backgroundColor: secondaryGlow,
-          left: `${centerX - 400}px`,
-          top: `${centerY - 450}px`,
+          left: "50%",
+          top: "48.5%",
+          transform: "translate(-50%, -50%)",
         }}
       />
 
@@ -198,8 +233,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
       <svg 
         className="absolute inset-0 w-full h-full pointer-events-none" 
         style={{ opacity: glowOpacity }}
-        viewBox="0 0 1100 680" 
-        preserveAspectRatio="xMidYMid slice"
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
       >
         <defs>
           {/* Glowing Filters */}
@@ -275,12 +309,13 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
 
         {/* Drawing Outer Star Field Particles tailored to active simulate hour value */}
         {Array.from({ length: 28 }).map((_, stIdx) => {
-          // Semi-random seeded coordinate patterns depending on the star index
+          // Semi-random seeded coordinate patterns proportional to screen size
+          const maxDist = Math.max(100, Math.min(dimensions.width, dimensions.height) * 0.55);
           const sRad = (stIdx * 45) % 360;
-          const sDist = 180 + ((stIdx * 95) % 400);
+          const sDist = (Math.min(dimensions.width, dimensions.height) * 0.15) + ((stIdx * 95) % maxDist);
           const sX = centerX + sDist * Math.cos(sRad * Math.PI / 180);
           const sY = centerY + sDist * Math.sin(sRad * Math.PI / 180);
-          const starsSize = 1.2 + (stIdx % 3) * 0.7;
+          const starsSize = 1.0 + (stIdx % 3) * 0.6;
 
           return (
             <circle
@@ -289,7 +324,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
               cy={sY}
               r={starsSize}
               fill={stIdx % 2 === 0 ? primaryGlow : secondaryGlow}
-              opacity={0.12 + Math.sin((activeHour + stIdx) * 1.5) * 0.1}
+              opacity={0.12 + Math.sin((activeHour + stIdx) * 1.5) * 0.08}
             />
           );
         })}

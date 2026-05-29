@@ -667,7 +667,7 @@ export default function App() {
       case "system_monitor":
         return <SystemMonitor />;
       case "control_panel":
-        return <ControlPanel />;
+        return <ControlPanel openWindow={handleOpenWindow} />;
       case "installer":
         return (
           <CMineWarInstaller
