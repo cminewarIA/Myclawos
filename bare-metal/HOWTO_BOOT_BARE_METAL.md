@@ -101,9 +101,9 @@ La forma estándar y profesional en la que sistemas operativos web (como ChromeO
    Esto generará los archivos estáticos en la carpeta `dist/`.
 
 3. **Configurar el Auto-arranque de X11**:
-   La receta incluida coloca el archivo `autostart` de `/tmp/clawos-iso-build/autostart` en tu configuración de pantalla completa del gestor de ventanas ligero (`openbox`), que levanta Chromium de modo kiosco con los parámetros:
+   La receta incluida coloca el archivo `autostart` de `/tmp/cminewaros-iso-build/autostart` en tu configuración de pantalla completa del gestor de ventanas ligero (`openbox`). Este levanta primero el backend de Node (`node dist/server.cjs &`), espera 3 segundos para garantizar el amarre del puerto, y luego inicia Chromium apuntando directamente al puerto local para evitar problemas de CORS y carga de activos (`/assets`):
    ```bash
-   chromium-browser --kiosk --no-sandbox file:///opt/clawos/dist/index.html
+   chromium-browser --kiosk --no-sandbox http://localhost:3000
    ```
 
 4. **Quemar la ISO resultante a tu USB**:
