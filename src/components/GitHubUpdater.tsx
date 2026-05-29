@@ -2702,29 +2702,6 @@ echo "========================================================================="
                   </button>
                 </div>
 
-                {/* 2. Simulated Android Gateway Switch */}
-                <div className="flex justify-between items-center bg-slate-900/30 p-2.5 rounded-lg border border-slate-900">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-slate-300 block">Simular Gateway Cyberpunk Android</span>
-                    <span className="text-[9px] text-slate-500 block">Fuerza a mostrar la selección IP / Demo al iniciar la web en PC.</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const mode = !forceAndroidSim;
-                      setForceAndroidSim(mode);
-                      localStorage.setItem("cminewar_force_android", String(mode));
-                      triggerNotification(mode ? "Portal Cyberpunk Android activado para el próximo arranque." : "Portal manual de Android desactivado.", "info");
-                    }}
-                    className={`px-3 py-1 text-[10px] font-mono font-bold rounded uppercase transition ${
-                      forceAndroidSim 
-                        ? "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" 
-                        : "bg-slate-800 hover:bg-slate-750 text-slate-400 border border-slate-700"
-                    }`}
-                  >
-                    {forceAndroidSim ? "SIMULAR (ON)" : "NORMAL"}
-                  </button>
-                </div>
-
                 {/* Emergency manual restart trigger */}
                 {isSafeModeArmed && (
                   <button

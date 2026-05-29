@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+@keyframes bios-glitch {
+  0% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  15% {
+    transform: translate(-5px, 2px) skewX(-6deg);
+    filter: hue-rotate(45deg) saturate(1.5) contrast(1.2);
+  }
+  30% {
+    transform: translate(4px, -3px) skewX(8deg);
+    filter: hue-rotate(130deg) invert(0.05);
+  }
+  45% {
+    transform: translate(-2px, 4px) skewX(-3deg);
+    filter: none;
+  }
+  60% {
+    transform: translate(6px, -2px) skewX(10deg);
+    filter: hue-rotate(270deg) brightness(1.3);
+  }
+  75% {
+    transform: translate(-4px, -4px) skewX(-8deg);
+    filter: saturate(2);
+  }
+  90% {
+    transform: translate(2px, 3px);
+  }
+  100% {
+    transform: translate(0);
+    filter: none;
+  }
+}
+
+@keyframes signal-lines {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100%;
+  }
+}
+
+.glitch-unstable {
+  animation: bios-glitch 0.18s infinite steps(2);
+  position: relative;
+}
+
+.glitch-unstable::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 2px,
+    transparent 6px
+  );
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.8;
+  animation: signal-lines 8s linear infinite;
+}
+
+/* Subtle digital signal block overlays when glitch is active */
+.glitch-overlay {
+  display: block;
+  position: absolute;
+  top: 15%;
+  left: 5%;
+  right: 5%;
+  height: 4px;
+  background: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 40px 0 rgba(34, 211, 238, 0.4), 0 120px 0 rgba(245, 158, 11, 0.4), 0 240px 0 rgba(236, 72, 153, 0.4);
+  opacity: 0.6;
+  z-index: 1000;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+  animation: signal-lines 0.2s steps(4) infinite;
+}
+

@@ -16,8 +16,10 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   const [repairLogs, setRepairLogs] = useState<string[]>([]);
   const [repairProgress, setRepairProgress] = useState(0);
   const [activeRepairType, setActiveRepairType] = useState("");
+  const [isGlitching, setIsGlitching] = useState(false);
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
+  const glitchTimeoutRef = useRef<any>(null);
 
   // Play micro synth click synthesizer
   const playPulseSound = (freq = 300, type: OscillatorType = "sine", duration = 0.05) => {
@@ -35,6 +37,36 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       osc.stop(audioCtx.currentTime + duration);
     } catch (e) {}
   };
+
+  // Occasional random CSS glitch during kernel bootloader load to emulate unstable BIOS screen
+  useEffect(() => {
+    if (bootPhase !== "bios" || bootProgress >= 100) {
+      setIsGlitching(false);
+      return;
+    }
+
+    const triggerGlitch = () => {
+      setIsGlitching(true);
+      // Play a quick triangle pitch oscillation for realistic retro display static buzz
+      playPulseSound(120, "triangle", 0.09);
+
+      setTimeout(() => {
+        setIsGlitching(false);
+      }, 60 + Math.random() * 120);
+
+      const nextTime = 1300 + Math.random() * 2600;
+      glitchTimeoutRef.current = setTimeout(triggerGlitch, nextTime);
+    };
+
+    const firstTimer = setTimeout(triggerGlitch, 900 + Math.random() * 1000);
+
+    return () => {
+      clearTimeout(firstTimer);
+      if (glitchTimeoutRef.current) {
+        clearTimeout(glitchTimeoutRef.current);
+      }
+    };
+  }, [bootPhase, bootProgress]);
 
   // BIOS boot log statements
   const biosBootSequence = [
@@ -199,7 +231,8 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   };
 
   return (
-    <div className="fixed inset-0 z-[9999999] bg-black flex flex-col font-mono text-slate-300 text-xs p-4 overflow-hidden select-none">
+    <div className={`fixed inset-0 z-[9999999] bg-black flex flex-col font-mono text-slate-300 text-xs p-4 overflow-hidden select-none ${isGlitching ? "glitch-unstable" : ""}`}>
+      {bootPhase === "bios" && isGlitching && <div className="glitch-overlay" />}
       
       {/* HEADER BIOS BANNER */}
       {bootPhase === "bios" && (

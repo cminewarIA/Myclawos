@@ -49,17 +49,8 @@ import {
 
 export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
-  // "gateway" (Cyberpunk Android prompt) -> "bootloader" (GRUB/vmlinuz BIOS loading) -> "ready" (Desktop environment loaded!)
-  const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">(() => {
-    if (typeof window !== "undefined") {
-      const forceAndroid = localStorage.getItem("cminewar_force_android") === "true";
-      const isAndroid = /android/i.test(navigator.userAgent);
-      if (forceAndroid || isAndroid) {
-        return "gateway";
-      }
-    }
-    return "bootloader";
-  });
+  // "gateway" (Cyberpunk Android prompt - ALWAYS MANDATORY) -> "bootloader" (GRUB/vmlinuz BIOS loading) -> "ready" (Desktop environment loaded!)
+  const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">("gateway");
 
   const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
   
