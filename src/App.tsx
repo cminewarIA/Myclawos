@@ -13,6 +13,8 @@ import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
+import AndroidGateway from "./components/AndroidGateway";
+import Bootloader from "./components/Bootloader";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import {
   Terminal as TerminalIcon,
@@ -46,6 +48,24 @@ import {
 } from "lucide-react";
 
 export default function App() {
+  // Boot phase / lifecycle state inside Debian virtual mainframe:
+  // "gateway" (Cyberpunk Android prompt) -> "bootloader" (GRUB/vmlinuz BIOS loading) -> "ready" (Desktop environment loaded!)
+  const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">(() => {
+    if (typeof window !== "undefined") {
+      const forceAndroid = localStorage.getItem("cminewar_force_android") === "true";
+      const isAndroid = /android/i.test(navigator.userAgent);
+      if (forceAndroid || isAndroid) {
+        return "gateway";
+      }
+    }
+    return "bootloader";
+  });
+
+  const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
+  
+  // Safe Mode Trigger flag direct from localStorage
+  const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
+
   // Touchscreen / Tactile mode state (Auto-detected & manually persistable)
   const [touchMode, setTouchMode] = useState<boolean>(() => {
     const saved = localStorage.getItem("cminewar_touch_mode");
@@ -581,6 +601,35 @@ export default function App() {
   const removeNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
+
+  if (bootLifecycle === "gateway") {
+    return (
+      <AndroidGateway
+        onSelectDemo={() => {
+          setBootLifecycle("bootloader");
+          triggerNotification("Iniciando CMineWar OS en modo solitario demo.", "info");
+        }}
+        onSelectServer={(ip) => {
+          setConnectedServerIp(ip);
+          setBootLifecycle("bootloader");
+          triggerNotification(`Cargando instalación nativa desde servidor remoto [${ip}]...`, "info");
+        }}
+      />
+    );
+  }
+
+  if (bootLifecycle === "bootloader") {
+    return (
+      <Bootloader
+        selectedServerIp={connectedServerIp}
+        isSafeModeDefault={isSafeModeActive}
+        onComplete={() => {
+          setBootLifecycle("ready");
+          triggerNotification("Colección de dependencias y Kernel listos. ¡Bienvenido a CMineWar OS!", "success");
+        }}
+      />
+    );
+  }
 
   return (
     <div

@@ -162,11 +162,20 @@ export default function GitHubUpdater({
   const [installedMessage, setInstalledMessage] = useState(() => localStorage.getItem("cminewar_installed_msg") || "Inicializar núcleo cognitivo y sincronizador udev");
   const [installedDate, setInstalledDate] = useState(() => localStorage.getItem("cminewar_installed_date") || "2026-05-28 12:44:00 UTC");
   
+  // Custom Kernel & Bootloader Status Persistence
+  const [activeKernel, setActiveKernel] = useState(() => localStorage.getItem("cminewar_kernel_version") || "v6.10.8-cminewar-generic-x86_64");
+  const [activeBootloader, setActiveBootloader] = useState(() => localStorage.getItem("cminewar_bootloader_version") || "CMineWar-GRUB MBR v2.06");
+  const [isSafeModeArmed, setIsSafeModeArmed] = useState(() => localStorage.getItem("cminewar_safe_mode") === "true");
+  const [forceAndroidSim, setForceAndroidSim] = useState(() => localStorage.getItem("cminewar_force_android") === "true");
+
   const [latestSha, setLatestSha] = useState<string>("");
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isDaemonActive, setIsDaemonActive] = useState(() => localStorage.getItem("cminewar_git_daemon") === "true");
+  const [isDaemonActive, setIsDaemonActive] = useState(() => {
+    const saved = localStorage.getItem("cminewar_git_daemon");
+    return saved !== null ? saved === "true" : true;
+  });
   const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("cminewar_git_interval")) || 30);
   const [lastCheckTime, setLastCheckTime] = useState<string>("-");
 
@@ -190,13 +199,41 @@ export default function GitHubUpdater({
     localStorage.setItem("cminewar_installed_date", installedDate);
     localStorage.setItem("cminewar_git_daemon", String(isDaemonActive));
     localStorage.setItem("cminewar_git_interval", String(pollInterval));
-  }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval]);
+    localStorage.setItem("cminewar_kernel_version", activeKernel);
+    localStorage.setItem("cminewar_bootloader_version", activeBootloader);
+    localStorage.setItem("cminewar_safe_mode", String(isSafeModeArmed));
+    localStorage.setItem("cminewar_force_android", String(forceAndroidSim));
+  }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval, activeKernel, activeBootloader, isSafeModeArmed, forceAndroidSim]);
 
   useEffect(() => {
     localStorage.setItem("cminewar_installed_packages", JSON.stringify(installedPackages));
     // Dispatch event to synchronize launchers instantly on App.tsx
     window.dispatchEvent(new Event("cminewar_packages_changed"));
   }, [installedPackages]);
+
+  // Simulated automatic update polling system daemon
+  useEffect(() => {
+    if (!isDaemonActive) {
+      setLastCheckTime("-");
+      return;
+    }
+
+    // Perform immediate initial soft tick
+    setLastCheckTime(new Date().toLocaleTimeString());
+
+    const daemonTimer = setInterval(() => {
+      const now = new Date();
+      setLastCheckTime(now.toLocaleTimeString());
+      
+      // Keep terminal background polling diagnostic active & random success ping
+      // 10% chance to report status OK inside live notifications
+      if (Math.random() < 0.10) {
+        triggerNotification("Daemon udev: Sincronización automática de GitHub completada (Comprobado sin cambios)", "success");
+      }
+    }, pollInterval * 1000);
+
+    return () => clearInterval(daemonTimer);
+  }, [isDaemonActive, pollInterval, triggerNotification]);
 
   // Fallback dynamic database loader inside Control Panel
   const loadSimulatedCommits = () => {
@@ -605,6 +642,87 @@ echo "========================================================================="
         return next;
       });
     }, 400);
+  };
+
+  // Custom Kernel & Bootloader Compilation engine
+  const executeKernelBootloaderUpdate = (type: "kernel" | "bootloader" | "both") => {
+    if (updating || rebooting) return;
+    setUpdating(true);
+    setUpdateProgress(0);
+    
+    let baseLogs: string[] = [];
+    if (type === "kernel") {
+      baseLogs = [
+        "⚡ [KERNEL UPDATE] Iniciando descarga de código fuente del kernel cminewar-core v6.10...",
+        "🔧 [COMPILADOR] Extrayendo ficheros bzImage e initrd.img...",
+      ];
+    } else if (type === "bootloader") {
+      baseLogs = [
+        "⚡ [BOOTLOADER UPDATE] Obteniendo definición MBR del cargador de arranque CMineWar-GRUB v2.06...",
+        "🔧 [DISCO] Preparando tabla de partición LBA activa...",
+      ];
+    } else {
+      baseLogs = [
+        "⚡ [NUCLEO INTEGRAL] Actualizando Kernel y Bootloader del sistema completo desde GitHub...",
+        "🔧 [SISTEMA] Iniciando compilación cruzada multiproceso para Debian...",
+      ];
+    }
+
+    setUpdateLogs(baseLogs);
+
+    const steps = type === "kernel" ? [
+      "🔍 [CONFIG] Cargando plantilla de compilación cminewar_defconfig...",
+      "🛠️ [MAKE] Compilando bzImage (Kernel comprimido) listo... OK",
+      "📦 [MODULES] Empaquetando módulos depurables en /lib/modules/6.10.8...",
+      "🚀 [INSTALL] Sobrescribiendo /boot/vmlinuz-6.10-cminewar-core...",
+    ] : type === "bootloader" ? [
+      "🔍 [STAGE 1] Comprobando compatibilidad de bloques en disco /dev/vda...",
+      "🛠️ [GRUB-INSTALL] Copiando archivos de arranque a /boot/grub/i386-pc/...",
+      "💾 [MBR] Escribiendo bootstrap en el primer sector físico del disco...",
+      "✔ [OK] Configuración de arranque CMineWar-GRUB actualizada con éxito.",
+    ] : [
+      "🔍 [CONFIG] Sincronizando árbol git contra compilación remota...",
+      "🛠️ Compilando nuevo Kernel v6.10.8-cminewar-generic_x86_64...",
+      "📦 Empaquetando ramdisk initrd virtual...",
+      "💾 Escribiendo MBR-GRUB v2.06 bootloader blocks...",
+      "✔ [SISTEMA RECOMPILADO] Núcleo y cargadores actualizados.",
+    ];
+
+    let currentStep = 0;
+    const progressTimer = setInterval(() => {
+      setUpdateProgress((prev) => {
+        const next = Math.min(prev + 12, 100);
+        if (currentStep < steps.length && next > (currentStep * 15)) {
+          setUpdateLogs((old) => [...old, steps[currentStep]]);
+          currentStep++;
+        }
+        if (next >= 100) {
+          clearInterval(progressTimer);
+          if (type === "kernel" || type === "both") {
+            setActiveKernel("v6.10.8-cminewar-patched-x86_64");
+            localStorage.setItem("cminewar_kernel_version", "v6.10.8-cminewar-patched-x86_64");
+          }
+          if (type === "bootloader" || type === "both") {
+            setActiveBootloader("CMineWar-GRUB MBR v2.06-patched");
+            localStorage.setItem("cminewar_bootloader_version", "CMineWar-GRUB MBR v2.06-patched");
+          }
+          setUpdating(false);
+          setRebooting(true);
+          
+          setRebootLogs([
+            "Consolidando cambios de almacenamiento...",
+            "Reiniciando el kernel para aplicar los nuevos parches del sistema...",
+            "Montando el nuevo kernel v6.10.8 con soporte optimizado udev...",
+            "¡El kernel se ha re-compilado e iniciado óptimamente!"
+          ]);
+          setTimeout(() => {
+            setRebooting(false);
+            triggerNotification(`¡Núcleo y Kernel actualizados con éxito!`, "success");
+          }, 2400);
+        }
+        return next;
+      });
+    }, 350);
   };
 
   return (
@@ -1824,20 +1942,151 @@ echo "========================================================================="
             {/* Manual actions bar */}
             <div className="flex flex-wrap gap-2.5 text-left">
               <button
-                onClick={() => triggerNotification("Buscando commits...", "info")}
-                className="flex items-center space-x-1.5 px-3 py-2 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-205 text-xs font-semibold rounded-lg transition"
+                onClick={() => {
+                  triggerNotification("Buscando commits de CMineWar en GitHub...", "info");
+                  loadSimulatedCommits();
+                }}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-200 text-xs font-semibold rounded-lg transition"
               >
                 <RefreshCw size={12} className={isFetching ? "animate-spin text-emerald-400" : ""} />
                 <span>Refrescar GitHub</span>
               </button>
 
               <button
-                onClick={() => triggerNotification("CMineWar OS ya está al día con el repositorio", "info")}
-                className="flex-1 flex items-center justify-center space-x-1 px-4 py-2 bg-slate-950 border border-slate-900 text-slate-500 text-xs font-medium rounded-lg cursor-not-allowed"
+                onClick={() => triggerNotification("El software del sistema está sincronizado al 100%", "success")}
+                className="flex-1 flex items-center justify-center space-x-1 px-4 py-2 bg-slate-950 border border-slate-900 text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-900/50 transition cursor-pointer"
               >
-                <CheckCircle size={12} className="text-slate-600 mr-1.5" />
+                <CheckCircle size={12} className="text-emerald-500 mr-1.5" />
                 <span>CMineWar OS está al día</span>
               </button>
+            </div>
+
+            {/* EXPANDED: FIRMWARE, KERNEL & BOOTLOADER SECTION */}
+            <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-4 text-left">
+              <div className="border-b border-slate-900 pb-2">
+                <span className="text-[9px] uppercase tracking-widest font-mono text-pink-500 font-bold block">
+                  ⚙️ Gestión Integral de Firmware, Kernel y Bootloader
+                </span>
+                <p className="text-[10px] text-slate-550 leading-relaxed mt-1">
+                  Re-compila el núcleo del sistema o re-flashea el cargador de arranque MBR directamente desde los repositorios de GitHub.
+                </p>
+              </div>
+
+              {/* Status information bars */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px] font-mono">
+                <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
+                  <span className="text-slate-500 block text-[8px] uppercase">KERNEL ACTIVO DEBIAN:</span>
+                  <span className="text-pink-400 font-bold block mt-1 truncate" title={activeKernel}>{activeKernel}</span>
+                </div>
+                <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
+                  <span className="text-slate-500 block text-[8px] uppercase">ARRANCADOR (BOOTLOADER):</span>
+                  <span className="text-pink-400 font-bold block mt-1 truncate" title={activeBootloader}>{activeBootloader}</span>
+                </div>
+              </div>
+
+              {/* Trigger actions */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">Acciones del compilador de GitHub:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    onClick={() => executeKernelBootloaderUpdate("kernel")}
+                    className="p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded text-[10px] text-slate-300 font-semibold transition active:scale-95"
+                    title="Recompila solo la bzImage de Debian"
+                  >
+                    Actualizar Kernel
+                  </button>
+                  <button
+                    onClick={() => executeKernelBootloaderUpdate("bootloader")}
+                    className="p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded text-[10px] text-slate-300 font-semibold transition active:scale-95"
+                    title="Flashea el primer sector de arranque GRUB"
+                  >
+                    Flashear GRUB
+                  </button>
+                  <button
+                    onClick={() => executeKernelBootloaderUpdate("both")}
+                    className="p-2 bg-pink-900/30 hover:bg-pink-900/40 border border-pink-500/20 text-pink-400 rounded text-[10px] font-bold transition active:scale-95"
+                    title="Actualizar y compilar todo el bloque"
+                  >
+                    Actualizar Todo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* EXPANDED: NATIVE LINUX RESCUE / SAFE MODE & COMPANION CONTROLS */}
+            <div className="bg-slate-950 p-4 border border-slate-800/80 rounded-xl text-left space-y-4">
+              <div>
+                <span className="text-[9px] uppercase tracking-widest font-mono text-red-400 font-bold block">
+                  🛡️ Modo Seguro (Recovery Rescue) y Portal Táctil
+                </span>
+                <p className="text-[10px] text-slate-550 leading-relaxed mt-1">
+                  Configura cargadores alternativos y simula gateways para depurar los parches instalados de Debian.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* 1. Safe Mode Switch */}
+                <div className="flex justify-between items-center bg-slate-900/30 p-2.5 rounded-lg border border-slate-900">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-slate-300 block">Modo Seguro de Reparación</span>
+                    <span className="text-[9px] text-slate-500 block">Fuerza el arranque en rescue shell con herramientas GitHub.</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const mode = !isSafeModeArmed;
+                      setIsSafeModeArmed(mode);
+                      localStorage.setItem("cminewar_safe_mode", String(mode));
+                      triggerNotification(mode ? "Modo Seguro ARMADO. Reinicie para entrar en rescue shell." : "Modo Seguro desactivado.", "info");
+                    }}
+                    className={`px-3 py-1 text-[10px] font-mono font-bold rounded uppercase transition ${
+                      isSafeModeArmed 
+                        ? "bg-red-500/10 border border-red-500/30 text-red-400 animate-pulse" 
+                        : "bg-slate-800 hover:bg-slate-750 text-slate-400 border border-slate-700"
+                    }`}
+                  >
+                    {isSafeModeArmed ? "ARMADO (ON)" : "DESACTIVADO"}
+                  </button>
+                </div>
+
+                {/* 2. Simulated Android Gateway Switch */}
+                <div className="flex justify-between items-center bg-slate-900/30 p-2.5 rounded-lg border border-slate-900">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-slate-300 block">Simular Gateway Cyberpunk Android</span>
+                    <span className="text-[9px] text-slate-500 block">Fuerza a mostrar la selección IP / Demo al iniciar la web en PC.</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const mode = !forceAndroidSim;
+                      setForceAndroidSim(mode);
+                      localStorage.setItem("cminewar_force_android", String(mode));
+                      triggerNotification(mode ? "Portal Cyberpunk Android activado para el próximo arranque." : "Portal manual de Android desactivado.", "info");
+                    }}
+                    className={`px-3 py-1 text-[10px] font-mono font-bold rounded uppercase transition ${
+                      forceAndroidSim 
+                        ? "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" 
+                        : "bg-slate-800 hover:bg-slate-750 text-slate-400 border border-slate-700"
+                    }`}
+                  >
+                    {forceAndroidSim ? "SIMULAR (ON)" : "NORMAL"}
+                  </button>
+                </div>
+
+                {/* Emergency manual restart trigger */}
+                {isSafeModeArmed && (
+                  <button
+                    onClick={() => {
+                      triggerNotification("Reiniciando el mainframe en Canal Seguro...", "info");
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
+                    }}
+                    className="w-full py-2.5 bg-red-650 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all animate-pulse text-center"
+                    id="btn-emergency-safe-reboot"
+                  >
+                    🚨 [ REINICIAR EN MODO SEGURO AHORA ]
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
