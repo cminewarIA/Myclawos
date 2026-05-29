@@ -288,7 +288,16 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    let distPath = "";
+    if (typeof __dirname !== "undefined") {
+      if (path.basename(__dirname) === 'dist') {
+        distPath = __dirname;
+      } else {
+        distPath = path.join(__dirname, 'dist');
+      }
+    } else {
+      distPath = path.join(process.cwd(), 'dist');
+    }
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

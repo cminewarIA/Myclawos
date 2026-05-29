@@ -52,17 +52,46 @@ xset s off || true
 xset -dpms || true
 xset s noblank || true
 
-# 3. Arrancar servidor de Node local de fondo si disponemos de APIs del backend
-node /opt/cminewaros/dist/server.cjs &
+# 3. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
+ifconfig lo up || ip link set lo up || true
 
-# 4. Esperar 3 segundos para asegurar que el servidor Express en el puerto 3000 esté levantado completamente
+# 4. Cambiar al directorio del proyecto y arrancar el servidor Express local
+cd /opt/cminewaros || cd /opt/clawos || true
+node dist/server.cjs &
+
+# 5. Esperar 3 segundos para asegurar que el servidor Express en el puerto 3000 esté levantado completamente
 sleep 3
 
-# 5. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
+# 6. Detectar si el binario del navegador disponible en el sistema Debian/Alpine
+if command -v chromium &>/dev/null; then
+  CHROME_BIN="chromium"
+elif command -v chromium-browser &>/dev/null; then
+  CHROME_BIN="chromium-browser"
+elif command -v google-chrome &>/dev/null; then
+  CHROME_BIN="google-chrome"
+elif command -v x-www-browser &>/dev/null; then
+  CHROME_BIN="x-www-browser"
+else
+  CHROME_BIN="chromium"
+fi
+
+# 7. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
 # Esto soluciona de raíz los problemas CORS de protocolo file://, bloqueo de almacenamiento local, de sonido y activos con rutas absolutas
-chromium-browser --kiosk --no-sandbox --no-first-run --simulate-outdated-no-au \
-  --disable-infobars --window-size=1920,1080 --window-position=0,0 \
-  --disable-session-crashed-bubble --disable-translate --start-maximized \
+# Añadimos --user-data-dir para dar soporte nativo y evitar que el navegador aborte cuando se ejecuta como ROOT en ISOs live o entornos bare-metal
+$CHROME_BIN --kiosk \
+  --no-sandbox \
+  --no-first-run \
+  --simulate-outdated-no-au \
+  --disable-infobars \
+  --window-size=1920,1080 \
+  --window-position=0,0 \
+  --disable-session-crashed-bubble \
+  --disable-translate \
+  --start-maximized \
+  --user-data-dir=/tmp/chromium-kiosk-profile \
+  --password-store=basic \
+  --no-errdialogs \
+  --autoplay-policy=no-user-gesture-required \
   http://localhost:3000 &
 
 EOF
