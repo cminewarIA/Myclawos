@@ -41,7 +41,7 @@ fi
 # 1. Instalar requerimientos básicos de Debian
 echo "[+] Actualizando repositorios e instalando herramientas de compilación..."
 apt-get update -y
-apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils
+apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils chromium openbox || apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils chromium-browser openbox || apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils openbox
 
 # 2. Comprobar e instalar Node.js
 if ! command -v node &> /dev/null; then
@@ -97,6 +97,113 @@ systemctl enable cminewar.service
 systemctl restart cminewar.service
 
 echo "[✔] Servicio 'cminewar.service' habilitado y arrancado con éxito en el puerto 3000."
+
+# 5.5 Auto-configurar entorno de escritorio Openbox en modo Kiosco y prevenir popups de advertencia
+echo "[+] Configurando Openbox y eliminando alertas de procesos huérfanos..."
+
+# Prevenir los molestos errores "Failed to execute child process" en Openbox para binarios ausentes
+# Creamos pequeños ejecutables dummy silenciosos en /usr/local/bin/ (para que tengan prioridad en el PATH)
+for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon x-terminal-emulator xterm lxterminal x-window-manager; do
+  if ! command -v "$bin_name" &>/dev/null; then
+    echo -e '#!/bin/sh\nexit 0' > "/usr/local/bin/$bin_name" 2>/dev/null || true
+    chmod +x "/usr/local/bin/$bin_name" 2>/dev/null || true
+  fi
+done
+
+# Crear directorios de configuración de Openbox si existen o se usan
+mkdir -p /etc/xdg/openbox
+mkdir -p ~/.config/openbox
+
+# Definir la receta autostart para Openbox que arranca Chromium directamente a localhost:3000
+cat << 'OBAUTO' > /tmp/cminewaros_openbox_autostart
+#!/bin/sh
+# Autostart para Openbox / CMineWar OS Kiosk
+xset s off || true
+xset -dpms || true
+xset s noblank || true
+
+# Asegurar loopback de red activa
+ifconfig lo up || ip link set lo up || true
+
+# Esperar activamente a que el servidor Express local en el puerto 3000 responda
+# Esto previene pantallas blancas o fallas de carga prematuras durante arranques fríos lentos
+for i in $(seq 1 30); do
+  if wget -qO- http://localhost:3000/api/health &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+# Autodetectar navegador instalado
+if command -v chromium &>/dev/null; then
+  CHROME_BIN="chromium"
+elif command -v chromium-browser &>/dev/null; then
+  CHROME_BIN="chromium-browser"
+elif command -v google-chrome &>/dev/null; then
+  CHROME_BIN="google-chrome"
+elif command -v x-www-browser &>/dev/null; then
+  CHROME_BIN="x-www-browser"
+else
+  CHROME_BIN="chromium"
+fi
+
+# Iniciar navegador en modo Kiosco de pantalla completa
+# Se ejecuta en un bucle infinito que se auto-recupera de caídas accidentales de proceso o Alt+F4 involuntarios.
+# Con perfiles limpios, se remueve el SingletonLock para solventar incidencias al reiniciar post apagón de hardware brusco.
+while true; do
+  rm -f /tmp/chromium-kiosk-profile/SingletonLock 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/Lock 2>/dev/null || true
+
+  $CHROME_BIN --kiosk \
+    --no-sandbox \
+    --no-first-run \
+    --simulate-outdated-no-au \
+    --disable-infobars \
+    --window-size=1920,1080 \
+    --window-position=0,0 \
+    --disable-session-crashed-bubble \
+    --disable-translate \
+    --start-maximized \
+    --user-data-dir=/tmp/chromium-kiosk-profile \
+    --password-store=basic \
+    --no-errdialogs \
+    --autoplay-policy=no-user-gesture-required \
+    --disable-gpu \
+    --disable-software-rasterizer \
+    --disable-gpu-compositing \
+    --disable-dev-shm-usage \
+    --ozone-platform=x11 \
+    --disable-features=UseOzonePlatform \
+    http://localhost:3000
+    
+  sleep 1
+done &
+OBAUTO
+
+# Aplicar el script de autostart a nivel del sistema (para todos los usuarios que abran Openbox)
+cp /tmp/cminewaros_openbox_autostart /etc/xdg/openbox/autostart || true
+chmod +x /etc/xdg/openbox/autostart || true
+
+# Aplicar también para el usuario root y usuarios del sistema si poseen perfil configurado
+if [ -d "$HOME/.config" ]; then
+  mkdir -p "$HOME/.config/openbox" || true
+  cp /tmp/cminewaros_openbox_autostart "$HOME/.config/openbox/autostart" || true
+  chmod +x "$HOME/.config/openbox/autostart" || true
+fi
+
+# Hacer lo mismo para el usuario físico no-root en caso de existir en /home
+for user_dir in /home/*; do
+  if [ -d "$user_dir" ]; then
+    mkdir -p "$user_dir/.config/openbox" || true
+    cp /tmp/cminewaros_openbox_autostart "$user_dir/.config/openbox/autostart" || true
+    chmod +x "$user_dir/.config/openbox/autostart" || true
+    # Asegurar que el usuario es dueño del directorio y el script
+    user_name=$(basename "$user_dir")
+    chown -R "$user_name:$user_name" "$user_dir/.config" || true
+  fi
+done
+
+echo "[✔] Entorno de escritorio Openbox pre-configurado con éxito para Kiosco auto-arrancable."
 
 # 6. Escribir el Gestor de Cortafuegos Físico de Debian (Anti-WAN)
 echo "[+] Desplegando script de control del cortafuegos de internet en /usr/local/bin/cminewar-firewall..."

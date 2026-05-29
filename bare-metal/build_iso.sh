@@ -54,7 +54,7 @@ xset s noblank || true
 
 # 2.5 Prevenir los molestos errores "Failed to execute child process" en Openbox para binarios ausentes
 # Creamos ejecutables dummy en el PATH en caso de que el entorno de escritorio, menús o atajos los invoquen.
-for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon; do
+for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon x-terminal-emulator xterm; do
   if ! command -v $bin_name &>/dev/null; then
     echo -e '#!/bin/sh\nexit 0' > "/usr/bin/$bin_name" 2>/dev/null || echo -e '#!/bin/sh\nexit 0' > "/usr/local/bin/$bin_name" 2>/dev/null || true
     chmod +x "/usr/bin/$bin_name" 2>/dev/null || chmod +x "/usr/local/bin/$bin_name" 2>/dev/null || true
@@ -68,8 +68,14 @@ ifconfig lo up || ip link set lo up || true
 cd /opt/cminewaros || cd /opt/clawos || true
 node dist/server.cjs &
 
-# 5. Esperar 3 segundos para asegurar que el servidor Express en el puerto 3000 esté levantado completamente
-sleep 3
+# 5. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo
+# Esto asegura que Chromium nunca muestre una página blanca o blanca de error por carga prematura, soportando discos lentos
+for i in $(seq 1 30); do
+  if wget -qO- http://localhost:3000/api/health &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
+    break
+  fi
+  sleep 1
+done
 
 # 6. Detectar si el binario del navegador disponible en el sistema Debian/Alpine
 if command -v chromium &>/dev/null; then
@@ -85,30 +91,37 @@ else
 fi
 
 # 7. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
-# Esto soluciona de raíz los problemas CORS de protocolo file://, bloqueo de almacenamiento local, de sonido y activos con rutas absolutas
-# Añadimos --user-data-dir para dar soporte nativo y evitar que el navegador aborte cuando se ejecuta como ROOT en ISOs live o entornos bare-metal
-# Agregamos flags de compatibilidad GPU para evitar pantallas en negro en tarjetas legacy físicas en Openbox
-$CHROME_BIN --kiosk \
-  --no-sandbox \
-  --no-first-run \
-  --simulate-outdated-no-au \
-  --disable-infobars \
-  --window-size=1920,1080 \
-  --window-position=0,0 \
-  --disable-session-crashed-bubble \
-  --disable-translate \
-  --start-maximized \
-  --user-data-dir=/tmp/chromium-kiosk-profile \
-  --password-store=basic \
-  --no-errdialogs \
-  --autoplay-policy=no-user-gesture-required \
-  --disable-gpu \
-  --disable-software-rasterizer \
-  --disable-gpu-compositing \
-  --disable-dev-shm-usage \
-  --ozone-platform=x11 \
-  --disable-features=UseOzonePlatform \
-  http://localhost:3000 &
+# Se ejecuta en un bucle infinito de persistencia: si Chromium se cierra accidentalmente (p. ej. Alt+F4) o falla, se auto-levanta al instante.
+# Eliminamos de raíz los problemas CORS, el bloqueo de almacenamiento local y los assets relativos.
+# Añadimos limpieza de SingletonLock para evitar advertencias de perfiles corruptos por apagones bruscos de corriente.
+while true; do
+  rm -f /tmp/chromium-kiosk-profile/SingletonLock 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/Lock 2>/dev/null || true
+  
+  $CHROME_BIN --kiosk \
+    --no-sandbox \
+    --no-first-run \
+    --simulate-outdated-no-au \
+    --disable-infobars \
+    --window-size=1920,1080 \
+    --window-position=0,0 \
+    --disable-session-crashed-bubble \
+    --disable-translate \
+    --start-maximized \
+    --user-data-dir=/tmp/chromium-kiosk-profile \
+    --password-store=basic \
+    --no-errdialogs \
+    --autoplay-policy=no-user-gesture-required \
+    --disable-gpu \
+    --disable-software-rasterizer \
+    --disable-gpu-compositing \
+    --disable-dev-shm-usage \
+    --ozone-platform=x11 \
+    --disable-features=UseOzonePlatform \
+    http://localhost:3000
+    
+  sleep 1
+done &
 
 EOF
 
