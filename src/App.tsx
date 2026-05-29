@@ -133,6 +133,7 @@ export default function App() {
   const [openFilePath, setOpenFilePath] = useState<string[] | null>(null);
   const [openFileName, setOpenFileName] = useState<string[] | null>(null);
   const [openFileContent, setOpenFileContent] = useState<string | null>(null);
+  const [widgetsOpen, setWidgetsOpen] = useState(true);
 
   // Chat conversation memory with CMineWar AI
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
@@ -669,11 +670,62 @@ export default function App() {
         ))}
       </div>
 
+      {/* Synology DSM-style Translucent Top Bar */}
+      <div 
+        className="w-full h-11 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0 select-none z-[99]"
+        id="dsm-desktop-top-bar"
+      >
+        <div className="flex items-center space-x-3 flex-row">
+          {/* Main Menu Toggle */}
+          <button
+            onClick={() => {
+              setAppDrawerOpen(true);
+            }}
+            className="flex items-center justify-center p-1.5 bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:bg-slate-850 rounded-lg text-emerald-400 transition cursor-pointer"
+            title="Centro de Aplicaciones DSM"
+            id="dsm-menu-button"
+          >
+            <LayoutGrid size={15} />
+          </button>
+          
+          <div className="h-4 w-[1px] bg-slate-800"></div>
+          
+          <span className="font-sans font-bold text-xs tracking-wider text-slate-200">
+            {connectedServerIp ? `CMineWar-NAS [${connectedServerIp}]` : "CMineWar-NAS (Demo)"}
+          </span>
+        </div>
+
+        {/* Center status label */}
+        <div className="hidden sm:flex items-center space-x-1.5 bg-slate-900/60 border border-slate-800 px-2 py-0.5 rounded text-[9px] font-mono text-slate-400">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+          <span>SISTEMA SALUDABLE (DSM 7.2)</span>
+        </div>
+
+        {/* Right Info Widgets trigger */}
+        <div className="flex items-center space-x-3">
+          {/* Toggle Widget Panel Button */}
+          <button
+            onClick={() => setWidgetsOpen(!widgetsOpen)}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md border text-[9.5px] font-mono font-bold uppercase transition duration-200 cursor-pointer ${
+              widgetsOpen
+                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                : "bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200"
+            }`}
+            id="dsm-widgets-toggle"
+          >
+            <Activity size={11} className={widgetsOpen ? "animate-pulse text-emerald-405" : "text-slate-500"} />
+            <span>ESTADO NAS</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Desktop workspace */}
       <div className="flex-1 relative p-4 pointer-events-auto overflow-hidden">
         {/* Desktop grid launchers */}
-        <div className={`grid grid-flow-row absolute left-6 select-none transition-all ${
-          touchMode ? "top-8 gap-8 w-28" : "top-6 gap-6 w-24"
+        <div className={`select-none transition-all z-10 ${
+          touchMode 
+            ? "absolute inset-x-4 top-4 bottom-32 xs:bottom-28 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-x-4 gap-y-7 p-4 auto-rows-max justify-center items-start overflow-y-auto" 
+            : "grid grid-flow-row absolute left-6 top-6 gap-6 w-24"
         }`}>
           {[
             { id: "openclaw_core", name: "CMineWar AI", icon: <DragonLogo size={touchMode ? 38 : 32} />, border: "group-hover:border-rose-500/60" },
@@ -733,6 +785,147 @@ export default function App() {
             </span>
           </div>
         </div>
+
+        {/* Custom Synology DSM-style Desktop Widget Panel */}
+        {widgetsOpen && (
+          <div 
+            className={`bg-slate-950/90 border border-slate-800/80 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md rounded-xl p-4 font-sans z-[90] pointer-events-auto transition-all ${
+              touchMode 
+                ? "absolute inset-x-4 bottom-2 flex flex-row gap-4 items-center justify-between overflow-x-auto shadow-emerald-950/10 border-emerald-500/20 max-h-[140px]" 
+                : "absolute right-6 top-6 w-76 flex flex-col space-y-3.5"
+            }`}
+            id="dsm-desktop-widget-panel"
+          >
+            {touchMode ? (
+              /* DSM Mobile Widget display */
+              <div className="w-full flex items-center justify-between gap-4 select-none shrink-0 min-w-[340px]">
+                {/* Health indicator */}
+                <div className="flex items-center space-x-2.5 shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <Activity size={18} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <h5 className="text-[10px] font-black tracking-widest text-[#2cbe7f] uppercase font-mono">NAS SALUD</h5>
+                    <p className="text-xs font-bold text-slate-100">Estado Excelente</p>
+                  </div>
+                </div>
+
+                {/* Resource mini sliders */}
+                <div className="flex-1 flex gap-4">
+                  {/* CPU status */}
+                  <div className="flex-1 bg-slate-900/55 p-2.5 border border-slate-900 rounded-lg">
+                    <div className="flex justify-between items-center text-[9px] font-mono font-bold text-slate-400">
+                      <span>USO CPU</span>
+                      <span className="text-emerald-400 font-bold">24%</span>
+                    </div>
+                    <div className="w-full bg-slate-950 h-1 rounded overflow-hidden mt-1.5">
+                      <div className="bg-emerald-500 h-full w-[24%] transition-all"></div>
+                    </div>
+                  </div>
+
+                  {/* RAM status */}
+                  <div className="flex-1 bg-slate-900/55 p-2.5 border border-slate-900 rounded-lg">
+                    <div className="flex justify-between items-center text-[9px] font-mono font-bold text-slate-400">
+                      <span>USO RAM</span>
+                      <span className="text-cyan-400 font-bold">38%</span>
+                    </div>
+                    <div className="w-full bg-slate-950 h-1 rounded overflow-hidden mt-1.5">
+                      <div className="bg-cyan-500 h-full w-[38%] transition-all"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick close button */}
+                <button 
+                  onClick={() => setWidgetsOpen(false)}
+                  className="p-1 hover:bg-slate-800 rounded border border-slate-800 text-slate-400 cursor-pointer"
+                  title="Ocultar Widget"
+                  id="btn-widgets-close-mobile"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              /* DSM PC Widget card (Full detail widget) */
+              <>
+                {/* Health Section */}
+                <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-200 font-sans">Monitor de Recursos DSM</h4>
+                  </div>
+                  <button 
+                    onClick={() => setWidgetsOpen(false)}
+                    className="text-slate-500 hover:text-slate-350 cursor-pointer"
+                    title="Ocultar widget"
+                    id="btn-widgets-close-pc"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+
+                {/* Health Indicator card */}
+                <div className="flex items-center space-x-3 bg-emerald-950/30 border border-emerald-500/20 p-2.5 rounded-lg">
+                  <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-full shrink-0">
+                    <Activity size={18} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <h5 className="text-[10px] font-mono uppercase font-bold text-emerald-400">Estado del Sistema</h5>
+                    <p className="text-[11px] font-semibold text-slate-200 font-sans">Su CMineWar-NAS funciona excelente.</p>
+                  </div>
+                </div>
+
+                {/* Resource Stats bars */}
+                <div className="space-y-3.5 pt-1 text-xs font-sans">
+                  {/* CPU Usage */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
+                      <span>Procesamiento (CPU Core)</span>
+                      <span className="text-emerald-400 font-bold">24%</span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
+                      <div className="bg-emerald-500 h-full w-[24%] transition-all duration-700"></div>
+                    </div>
+                  </div>
+
+                  {/* RAM Memory Usage */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
+                      <span>Memoria Física (Virtual RAM)</span>
+                      <span className="text-cyan-400 font-bold">38%</span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
+                      <div className="bg-cyan-500 h-full w-[38%] transition-all duration-700"></div>
+                    </div>
+                  </div>
+
+                  {/* VFS Space Usage */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
+                      <span>Volumen virtual (VFS /vfs)</span>
+                      <span className="text-pink-400 font-bold">14.6 GB / 32 GB (45%)</span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
+                      <div className="bg-pink-500 h-full w-[45%] transition-all duration-700"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Synology Services status indicators */}
+                <div className="border-t border-slate-900 pt-3 text-[10px] space-y-1.5 font-mono">
+                  <div className="flex items-center justify-between text-slate-550 flex-wrap">
+                    <span>IP GATEWAY:</span>
+                    <span className="text-cyan-400">{connectedServerIp || "127.0.0.1 (Local)"}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-550 flex-wrap">
+                    <span>CONEXIÓN UDEV:</span>
+                    <span className="text-emerald-400 font-bold">ACTIVO SHM</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Windows Rendering Layer */}
         {windows.map((win) => (
