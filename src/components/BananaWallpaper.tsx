@@ -18,7 +18,47 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
   const [actualHour, setActualHour] = useState(() => new Date().getHours());
   
   // Custom simulation hour so users can easily play and test other hours
-  const [simulatedHour, setSimulatedHour] = useState<number | null>(null);
+  const [simulatedHour, setSimulatedHour] = useState<number | null>(() => {
+    const saved = localStorage.getItem("cminewar_nano_sim_hour");
+    if (!saved || saved === "real") return null;
+    return parseInt(saved, 10);
+  });
+
+  // Dynamic customization settings states
+  const [nanoBananaSize, setNanoBananaSize] = useState<"nano" | "estandar" | "maxi">(() => {
+    return (localStorage.getItem("cminewar_nano_banana_size") as any) || "estandar";
+  });
+  const [lineStyle, setLineStyle] = useState<"curvo" | "recto" | "oculto">(() => {
+    return (localStorage.getItem("cminewar_nano_line_style") as any) || "curvo";
+  });
+  const [glowIntensity, setGlowIntensity] = useState<"sutil" | "medio" | "fuerte">(() => {
+    return (localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio";
+  });
+
+  // Sync wallpaper settings with Control Panel using storage events
+  useEffect(() => {
+    const syncWallpaperSettings = () => {
+      setNanoBananaSize((localStorage.getItem("cminewar_nano_banana_size") as any) || "estandar");
+      setLineStyle((localStorage.getItem("cminewar_nano_line_style") as any) || "curvo");
+      setGlowIntensity((localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio");
+      const savedHour = localStorage.getItem("cminewar_nano_sim_hour");
+      if (!savedHour || savedHour === "real") {
+        setSimulatedHour(null);
+      } else {
+        setSimulatedHour(parseInt(savedHour, 10));
+      }
+    };
+    
+    // Listen to standard storage updates (from same or other panels)
+    window.addEventListener("storage", syncWallpaperSettings);
+    // Extra manual event triggers support inside same frame
+    window.addEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    
+    return () => {
+      window.removeEventListener("storage", syncWallpaperSettings);
+      window.removeEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    };
+  }, []);
 
   // Keep actualHour synced to systemic local clock
   useEffect(() => {
@@ -69,11 +109,32 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     statusBadge = "bg-rose-900/40 border-rose-500/30 text-rose-300";
   }
 
+  // Adjust neon glow intensity parameters
+  let glowOpacity = 0.82;
+  let blurDeviation = 6;
+  if (glowIntensity === "sutil") {
+    glowOpacity = 0.4;
+    blurDeviation = 2;
+  } else if (glowIntensity === "fuerte") {
+    glowOpacity = 1.0;
+    blurDeviation = 12;
+  }
+
   // Generate 2D coordinates for services mapping in SVG space
   // Central core is at (450, 320)
   const centerX = 550;
   const centerY = 330;
-  const radius = 240;
+  
+  // Dynamic scale parameters based on 'nanoBananaSize' setting
+  let radius = 240;
+  let coreScale = 1.0;
+  if (nanoBananaSize === "nano") {
+    radius = 150;
+    coreScale = 0.7;
+  } else if (nanoBananaSize === "maxi") {
+    radius = 330;
+    coreScale = 1.35;
+  }
 
   // Let's list the core services to display
   // Include standard service list & make sure they have layout positions
@@ -136,14 +197,14 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
       {/* 3. The Generative Wireframe & Sockets Map SVG layer */}
       <svg 
         className="absolute inset-0 w-full h-full pointer-events-none" 
-        style={{ opacity: 0.82 }}
+        style={{ opacity: glowOpacity }}
         viewBox="0 0 1100 680" 
         preserveAspectRatio="xMidYMid slice"
       >
         <defs>
           {/* Glowing Filters */}
           <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feGaussianBlur stdDeviation={blurDeviation} result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -151,7 +212,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           </filter>
           
           <filter id="core-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="15" result="blur" />
+            <feGaussianBlur stdDeviation={blurDeviation * 2.5} result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -167,12 +228,17 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
 
         {/* Dynamic Connected Bus Wires */}
         {nodes.map((node, i) => {
+          if (lineStyle === "oculto") return null;
+
           const isServiceActive = node.status === "active";
           // Perfect curved Bezier cables going from center banana to the service endpoint
           // Curve pulls slightly towards the angle bisector for cosmic look
           const midX = (centerX + node.x) / 2 + Math.cos(node.angle + 0.4) * 35;
           const midY = (centerY + node.y) / 2 + Math.sin(node.angle + 0.4) * 35;
-          const pathD = `M ${centerX} ${centerY} Q ${midX} ${midY} ${node.x} ${node.y}`;
+          
+          const pathD = lineStyle === "recto"
+            ? `M ${centerX} ${centerY} L ${node.x} ${node.y}`
+            : `M ${centerX} ${centerY} Q ${midX} ${midY} ${node.x} ${node.y}`;
 
           return (
             <g key={node.id || `node-${i}`}>
@@ -231,23 +297,23 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
         {/* Central Core Circle Node (Banana Core Platform) */}
         <g transform={`translate(${centerX}, ${centerY})`}>
           {/* Pulsing Backplane Halo */}
-          <circle r="65" fill={primaryGlow} opacity="0.08" filter="url(#core-glow)">
-            <animate attributeName="r" values="55;75;55" dur="4s" repeatCount="indefinite" />
+          <circle r={65 * coreScale} fill={primaryGlow} opacity="0.08" filter="url(#core-glow)">
+            <animate attributeName="r" values={`${55 * coreScale};${75 * coreScale};${55 * coreScale}`} dur="4s" repeatCount="indefinite" />
           </circle>
           
-          <circle r="48" fill="rgba(15, 23, 42, 0.9)" stroke={primaryGlow} strokeWidth="1.5" filter="url(#neon-glow)" />
-          <circle r="42" fill="rgba(2, 6, 23, 0.95)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+          <circle r={48 * coreScale} fill="rgba(15, 23, 42, 0.9)" stroke={primaryGlow} strokeWidth="1.5" filter="url(#neon-glow)" />
+          <circle r={42 * coreScale} fill="rgba(2, 6, 23, 0.95)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
 
           {/* Custom Dragon Logo in the center of the kernel wallpaper */}
-          <foreignObject x="-42" y="-42" width="84" height="84">
+          <foreignObject x={-42 * coreScale} y={-42 * coreScale} width={84 * coreScale} height={84 * coreScale}>
             <div className="w-full h-full flex items-center justify-center">
-              <DragonLogo size={80} glow={true} />
+              <DragonLogo size={80 * coreScale} glow={true} />
             </div>
           </foreignObject>
 
           {/* Subtext around core */}
-          <path id="core-text-path" d="M -42,0 A 42,42 0 1,1 42,0" fill="none" />
-          <text fontSize="6.5" fontWeight="bold" fill="rgba(255, 255, 255, 0.45)" letterSpacing="1.2" className="font-mono">
+          <path id="core-text-path" d={`M ${-42 * coreScale},0 A ${42 * coreScale},${42 * coreScale} 0 1,1 ${42 * coreScale},0`} fill="none" />
+          <text fontSize={6.5 * coreScale} fontWeight="bold" fill="rgba(255, 255, 255, 0.45)" letterSpacing="1.2" className="font-mono">
             <textPath href="#core-text-path" startOffset="50%" textAnchor="middle">
               CMINEWAR KERNEL DEBIAN FORCE
             </textPath>
@@ -315,94 +381,6 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
         })}
       </svg>
 
-      {/* 4. Elegant Cybernetic Floating Widget Controls & Hour Simulation Overlays */}
-      <div 
-        className="absolute bottom-16 right-6 z-[1] pointer-events-auto max-w-xs w-full bg-slate-950/90 hover:bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 shadow-2xl space-y-3 font-mono text-[10.5px] text-slate-400 select-text animate-fade-in"
-        id="nano-banana-wallpaper-widget"
-      >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div className="flex items-center space-x-1.5">
-            <Sparkles size={12} className={matrixText} />
-            <span className="font-bold text-slate-200 uppercase tracking-widest text-[9.5px]">Nano Banana Dynamic Background</span>
-          </div>
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Wallpaper Daemon Activo" />
-        </div>
-
-        {/* Telemetry rows */}
-        <div className="space-y-1.5 text-left text-xs bg-slate-950 p-2.5 rounded-lg border border-slate-900 leading-relaxed">
-          <div className="flex justify-between">
-            <span className="text-slate-600">Simulación / Hora:</span>
-            <span className={matrixText}>{activeHour.toString().padStart(2, '0')}:00 UTC</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-600">Esquema Visual:</span>
-            <span className="text-slate-300 font-semibold truncate max-w-[120px]">{themeName.split(" ").slice(2).join(" ")}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-600">Nudos de Red Asimilados:</span>
-            <span className="text-emerald-400 font-bold">{displayServices.length} Sockets</span>
-          </div>
-          <p className="text-[9px] text-slate-500 italic leading-normal border-t border-slate-900/40 mt-1.5 pt-1.5">
-            💡 Nano Banana está asimilando a CMineWar AI y a los {services.filter(s => s.status === 'active').length} servicios instalados para moldear su firma espectral, manteniendo el logo de dragón sagrado de CMineWar OS intacto e inalterable.
-          </p>
-        </div>
-
-        {/* Interactive Play Controls */}
-        <div className="space-y-2 pt-1 border-t border-slate-900">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Simular ciclo de hora:</span>
-            {simulatedHour !== null && (
-              <button 
-                onClick={() => setSimulatedHour(null)}
-                className="text-[9px] text-rose-400 hover:text-rose-300 transition flex items-center space-x-0.5 border border-rose-950 px-1 py-0.5 rounded bg-rose-950/20"
-                title="Sincronizar fondo con hora real del sistema"
-              >
-                <RefreshCw size={8} />
-                <span>Restaurar Real</span>
-              </button>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-4 gap-1">
-            {[0, 6, 12, 18].map((hr) => {
-              const ranges = [
-                { title: "Noche", emoji: "🌌", isMatch: activeHour >= 0 && activeHour < 6 },
-                { title: "Mañana", emoji: "🌅", isMatch: activeHour >= 6 && activeHour < 12 },
-                { title: "Tarde", emoji: "☀️", isMatch: activeHour >= 12 && activeHour < 18 },
-                { title: "Ocaso", emoji: "🌇", isMatch: activeHour >= 18 && activeHour < 24 },
-              ];
-              const range = hr === 0 ? ranges[0] : hr === 6 ? ranges[1] : hr === 12 ? ranges[2] : ranges[3];
-              const isSelected = range.isMatch;
-
-              return (
-                <button
-                  key={hr}
-                  onClick={() => setSimulatedHour(hr)}
-                  className={`py-1 text-center rounded transition text-[9px] flex flex-col items-center justify-center border font-semibold ${
-                    isSelected 
-                      ? "bg-emerald-950 border-emerald-800 text-emerald-300 font-bold" 
-                      : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  }`}
-                  title={`Simular tema de ${range.title}`}
-                >
-                  <span className="text-xs mb-0.5">{range.emoji}</span>
-                  <span>{hr.toString().padStart(2, '0')}h</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Secure Logo Constraint Status */}
-          <div className="text-[8.5px] mt-1 text-emerald-400/90 tracking-wide font-extrabold flex items-center justify-center space-x-1 py-1 px-1.5 rounded bg-emerald-950/30 border border-emerald-800/40 text-center select-none leading-relaxed">
-            <span>🛡️ DRAGON LOGO SECURE - UNALTERABLE BY NANO BANANA DECENTRALIZATION 🛡️</span>
-          </div>
-
-          {/* Sockets notification hint */}
-          <div className="text-[8px] text-slate-600 flex items-center justify-center space-x-1 text-center bg-slate-950 py-1 rounded">
-            <span>Para cambiar servicios, use el <strong>Panel de Control</strong></span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -56,7 +56,42 @@ export default function GitHubUpdater({
   triggerNotification,
 }: GitHubUpdaterProps) {
   // Navigation tabs (Windows Control Panel style + sidebar)
-  const [activeTab, setActiveTab] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github" | "lan_security">("index");
+  const [activeTab, setActiveTab ] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github" | "lan_security" | "wallpaper">("index");
+  
+  // Wallpaper Settings synced with localStorage
+  const [nanoBananaSize, setNanoBananaSize] = useState<"nano" | "estandar" | "maxi">(() => {
+    return (localStorage.getItem("cminewar_nano_banana_size") as "nano" | "estandar" | "maxi") || "estandar";
+  });
+  const [lineStyle, setLineStyle] = useState<"curvo" | "recto" | "oculto">(() => {
+    return (localStorage.getItem("cminewar_nano_line_style") as "curvo" | "recto" | "oculto") || "curvo";
+  });
+  const [glowIntensity, setGlowIntensity] = useState<"sutil" | "medio" | "fuerte">(() => {
+    return (localStorage.getItem("cminewar_nano_glow_intensity") as "sutil" | "medio" | "fuerte") || "medio";
+  });
+  const [simulatedHour, setSimulatedHour] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_sim_hour") || "real";
+  });
+
+  const updateWallpaperSetting = (key: string, value: string) => {
+    localStorage.setItem(key, value);
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("cminewar_wallpaper_settings_changed"));
+  };
+
+  useEffect(() => {
+    const syncWallpaperSettings = () => {
+      setNanoBananaSize((localStorage.getItem("cminewar_nano_banana_size") as "nano" | "estandar" | "maxi") || "estandar");
+      setLineStyle((localStorage.getItem("cminewar_nano_line_style") as "curvo" | "recto" | "oculto") || "curvo");
+      setGlowIntensity((localStorage.getItem("cminewar_nano_glow_intensity") as "sutil" | "medio" | "fuerte") || "medio");
+      setSimulatedHour(localStorage.getItem("cminewar_nano_sim_hour") || "real");
+    };
+    window.addEventListener("storage", syncWallpaperSettings);
+    window.addEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    return () => {
+      window.removeEventListener("storage", syncWallpaperSettings);
+      window.removeEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    };
+  }, []);
   
   // WAN / Internet Connection Blocking Firewall States
   const [wanBlocked, setWanBlocked] = useState<boolean>(() => {
@@ -187,6 +222,63 @@ export default function GitHubUpdater({
   const [apkCompileLogs, setApkCompileLogs] = useState<string[]>([]);
   const [apkDownloadUrl, setApkDownloadUrl] = useState<string | null>(null);
   const apkLogsEndRef = useRef<HTMLDivElement>(null);
+
+  // Google OAuth Profile State for secure developer signature
+  const [googleProfile, setGoogleProfile] = useState<{
+    name: string;
+    email: string;
+    picture: string;
+    sub: string;
+  } | null>(() => {
+    const saved = localStorage.getItem("cminewar_google_profile");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (googleProfile) {
+      localStorage.setItem("cminewar_google_profile", JSON.stringify(googleProfile));
+    } else {
+      localStorage.removeItem("cminewar_google_profile");
+    }
+  }, [googleProfile]);
+
+  // OAuth postMessage event listener from popup
+  useEffect(() => {
+    const handleOAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === "GOOGLE_OAUTH_SUCCESS" && event.data?.profile) {
+        setGoogleProfile(event.data.profile);
+        triggerNotification(`Identidad vinculada con éxito. Google Signer listo: ${event.data.profile.email}`, "success");
+      }
+    };
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [triggerNotification]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const origin = encodeURIComponent(window.location.origin);
+      const res = await fetch(`/api/auth/google/url?origin=${origin}`);
+      if (!res.ok) throw new Error("Fallo al obtener URL de Google Auth.");
+      const { url } = await res.json();
+      
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      
+      const authWindow = window.open(
+        url,
+        "google_oauth_popup",
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
+      );
+      if (!authWindow) {
+        triggerNotification("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes.", "info");
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerNotification(`Error de conexión con el proveedor Google OAuth: ${err.message}`, "info");
+    }
+  };
 
   const [updating, setUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
@@ -439,18 +531,36 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
     setIsCompilingApk(true);
     setApkCompileProgress(0);
     setApkDownloadUrl(null);
-    setApkCompileLogs([
-      `$ sudo cminewar-android-compiler --package=${apkPackageName} --version=${apkVersion}`,
+    
+    // Set custom logs based on Google identity state
+    const baseLogs = [
+      `$ sudo cminewar-android-compiler --package=${apkPackageName} --version=${apkVersion}` + (googleProfile ? ` --google-signer=${googleProfile.email}` : ""),
       `[INIT] Cargando el entorno de compilación Android SDK (Java Direct VM)...`,
       `[INIT] Encontrado JDK v17.0.8 (Eclipse Temurin) en /usr/lib/jvm/java-17-openjdk`,
       `[INIT] Directorio del compilador gradle: /opt/gradle/gradle-8.4/bin/gradle`,
       `[PREPARE] Creando estructura del proyecto native-android en /tmp/cminewar-apk-build/`
-    ]);
+    ];
+
+    if (googleProfile) {
+      baseLogs.push(
+        `[KEYSTORE] Autenticación de firma con Google Cloud exitosa.`,
+        `[KEYSTORE] Generando almacén de claves seguro PKCS12 mediante perfil federado:`,
+        `[KEYSTORE] DN: CN=${googleProfile.name}, OU=Google Developer Client, O=CMineWar Mobile, C=ES`,
+        `[KEYSTORE] Clave de firma encriptada con Google Token ID sub:${googleProfile.sub.substring(0, 10)}...`
+      );
+    } else {
+      baseLogs.push(
+        `[KEYSTORE] Sin credenciales Google vinculadas. Utilizando firma genérica "CMineWar OS Default Developer MD5"...`
+      );
+    }
+
+    setApkCompileLogs(baseLogs);
 
     const compileSteps = [
       `[WORKSPACE] Copiando plantilla nativa de WebView y AndroidManifest.xml...`,
       `[MANIFEST] Configurando paquete: package="${apkPackageName}" con Android:versionName="${apkVersion}"`,
       `[CONFIG] Habilitando soporte de orientación automática (Horizontal/Vertical) y barra translúcida.`,
+      `[OTA CLIENT] ENLACE EN CALIENTE AUTOMÁTICO (Fondo & Núcleo): Configurando módulo daemon OTA de segundo plano en puerto 3000 para auto-actualizaciones transparentes sin reinstalación.`,
       `[ASSETS] Compilando recursos y activos estáticos de la interfaz React + Vite para producción...`,
       `[ASSETS] Generando index.html y empaquetando scripts en carpeta dist/assets/...`,
       `[CAPACITOR] Copiando activos web compilados a android/app/src/main/assets/public/`,
@@ -461,12 +571,16 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
       `[GRADLE] > :app:mergeReleaseAssets (Compilando interfaces de Synology DSM en WebView)`,
       `[GRADLE] > :app:processReleaseResources (Vinculando assets de sonido, logo y pantalla de carga)`,
       `[GRADLE] > :app:dexBuilderRelease (Dividiendo y optimizando archivos .class a Dalvik Executable .dex)`,
-      `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store seguro de CMineWar)...`,
-      `[SIGNING] Aplicando firmas v2 y v3 (zipalign 4-byte boundary OK)...`,
+      googleProfile 
+        ? `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store certificado de Google Creator ${googleProfile.name})...`
+        : `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store genérico local de CMineWar)...`,
+      googleProfile
+        ? `[SIGNING] Firma dual v2 + v3 aplicada con credenciales certificadas por Google Cloud (zipalign 4-byte boundaries OK)...`
+        : `[SIGNING] Aplicando firmas estándar v2 y v3 (zipalign 4-byte boundary OK)...`,
       `[COMPILATION SUCCESS] ¡Archivo APK compilado con éxito!`,
       `[INFO] Nombre: cminewar_os_mobile_${apkVersion}.apk`,
-      `[INFO] Peso: 12.4 MB`,
-      `[INFO] Estado: Firmado y Listo de forma local`
+      `[INFO] Peso: 11.8 MB`,
+      `[INFO] Estado: ` + (googleProfile ? `Firmado y Verificado Seguro con Google Developer ID` : `Firmado con Keystore genérico local`)
     ];
 
     let currentStep = 0;
@@ -493,7 +607,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
           apkBytes[2] = 0x03; // Local file header signature
           apkBytes[3] = 0x04;
           
-          const headerInfo = `CMineWar OS Mobile Companion APK\nPackage: ${apkPackageName}\nVersion: ${apkVersion}\nUrl: ${window.location.origin}\nGenerated inside CMineWar-NAS System Settings. Use this package to run CMineWar in fullscreen mode with native sensor locks.`;
+          const headerInfo = `CMineWar OS Mobile Companion APK\nPackage: ${apkPackageName}\nVersion: ${apkVersion}\nUrl: ${window.location.origin}\nSigner: ${googleProfile ? googleProfile.email : "Generic_Keystore"}\nGenerated inside CMineWar-NAS System Settings. Use this package to run CMineWar in fullscreen mode with native sensor locks.`;
           for (let i = 0; i < headerInfo.length; i++) {
             apkBytes[30 + i] = headerInfo.charCodeAt(i);
           }
@@ -852,21 +966,162 @@ echo "========================================================================="
           </div>
         </div>
 
-        {/* Home Button to return to index category view */}
-        {activeTab !== "index" && (
-          <button
-            onClick={() => setActiveTab("index")}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-semibold rounded-lg border border-slate-800 transition"
-          >
-            <LayoutGrid size={12} className="text-pink-400" />
-            <span>Inicio Panel</span>
-          </button>
-        )}
       </div>
 
-      {/* Primary Categories Grid (Old Windows Control Panel Style) */}
-      {activeTab === "index" ? (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Main split view representing settings sidebar + content area */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* Left Sidebar coherent with Control Panel design */}
+        <div className="w-full md:w-52 bg-slate-950 p-3 flex md:flex-col space-y-0 md:space-y-1 md:space-x-0 gap-1.5 border-r border-slate-800 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
+          {/* Index Button */}
+          <button
+            onClick={() => setActiveTab("index")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "index"
+                ? "bg-slate-900 text-pink-400 border-pink-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <LayoutGrid size={13} className={activeTab === "index" ? "text-pink-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Inicio Panel</span>
+          </button>
+
+          {/* WiFi Button */}
+          <button
+            onClick={() => setActiveTab("wifi")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "wifi"
+                ? "bg-slate-900 text-cyan-400 border-cyan-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Wifi size={13} className={activeTab === "wifi" ? "text-cyan-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Red WiFi</span>
+          </button>
+
+          {/* Bluetooth Button */}
+          <button
+            onClick={() => setActiveTab("bluetooth")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "bluetooth"
+                ? "bg-slate-900 text-blue-400 border-blue-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Bluetooth size={13} className={activeTab === "bluetooth" ? "text-blue-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Bluetooth</span>
+          </button>
+
+          {/* Ethernet Button */}
+          <button
+            onClick={() => setActiveTab("ethernet")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "ethernet"
+                ? "bg-slate-900 text-emerald-400 border-emerald-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Network size={13} className={activeTab === "ethernet" ? "text-emerald-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Ethernet</span>
+          </button>
+
+          {/* LTE Button */}
+          <button
+            onClick={() => setActiveTab("lte")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "lte"
+                ? "bg-slate-900 text-violet-400 border-violet-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Radio size={13} className={activeTab === "lte" ? "text-violet-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">LTE Celular</span>
+          </button>
+
+          {/* Display Button */}
+          <button
+            onClick={() => setActiveTab("display")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "display"
+                ? "bg-slate-900 text-pink-400 border-pink-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Tv size={13} className={activeTab === "display" ? "text-pink-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Pantalla</span>
+          </button>
+
+          {/* Android Button */}
+          <button
+            onClick={() => setActiveTab("apk")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "apk"
+                ? "bg-slate-900 text-yellow-405 border-yellow-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Smartphone size={13} className={activeTab === "apk" ? "text-yellow-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Android APK</span>
+          </button>
+
+          {/* Wallpaper Button */}
+          <button
+            onClick={() => setActiveTab("wallpaper")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "wallpaper"
+                ? "bg-slate-900 text-pink-400 border-pink-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Sparkles size={13} className={activeTab === "wallpaper" ? "text-pink-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Fondo Banano</span>
+          </button>
+
+          {/* Packages Button */}
+          <button
+            onClick={() => setActiveTab("packages")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "packages"
+                ? "bg-slate-900 text-emerald-450 border-emerald-550/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <LayoutGrid size={13} className={activeTab === "packages" ? "text-emerald-450" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Ver Paquetes</span>
+          </button>
+
+          {/* GitHub Button */}
+          <button
+            onClick={() => setActiveTab("github")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "github"
+                ? "bg-slate-900 text-slate-300 border-slate-700/50 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Github size={13} className={activeTab === "github" ? "text-slate-350" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Sinc GitHub</span>
+          </button>
+
+          {/* Firewall Button */}
+          <button
+            onClick={() => setActiveTab("lan_security")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "lan_security"
+                ? "bg-slate-900 text-rose-450 border-rose-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <ShieldAlert size={13} className={activeTab === "lan_security" ? "text-rose-450" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Cortafuegos</span>
+          </button>
+        </div>
+
+        {/* Right Main Content Area */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-900 relative">
+
+          {/* Primary Categories Grid (Old Windows Control Panel Style in right content area) */}
+          {activeTab === "index" ? (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="border-b border-slate-800 pb-3">
               <span className="text-xs font-bold font-mono uppercase text-slate-500 tracking-widest text-left block">Selecciona una categoría de hardware o sistema:</span>
@@ -1019,6 +1274,27 @@ echo "========================================================================="
                 <div>
                   <h4 className="text-xs font-bold text-slate-200 group-hover:text-rose-400 transition">Cortafuegos y Red Local</h4>
                   <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Habilita acceso web local y bloquea accesos externos de Internet.</p>
+                </div>
+              </button>
+              
+              {/* Card 10: Wallpaper Settings */}
+              <button
+                onClick={() => setActiveTab("wallpaper")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-pink-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+                id="btn-category-wallpaper"
+                title="Configura el tamaño, cables, brillos y simulación de hora del fondo animado Nano Banano"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
+                    <Sparkles size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-pink-500/15 text-pink-400 border border-pink-500/20">
+                    INTERACTIVO
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-pink-400 transition">Fondo Nano Banano</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Personaliza cables de red, ciclos de horas y brillos de neón.</p>
                 </div>
               </button>
 
@@ -1588,6 +1864,73 @@ echo "========================================================================="
                     <span>Escala Viewport Dinámica:</span>
                     <span className="text-cyan-400">device-width</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Auto-Actualización OTA:</span>
+                    <span className="text-pink-400 font-bold">AUTOMÁTICA (ACTIVE_LIVE)</span>
+                  </div>
+                </div>
+
+                {/* Google Secure Signature Integration Cards */}
+                <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850 space-y-2 font-sans text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-300 flex items-center space-x-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                      <span>Firma Segura APK con Google</span>
+                    </span>
+                    {googleProfile ? (
+                      <span className="text-[8.5px] uppercase font-mono font-black text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.2 rounded">
+                        CONECTADO
+                      </span>
+                    ) : (
+                      <span className="text-[8.5px] uppercase font-mono font-black text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded">
+                        SIN CONFIGURAR
+                      </span>
+                    )}
+                  </div>
+
+                  {googleProfile ? (
+                    <div className="flex items-center space-x-2.5 bg-slate-950/60 p-2 rounded border border-slate-800/40">
+                      <img 
+                        src={googleProfile.picture} 
+                        alt="Google avatar" 
+                        className="w-7 h-7 rounded-full border border-emerald-500/20 shadow-md"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10.5px] font-bold text-slate-200 truncate">{googleProfile.name}</p>
+                        <p className="text-[9px] text-slate-400 font-mono truncate">{googleProfile.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setGoogleProfile(null);
+                          triggerNotification("Identidad de Google desvinculada.", "info");
+                        }}
+                        className="text-[9px] text-rose-400 hover:text-rose-300 hover:underline font-mono"
+                      >
+                        Desvincular
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <p className="text-[9.5px] text-slate-400 leading-normal">
+                        Vincule sus credenciales de Google para firmar la APK con su firma de desarrollador auténtica. Esto garantiza que la APK sea reconocida como segura.
+                      </p>
+                      <button
+                        onClick={handleGoogleSignIn}
+                        className="w-full flex items-center justify-center space-x-1.5 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white text-[10px] font-semibold rounded-md transition"
+                      >
+                        <span className="flex space-x-0.5 text-[10px] font-extrabold mr-1">
+                          <span className="text-blue-400">G</span>
+                          <span className="text-red-400">o</span>
+                          <span className="text-yellow-400">o</span>
+                          <span className="text-blue-400">g</span>
+                          <span className="text-green-400">l</span>
+                          <span className="text-red-400">e</span>
+                        </span>
+                        <span>Vincular Cuenta de Google</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Compilation Visualizer or triggers */}
@@ -2336,6 +2679,145 @@ echo "========================================================================="
         </div>
       )}
 
+      {/* SECTION 11: Wallpaper settings */}
+      {activeTab === "wallpaper" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-xl mx-auto w-full space-y-4 text-left font-sans" id="view-wallpaper-settings">
+          <div className="border-b border-slate-800 pb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+              <Sparkles size={14} className="text-pink-400 animate-pulse" />
+              <span>Configuración del Fondo de Pantalla Nano Banano</span>
+            </h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Personaliza el fondo regenerativo del sistema. Los ajustes lógicos se aplican instantáneamente de forma interactiva.
+            </p>
+          </div>
+
+          <div className="space-y-4 text-xs">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+              <div className="flex items-center space-x-2 border-b border-slate-900 pb-2.5">
+                <Sliders size={13} className="text-pink-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Firma Espectral de Red</span>
+              </div>
+
+              <div className="space-y-3.5 text-left text-xs">
+                {/* Select size */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Talla de la Red Banano:</span>
+                  <select
+                    id="sys-ctrl-nano-talla"
+                    name="sys-ctrl-nano-talla"
+                    value={nanoBananaSize}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setNanoBananaSize(val);
+                      updateWallpaperSetting("cminewar_nano_banana_size", val);
+                      triggerNotification(`Talla del Fondo de Pantalla cambiada a: ${val.toUpperCase()}`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="nano">🔬 Talla Pequeña (Compacto / Óptimo Móvil)</option>
+                    <option value="estandar">🍌 Talla Estándar (Original de Computadora)</option>
+                    <option value="maxi">🚀 Talla Maxi (Inmersivo de Alta Fidelidad)</option>
+                  </select>
+                </div>
+
+                {/* Select Hour color cycle */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Ciclo Cromático de Fondo / Hora:</span>
+                  <select
+                    id="sys-ctrl-nano-hora"
+                    name="sys-ctrl-nano-hora"
+                    value={simulatedHour}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSimulatedHour(val);
+                      updateWallpaperSetting("cminewar_nano_sim_hour", val);
+                      triggerNotification(`Ciclo cromático adaptado a: ${val === 'real' ? 'Hora Real' : 'Simulación de Hora ' + val + ':00'}`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="real">🕰️ Sincronizar con Hora Real del Sistema</option>
+                    <option value="0">🌌 Temática Noche Cósmica (Púrpura Profundo - 00:00)</option>
+                    <option value="6">🌅 Temática Amanecer Dorado (Ámbar Reluciente - 06:00)</option>
+                    <option value="12">☀️ Temática Mediodía Mint (Cian Electrizante - 12:00)</option>
+                    <option value="18">🌇 Temática Ocaso Coral (Rosa Sunset - 18:00)</option>
+                  </select>
+                </div>
+
+                {/* Select Lines style */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Estructura lógicas de Cableado:</span>
+                  <select
+                    id="sys-ctrl-nano-cables"
+                    name="sys-ctrl-nano-cables"
+                    value={lineStyle}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setLineStyle(val);
+                      updateWallpaperSetting("cminewar_nano_line_style", val);
+                      triggerNotification(`Estilo de cables cambiado a: ${val.toUpperCase()}`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="curvo">〰️ Cables Curvos Bezier Electrónicos</option>
+                    <option value="recto">➖ Cables Rectos Directores Geométricos</option>
+                    <option value="oculto">❌ Red Inalámbrica Sigilosa (Ocultar Cables)</option>
+                  </select>
+                </div>
+
+                {/* Glow intensity dropdown */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Intensidad del Brillo (Filtro CSS Glow):</span>
+                  <select
+                    id="sys-ctrl-nano-brillo"
+                    name="sys-ctrl-nano-brillo"
+                    value={glowIntensity}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setGlowIntensity(val);
+                      updateWallpaperSetting("cminewar_nano_glow_intensity", val);
+                      triggerNotification(`Intensidad de brillo ecualizada a: ${val.toUpperCase()}`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="sutil">💎 Brillo Sutil Ultra Elegante y Opaco</option>
+                    <option value="medio">✨ Brillo Estándar Equilibrado de Neón</option>
+                    <option value="fuerte">🔥 Flujo Radiante de Alto Voltaje</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <div className="text-[9.5px] text-emerald-450 tracking-wide font-mono font-extrabold flex items-center justify-center space-x-1 py-1.5 px-2 rounded bg-emerald-950/20 border border-emerald-900/30 text-center select-none leading-relaxed">
+                  <span>🛡️ LOGO DE DRAGÓN C-LINE PRESERVADO E INALTERABLE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Interactive Sync Test */}
+            <div className="bg-slate-950/50 p-4 rounded-xl border border-dashed border-pink-500/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs select-none">
+              <div className="space-y-0.5 text-left">
+                <span className="font-bold text-slate-200 block uppercase font-mono text-[10px]">Forzar ráfaga de Sincronización</span>
+                <span className="text-[9px] text-slate-500 block font-sans">Actualizar sockets virtuales y reconectar el clúster.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new Event("storage"));
+                  window.dispatchEvent(new Event("cminewar_wallpaper_settings_changed"));
+                  triggerNotification("Sincronización de sockets forzada con éxito.", "success");
+                }}
+                className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-900/60 text-pink-300 font-semibold text-[10px] transition rounded focus:outline-none shrink-0 font-mono"
+              >
+                Forzar Sinc
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        </div>
+      </div>
     </div>
   );
 }

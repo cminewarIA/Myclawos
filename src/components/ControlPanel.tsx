@@ -12,11 +12,15 @@ import {
   RefreshCw, 
   CheckCircle,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  Smartphone,
+  Bot,
+  ShieldCheck
 } from "lucide-react";
 
 export default function ControlPanel() {
-  const [activeTab, setActiveTab] = useState<"network" | "memory" | "services">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "memory" | "services" | "wallpaper">("network");
   
   // Simulated Statistics Real-time States
   const [ramUsed, setRamUsed] = useState(4120); // out of 16384 MB (Host representation)
@@ -24,6 +28,26 @@ export default function ControlPanel() {
   const [ramFree, setRamFree] = useState(10414);
   const [ramPercent, setRamPercent] = useState(25);
   const [ramHistory, setRamHistory] = useState<number[]>(Array(24).fill(25));
+
+  // Wallpaper Settings synced with localStorage
+  const [nanoBananaSize, setNanoBananaSize] = useState<"nano" | "estandar" | "maxi">(() => {
+    return (localStorage.getItem("cminewar_nano_banana_size") as any) || "estandar";
+  });
+  const [lineStyle, setLineStyle] = useState<"curvo" | "recto" | "oculto">(() => {
+    return (localStorage.getItem("cminewar_nano_line_style") as any) || "curvo";
+  });
+  const [glowIntensity, setGlowIntensity] = useState<"sutil" | "medio" | "fuerte">(() => {
+    return (localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio";
+  });
+  const [simulatedHour, setSimulatedHour] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_sim_hour") || "real";
+  });
+
+  const updateWallpaperSetting = (key: string, value: string) => {
+    localStorage.setItem(key, value);
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("cminewar_wallpaper_settings_changed"));
+  };
   
   const [netSpeedDown, setNetSpeedDown] = useState(4.2); // MB/s
   const [netSpeedUp, setNetSpeedUp] = useState(0.8); // MB/s
@@ -218,6 +242,19 @@ export default function ControlPanel() {
         >
           <Sliders size={14} className={activeTab === "services" ? "text-violet-400" : "text-slate-500"} />
           <span className="whitespace-nowrap">Servicios Core</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("wallpaper")}
+          className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${
+            activeTab === "wallpaper"
+              ? "bg-slate-900 text-pink-400 border border-pink-500/10 font-bold"
+              : "hover:bg-slate-900 border border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+          id="btn-tab-wallpaper"
+        >
+          <Sparkles size={14} className={activeTab === "wallpaper" ? "text-pink-400" : "text-slate-500"} />
+          <span className="whitespace-nowrap">Ajustes Fondo</span>
         </button>
       </div>
 
@@ -631,6 +668,187 @@ export default function ControlPanel() {
                   Todos los sockets y descriptores de archivos virtuales del explorador gráfico están sincronizados sin fallos lógicos. La CPU virtual se encuentra estabilizada bajo carga moderada de 1.1 GHz lógicos.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: Wallpaper Configurations & Android OTA Autoupdates */}
+        {activeTab === "wallpaper" && (
+          <div className="space-y-5 flex flex-col flex-1" id="wallpaper-dashboard">
+            <div>
+              <h3 className="text-sm font-semibold tracking-wide text-slate-200 flex items-center space-x-2">
+                <Sparkles size={16} className="text-pink-400" />
+                <span>Configuración de Fondo de Pantalla Nano Banano & Enlace Móvil</span>
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">Controla la apariencia del fondo regenerativo y las propiedades de sincronización con tu dispositivo móvil.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              
+              {/* Wallpaper settings card */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+                <div className="flex items-center space-x-2 border-b border-slate-900 pb-2.5">
+                  <Sliders size={13} className="text-pink-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Ajustar Firma Espectral de Red</span>
+                </div>
+
+                <div className="space-y-3.5 text-left text-xs">
+                  {/* Select size */}
+                  <div className="flex flex-col space-y-1">
+                    <label htmlFor="ctrl-nano-talla" className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Talla de la Red Banano:</label>
+                    <select
+                      id="ctrl-nano-talla"
+                      value={nanoBananaSize}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        setNanoBananaSize(val);
+                        updateWallpaperSetting("cminewar_nano_banana_size", val);
+                      }}
+                      className="bg-slate-900 border border-slate-850 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    >
+                      <option value="nano">🔬 Talla Pequeña (Compacto / Óptimo Móvil)</option>
+                      <option value="estandar">🍌 Talla Estándar (Original de Computadora)</option>
+                      <option value="maxi">🚀 Talla Maxi (Inmersivo de Alta Fidelidad)</option>
+                    </select>
+                  </div>
+
+                  {/* Select Hour color cycle */}
+                  <div className="flex flex-col space-y-1">
+                    <label htmlFor="ctrl-nano-hora" className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Ciclo Cromático de Fondo / Hora:</label>
+                    <select
+                      id="ctrl-nano-hora"
+                      value={simulatedHour}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSimulatedHour(val);
+                        updateWallpaperSetting("cminewar_nano_sim_hour", val);
+                      }}
+                      className="bg-slate-900 border border-slate-850 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    >
+                      <option value="real">🕰️ Sincronizar con Hora Real del Sistema</option>
+                      <option value="0">🌌 Temática Noche Cósmica (Púrpura Profundo - 00:00)</option>
+                      <option value="6">🌅 Temática Amanecer Dorado (Ámbar Reluciente - 06:00)</option>
+                      <option value="12">☀️ Temática Mediodía Mint (Cian Electrizante - 12:00)</option>
+                      <option value="18">🌇 Temática Ocaso Coral (Rosa Sunset - 18:00)</option>
+                    </select>
+                  </div>
+
+                  {/* Select Lines style */}
+                  <div className="flex flex-col space-y-1">
+                    <label htmlFor="ctrl-nano-cables" className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Estructura lógicas de Cableado:</label>
+                    <select
+                      id="ctrl-nano-cables"
+                      value={lineStyle}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        setLineStyle(val);
+                        updateWallpaperSetting("cminewar_nano_line_style", val);
+                      }}
+                      className="bg-slate-900 border border-slate-850 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    >
+                      <option value="curvo">〰️ Cables Curvos Bezier Electrónicos</option>
+                      <option value="recto">➖ Cables Rectos Directores Geométricos</option>
+                      <option value="oculto">❌ Red Inalámbrica Sigilosa (Ocultar Cables)</option>
+                    </select>
+                  </div>
+
+                  {/* Glow intensity dropdown */}
+                  <div className="flex flex-col space-y-1">
+                    <label htmlFor="ctrl-nano-brillo" className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Intensidad del Brillo (Filtro CSS Glow):</label>
+                    <select
+                      id="ctrl-nano-brillo"
+                      value={glowIntensity}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        setGlowIntensity(val);
+                        updateWallpaperSetting("cminewar_nano_glow_intensity", val);
+                      }}
+                      className="bg-slate-900 border border-slate-850 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    >
+                      <option value="sutil">💎 Brillo Sutil Ultra Elegante y Opaco</option>
+                      <option value="medio">✨ Brillo Estándar Equilibrado de Neón</option>
+                      <option value="fuerte">🔥 Flujo Radiante de Alto Voltaje</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div className="text-[8.5px] text-emerald-450 tracking-wide font-mono font-extrabold flex items-center justify-center space-x-1 py-1.5 px-2 rounded bg-emerald-950/20 border border-emerald-900/30 text-center select-none leading-relaxed">
+                    <span>🛡️ LOGO DE DRAGÓN C-LINE PRESERVADO E INALTERABLE</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Android auto-update details card */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-2.5">
+                    <div className="flex items-center space-x-2">
+                      <Smartphone size={13} className="text-pink-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Auto-Actualización OTA Móvil</span>
+                    </div>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" title="OTA Server activo" />
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    ¿Sabías que no necesitas descargar o reinstalar la APK de Android manualmente cada vez que hay variaciones en CMineWar AI? 
+                  </p>
+
+                  {/* Autoupdate Automatic Background Sync Status */}
+                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-850/80 space-y-2 font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] font-mono font-bold text-slate-200 uppercase">Estado del Motor Live OTA:</span>
+                      <span className="px-2.5 py-0.5 text-[8.5px] font-black rounded tracking-widest bg-emerald-950 text-emerald-300 border border-emerald-800 uppercase animate-pulse">
+                        AUTOMÁTICO
+                      </span>
+                    </div>
+
+                    <p className="text-[9.5px] leading-relaxed text-slate-400 border-t border-slate-950/40 pt-2">
+                      <span className="text-emerald-450 font-bold">⚡ SINCRONIZACIÓN EN TIEMPO REAL ACTIVA.</span> El WebView de Android detecta instantáneamente en segundo plano los cambios lógicos del servidor y del fondo de pantalla, refrescando la interfaz con un fade suave sin interrumpir la emulación ni solicitar interacción.
+                    </p>
+                  </div>
+
+                  {/* Sockets metadata info indicator */}
+                  <div className="space-y-2 text-[9.5px] font-sans text-slate-400 bg-slate-950 p-2 border border-slate-900 rounded-lg">
+                    <div className="flex justify-between font-mono">
+                      <span className="text-slate-600">Puerto OTA de Escucha:</span>
+                      <span className="text-pink-400">3000 / Websocket Sync</span>
+                    </div>
+                    <div className="flex justify-between font-mono">
+                      <span className="text-slate-600">Protocolo de Caching:</span>
+                      <span className="text-slate-300 font-semibold">ServiceWorker Hot-Swap</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-900 rounded-xl border border-slate-850 text-[10px] text-slate-400 font-serif leading-relaxed mt-4 flex items-start space-x-2">
+                  <span className="text-xs">💡</span>
+                  <p className="font-sans text-[9px] text-slate-500 italic">
+                    "Al activarlo, la interfaz de Android se comporta como un nodo de red autónomo que descarga los assets de forma elástica." — ClawOS Team.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Custom Interactive Sync Test Button */}
+            <div className="bg-slate-950/50 p-3.5 rounded-xl border border-dashed border-pink-500/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs select-none">
+              <div className="space-y-0.5">
+                <span className="font-bold text-slate-200 block uppercase font-mono text-[10.5px]">Probar ráfaga de sincronización virtual (Móvil & Fondo)</span>
+                <span className="text-[9.5px] text-slate-500 block">Emite un paquete de datos para forzar la actualización automática de todo el clúster.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new Event("storage"));
+                  window.dispatchEvent(new Event("cminewar_wallpaper_settings_changed"));
+                  // Display dynamic notification
+                  alert("📡 ¡Exito! Ráfaga de sincronización OTA forzada. Los sockets en la simulación del móvil de Android y las propiedades del Wallpaper han sido reiniciados y ecualizados.");
+                }}
+                className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-900/60 text-pink-300 font-semibold text-[10.5px] transition rounded focus:outline-none shrink-0"
+              >
+                Forzar Refresco Sockets
+              </button>
             </div>
           </div>
         )}

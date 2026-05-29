@@ -66,6 +66,64 @@ export default function App() {
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
 
+  // Automatic Background Live OTA update status & server tracking
+  const [isOtaUpdating, setIsOtaUpdating] = useState(false);
+  const initialInstanceIdRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    let timerId: any = null;
+
+    const checkOtaStatus = async () => {
+      try {
+        const res = await fetch("/api/cminewar/system-status");
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data && data.instanceId) {
+          if (!initialInstanceIdRef.current) {
+            // First boot query: save runtime server instance id
+            initialInstanceIdRef.current = data.instanceId;
+          } else if (initialInstanceIdRef.current !== data.instanceId) {
+            // Hot update on server detected! Trigger fully automated background reload
+            console.log("⚡ [OTA AUTOMATIC DEAMON] Nueva firma del servidor detectada. Actualizando interfaz...");
+            setIsOtaUpdating(true);
+            
+            // Audio indication alert
+            try {
+              const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+              osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.35);
+              gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.start();
+              osc.stop(audioCtx.currentTime + 0.35);
+            } catch (e) {}
+
+            setTimeout(() => {
+              window.location.reload();
+            }, 1800);
+          }
+        }
+      } catch (err) {
+        // Silent recovery: fail silently to prevent browser/alert noises to user during quick re-builds
+      }
+    };
+
+    // Keep querying/polling every 6 seconds in background autonomously
+    const delayId = setTimeout(() => {
+      checkOtaStatus();
+      timerId = setInterval(checkOtaStatus, 6000);
+    }, 4000);
+
+    return () => {
+      clearTimeout(delayId);
+      if (timerId) clearInterval(timerId);
+    };
+  }, []);
+
   // Touchscreen / Tactile mode state (Auto-detected and dynamic)
   const [touchMode, setTouchMode] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -83,7 +141,44 @@ export default function App() {
         const isCoarse = window.matchMedia("(pointer: coarse)").matches;
         const isTouchPoints = navigator.maxTouchPoints > 0;
         const isSmallScreen = window.innerWidth < 1024;
-        setTouchMode(isCoarse || isTouchPoints || isSmallScreen);
+        const isTouchEnabled = isCoarse || isTouchPoints || isSmallScreen;
+        setTouchMode(isTouchEnabled);
+
+        // Adjust open windows if the screen resizes in real-time
+        setWindows((prev) => {
+          const screenW = window.innerWidth;
+          const screenH = window.innerHeight;
+          const isMobile = screenW < 768 || isTouchEnabled;
+
+          return prev.map((w) => {
+            if (!w.isOpen) return w;
+            if (isMobile) {
+              return { ...w, isMaximized: true };
+            } else {
+              let updatedPos = { ...w.position };
+              let updatedSize = { ...w.size };
+
+              const maxAllowedWidth = Math.floor(screenW * 0.95);
+              const maxAllowedHeight = Math.floor((screenH - 50) * 0.9);
+
+              if (updatedSize.width > maxAllowedWidth) {
+                updatedSize.width = maxAllowedWidth;
+              }
+              if (updatedSize.height > maxAllowedHeight) {
+                updatedSize.height = maxAllowedHeight;
+              }
+
+              if (updatedPos.x + updatedSize.width > screenW) {
+                updatedPos.x = Math.max(10, screenW - updatedSize.width - 20);
+              }
+              if (updatedPos.y + updatedSize.height > screenH - 50) {
+                updatedPos.y = Math.max(10, screenH - updatedSize.height - 70);
+              }
+
+              return { ...w, position: updatedPos, size: updatedSize };
+            }
+          });
+        });
       }
     };
 
@@ -380,9 +475,49 @@ export default function App() {
     setWindows((prev) => {
       // Find highest z-index
       const maxZ = Math.max(...prev.map((w) => w.zIndex), 0);
+      
+      const screenW = typeof window !== "undefined" ? window.innerWidth : 1024;
+      const screenH = typeof window !== "undefined" ? window.innerHeight : 768;
+      const isMobileSize = screenW < 768 || touchMode;
+
       return prev.map((w) => {
         if (w.id === id) {
-          return { ...w, isOpen: true, isMinimized: false, zIndex: maxZ + 1 };
+          let updatedPos = { ...w.position };
+          let updatedSize = { ...w.size };
+          let isMax = w.isMaximized;
+
+          if (isMobileSize) {
+            // Mobile auto-adjust: maximize to fit screen perfectly
+            isMax = true;
+          } else {
+            // Desktop safe fitting: cap to window boundaries so it never overflows
+            const maxAllowedWidth = Math.floor(screenW * 0.95);
+            const maxAllowedHeight = Math.floor((screenH - 50) * 0.9);
+            
+            if (updatedSize.width > maxAllowedWidth) {
+              updatedSize.width = maxAllowedWidth;
+            }
+            if (updatedSize.height > maxAllowedHeight) {
+              updatedSize.height = maxAllowedHeight;
+            }
+            
+            if (updatedPos.x + updatedSize.width > screenW) {
+              updatedPos.x = Math.max(10, screenW - updatedSize.width - 20);
+            }
+            if (updatedPos.y + updatedSize.height > screenH - 50) {
+              updatedPos.y = Math.max(10, screenH - updatedSize.height - 70);
+            }
+          }
+
+          return { 
+            ...w, 
+            isOpen: true, 
+            isMinimized: false, 
+            isMaximized: isMax,
+            zIndex: maxZ + 1,
+            position: updatedPos,
+            size: updatedSize
+          };
         }
         return w;
       });
@@ -655,6 +790,27 @@ export default function App() {
     >
       {/* Dynamic Hourly Generative Wallpaper by Nano Banana */}
       <BananaWallpaper services={services} />
+
+      {/* Automatic Background Live OTA Hard Reload Overlay */}
+      {isOtaUpdating && (
+        <div className="absolute inset-0 z-[100000] bg-slate-950/95 flex flex-col items-center justify-center space-y-5 animate-fade-in font-mono pointer-events-auto">
+          <div className="relative flex items-center justify-center">
+            <div className="h-14 w-14 rounded-full border-2 border-dashed border-pink-500 animate-spin"></div>
+            <Sparkles className="absolute text-pink-400 animate-pulse" size={20} />
+          </div>
+          <div className="text-center space-y-1.5 px-6">
+            <h3 className="text-xs font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">
+              Sincronización Inteligente OTA
+            </h3>
+            <p className="text-[9.5px] text-slate-400 max-w-[280px] leading-relaxed mx-auto">
+              Se han detectado cambios lógicos en caliente. Regenerando firma de red del clúster e interfaz...
+            </p>
+            <div className="text-[8px] text-emerald-450 tracking-wider font-extrabold px-2 py-0.5 rounded border border-emerald-900/30 bg-emerald-950/20 inline-block uppercase select-none">
+              ⚡ DAEMON COGNITIVO: CONECTADO AUTOMÁTICAMENTE ⚡
+            </div>
+          </div>
+        </div>
+      )}
       {/* Dynamic Notification Layer */}
       <div className="absolute top-4 right-4 z-[9999] flex flex-col space-y-2 max-w-sm w-full pointer-events-auto">
         {notifications.map((n) => (

@@ -36,6 +36,17 @@ function getGenAI(): GoogleGenAI | null {
   return ai;
 }
 
+// Unique runtime instance identifier generated on server startup to track hot rebuilds/reloads
+const SERVER_INSTANCE_ID = Date.now().toString() + "_" + Math.random().toString(36).substring(2, 9);
+
+app.get("/api/cminewar/system-status", (req, res) => {
+  res.json({
+    status: "ok",
+    instanceId: SERVER_INSTANCE_ID,
+    timestamp: Date.now()
+  });
+});
+
 // CMineWar Cognitive Central Core Chat Endpoint
 app.post("/api/cminewar/chat", async (req, res) => {
   const { message, history } = req.body;
@@ -98,6 +109,131 @@ Intégrate perfectamente como si fueses el sistema operativo en sí. Mantén res
       text: `[ALERTA DE SISTEMA - ENLACE GEMINI CAÍDO] Excepción de red detectada: ${error.message || "Fallo de conexión"}.\n\nReajustando hilos cognitivos locales... ${simulatedResponse}`,
       mode: "recovery"
     });
+  }
+});
+
+// Google OAuth Authorization & Profile Retrieval Endpoint for Android APK Signer
+app.get("/api/auth/google/url", (req, res) => {
+  const origin = req.query.origin || `http://localhost:${PORT}`;
+  const redirectUri = `${origin}/auth/callback`;
+  
+  const clientId = process.env.OAUTH_CLIENT_ID || "PLACEHOLDER_CLIENT_ID";
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+    access_type: "offline",
+    prompt: "consent"
+  });
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  res.json({ url: authUrl });
+});
+
+// OAuth Callback handler and User ID Token decoder
+app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
+  const { code } = req.query;
+  const origin = req.protocol + "://" + req.get("host");
+  const redirectUri = `${origin}/auth/callback`;
+
+  if (!code) {
+    return res.send(`
+      <html>
+        <body style="background: #020617; color: #f43f5e; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center;">
+          <div>
+            <h2>Error de Autenticación</h2>
+            <p>No se recibió el código de autorización de Google.</p>
+            <button onclick="window.close()" style="background: #f43f5e; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Cerrar Ventana</button>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  try {
+    const clientId = process.env.OAUTH_CLIENT_ID || "";
+    const clientSecret = process.env.OAUTH_CLIENT_SECRET || "";
+
+    // 1. Exchange authorization code for tokens
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code: code.toString(),
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.text();
+      throw new Error(`Google Token Exchange Fallido: ${errorData}`);
+    }
+
+    const tokenData = await tokenResponse.json() as any;
+    const accessToken = tokenData.access_token;
+
+    // 2. Retrieve google user details
+    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!profileResponse.ok) {
+      throw new Error("No se pudo obtener la información de perfil de Google.");
+    }
+
+    const profileData = await profileResponse.json() as any;
+
+    // Return HTML to pass credentials back to parent browser window and close the popup cleanly
+    res.send(`
+      <html>
+        <body style="background: #020617; color: #10b981; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; margin: 0; padding: 20px;">
+          <div style="border: 2px solid #10b981; padding: 30px; border-radius: 12px; background: #090d16; box-shadow: 0 0 20px rgba(16,185,129,0.2);">
+            <div style="font-size: 40px; margin-bottom: 15px;">🔒</div>
+            <h2 style="color: #10b981; margin-top: 0;">¡Autenticación con Google Exitosa!</h2>
+            <p style="color: #94a3b8; font-size: 13px;">Identidad verificada para firma de APK:</p>
+            <p style="color: #f59e0b; font-weight: bold; font-size: 14px; background: #040711; padding: 8px; border-radius: 6px; border: 1px dashed #f59e0b/30;">${profileData.name} (${profileData.email})</p>
+            <p style="color: #64748b; font-size: 11px;">Esta ventana se cerrará automáticamente...</p>
+          </div>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ 
+                type: 'GOOGLE_OAUTH_SUCCESS',
+                profile: {
+                  name: ${JSON.stringify(profileData.name)},
+                  email: ${JSON.stringify(profileData.email)},
+                  picture: ${JSON.stringify(profileData.picture)},
+                  sub: ${JSON.stringify(profileData.sub)}
+                }
+              }, '*');
+              setTimeout(() => {
+                window.close();
+              }, 1200);
+            } else {
+              window.location.href = '/';
+            }
+          </script>
+        </body>
+      </html>
+    `);
+
+  } catch (error: any) {
+    console.error("Google OAuth Error:", error);
+    res.send(`
+      <html>
+        <body style="background: #020617; color: #ef4444; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; margin: 0; padding: 20px;">
+          <div style="border: 1px solid #ef4444; padding: 25px; border-radius: 8px; background: rgba(239, 68, 68, 0.05);">
+            <h2 style="margin-top: 0;">Fallo en Verificación Credentials</h2>
+            <p style="color: #94a3b8; font-size: 14px;">Error al intercambiar tokens o verificar identidad con Google.</p>
+            <p style="color: #f43f5e; font-family: monospace; font-size: 12px; background: #000; padding: 10px; border-radius: 4px; text-align: left;">${error.message || error}</p>
+            <button onclick="window.close()" style="background: #334155; hover:background: #475569; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">Cerrar Ventana</button>
+          </div>
+        </body>
+      </html>
+    `);
   }
 });
 
