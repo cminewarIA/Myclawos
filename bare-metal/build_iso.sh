@@ -66,7 +66,7 @@ ifconfig lo up || ip link set lo up || true
 
 # 4. Cambiar al directorio del proyecto y arrancar el servidor Express local
 cd /opt/cminewaros || cd /opt/clawos || true
-node dist/server.cjs &
+node dist/server.cjs >/tmp/cminewaros_node.log 2>&1 &
 
 # 5. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo
 # Esto asegura que Chromium nunca muestre una página blanca o blanca de error por carga prematura, soportando discos lentos
@@ -93,10 +93,12 @@ fi
 # 7. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
 # Se ejecuta en un bucle infinito de persistencia: si Chromium se cierra accidentalmente (p. ej. Alt+F4) o falla, se auto-levanta al instante.
 # Eliminamos de raíz los problemas CORS, el bloqueo de almacenamiento local y los assets relativos.
-# Añadimos limpieza de SingletonLock para evitar advertencias de perfiles corruptos por apagones bruscos de corriente.
+# Añadimos limpieza de SingletonLock y logs integrados en /tmp/cminewaros_kiosk.log para auditar arranque.
 while true; do
   rm -f /tmp/chromium-kiosk-profile/SingletonLock 2>/dev/null || true
   rm -f /tmp/chromium-kiosk-profile/Lock 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/SingletonSocket 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/SingletonCookie 2>/dev/null || true
   
   $CHROME_BIN --kiosk \
     --no-sandbox \
@@ -112,13 +114,9 @@ while true; do
     --password-store=basic \
     --no-errdialogs \
     --autoplay-policy=no-user-gesture-required \
-    --disable-gpu \
-    --disable-software-rasterizer \
-    --disable-gpu-compositing \
     --disable-dev-shm-usage \
-    --ozone-platform=x11 \
-    --disable-features=UseOzonePlatform \
-    http://localhost:3000
+    --disable-gpu \
+    http://localhost:3000 >>/tmp/cminewaros_kiosk.log 2>&1
     
   sleep 1
 done &

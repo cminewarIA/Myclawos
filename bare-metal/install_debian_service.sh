@@ -149,10 +149,12 @@ fi
 
 # Iniciar navegador en modo Kiosco de pantalla completa
 # Se ejecuta en un bucle infinito que se auto-recupera de caídas accidentales de proceso o Alt+F4 involuntarios.
-# Con perfiles limpios, se remueve el SingletonLock para solventar incidencias al reiniciar post apagón de hardware brusco.
+# Con perfiles limpios y borrado de Socket/Lock, se garantiza un reinicio perfecto. Logs en /tmp/cminewaros_kiosk.log.
 while true; do
   rm -f /tmp/chromium-kiosk-profile/SingletonLock 2>/dev/null || true
   rm -f /tmp/chromium-kiosk-profile/Lock 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/SingletonSocket 2>/dev/null || true
+  rm -f /tmp/chromium-kiosk-profile/SingletonCookie 2>/dev/null || true
 
   $CHROME_BIN --kiosk \
     --no-sandbox \
@@ -168,13 +170,9 @@ while true; do
     --password-store=basic \
     --no-errdialogs \
     --autoplay-policy=no-user-gesture-required \
-    --disable-gpu \
-    --disable-software-rasterizer \
-    --disable-gpu-compositing \
     --disable-dev-shm-usage \
-    --ozone-platform=x11 \
-    --disable-features=UseOzonePlatform \
-    http://localhost:3000
+    --disable-gpu \
+    http://localhost:3000 >>/tmp/cminewaros_kiosk.log 2>&1
     
   sleep 1
 done &
