@@ -404,7 +404,7 @@ Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
             content: `[Default Browser Configuration]
 BROWSER_BINARY=/bin/chromium-browser
 DEFAULT_BROWSER=Chromium
-CHROMIUM_FLAGS="--no-sandbox --disable-gpu"
+CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-software-rasterizer --disable-gpu-compositing --disable-dev-shm-usage"
 URL_HOME=https://cminewar.ai`,
           };
           updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);

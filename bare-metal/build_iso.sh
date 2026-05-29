@@ -52,6 +52,13 @@ xset s off || true
 xset -dpms || true
 xset s noblank || true
 
+# 2.5 Prevenir el error "Failed to execute child process 'evte'" en Openbox.
+# Creamos un ejecutable dummy en el PATH en caso de que algún servicio o atajo de teclado esté buscándolo.
+if ! command -v evte &>/dev/null; then
+  echo -e '#!/bin/sh\nexit 0' > /usr/bin/evte 2>/dev/null || echo -e '#!/bin/sh\nexit 0' > /usr/local/bin/evte 2>/dev/null || true
+  chmod +x /usr/bin/evte 2>/dev/null || chmod +x /usr/local/bin/evte 2>/dev/null || true
+fi
+
 # 3. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
 ifconfig lo up || ip link set lo up || true
 
@@ -78,6 +85,7 @@ fi
 # 7. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
 # Esto soluciona de raíz los problemas CORS de protocolo file://, bloqueo de almacenamiento local, de sonido y activos con rutas absolutas
 # Añadimos --user-data-dir para dar soporte nativo y evitar que el navegador aborte cuando se ejecuta como ROOT en ISOs live o entornos bare-metal
+# Agregamos flags de compatibilidad GPU para evitar pantallas en negro en tarjetas legacy físicas en Openbox
 $CHROME_BIN --kiosk \
   --no-sandbox \
   --no-first-run \
@@ -92,6 +100,12 @@ $CHROME_BIN --kiosk \
   --password-store=basic \
   --no-errdialogs \
   --autoplay-policy=no-user-gesture-required \
+  --disable-gpu \
+  --disable-software-rasterizer \
+  --disable-gpu-compositing \
+  --disable-dev-shm-usage \
+  --ozone-platform=x11 \
+  --disable-features=UseOzonePlatform \
   http://localhost:3000 &
 
 EOF
