@@ -52,12 +52,14 @@ xset s off || true
 xset -dpms || true
 xset s noblank || true
 
-# 2.5 Prevenir el error "Failed to execute child process 'evte'" en Openbox.
-# Creamos un ejecutable dummy en el PATH en caso de que algún servicio o atajo de teclado esté buscándolo.
-if ! command -v evte &>/dev/null; then
-  echo -e '#!/bin/sh\nexit 0' > /usr/bin/evte 2>/dev/null || echo -e '#!/bin/sh\nexit 0' > /usr/local/bin/evte 2>/dev/null || true
-  chmod +x /usr/bin/evte 2>/dev/null || chmod +x /usr/local/bin/evte 2>/dev/null || true
-fi
+# 2.5 Prevenir los molestos errores "Failed to execute child process" en Openbox para binarios ausentes
+# Creamos ejecutables dummy en el PATH en caso de que el entorno de escritorio, menús o atajos los invoquen.
+for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon; do
+  if ! command -v $bin_name &>/dev/null; then
+    echo -e '#!/bin/sh\nexit 0' > "/usr/bin/$bin_name" 2>/dev/null || echo -e '#!/bin/sh\nexit 0' > "/usr/local/bin/$bin_name" 2>/dev/null || true
+    chmod +x "/usr/bin/$bin_name" 2>/dev/null || chmod +x "/usr/local/bin/$bin_name" 2>/dev/null || true
+  fi
+done
 
 # 3. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
 ifconfig lo up || ip link set lo up || true
