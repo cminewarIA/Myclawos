@@ -42,11 +42,11 @@ fi
 echo "[+] Actualizando repositorios e instalando herramientas de compilación..."
 apt-get update -y
 
-echo "[+] Instalando herramientas del sistema, entorno de ventanas Openbox y suite Omarchy de terminal..."
-apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils openbox tmux neovim btop htop fzf zoxide jq xterm lxterminal || true
+echo "[+] Instalando herramientas del sistema y suite Omarchy de terminal (Consola y TUI pura)..."
+apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils tmux neovim btop htop fzf zoxide jq || true
 
-echo "[+] Nota: Modo Omarchy activo. Se prioriza el espacio de trabajo de consola interactiva sobre el navegador web."
-BROWSER_INSTALLED=true
+echo "[+] Nota: Modo Omarchy activo. Se prioriza y ejecuta el espacio de trabajo de consola interactiva pura directamente en TTY (sin Openbox)."
+BROWSER_INSTALLED=false
 
 # 2. Comprobar e instalar Node.js
 if ! command -v node &> /dev/null; then
@@ -103,17 +103,9 @@ systemctl restart cminewar.service
 
 echo "[✔] Servicio 'cminewar.service' habilitado y arrancado con éxito en el puerto 3000."
 
-# 5.5 Auto-configurar entorno de escritorio Openbox en modo Kiosco y prevenir popups de advertencia
-echo "[+] Configurando Openbox y eliminando alertas de procesos huérfanos..."
-
-# Prevenir los molestos errores "Failed to execute child process" en Openbox para binarios ausentes
-# Creamos pequeños ejecutables dummy silenciosos en /usr/local/bin/ (para que tengan prioridad en el PATH)
-for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon x-terminal-emulator xterm lxterminal x-window-manager; do
-  if ! command -v "$bin_name" &>/dev/null; then
-    echo -e '#!/bin/sh\nexit 0' > "/usr/local/bin/$bin_name" 2>/dev/null || true
-    chmod +x "/usr/local/bin/$bin_name" 2>/dev/null || true
-  fi
-done
+# 5.5 Configurar el arranque en consola pura por defecto sin servidor gráfico
+echo "[+] Configurando el sistema operativo para inicio automático por defecto en consola pura (TUI/modo texto)..."
+systemctl set-default multi-user.target || true
 
 # 5.5 Desplegar componentes de la Suite de Consola Interactiva Omarchy de CMineWar OS
 echo "[+] Creando cargadores y dashboards interactivos de la Suite Omarchy..."
@@ -122,24 +114,37 @@ echo "[+] Creando cargadores y dashboards interactivos de la Suite Omarchy..."
 cat << 'AICLI' > /usr/local/bin/cminewar-ai-cli
 #!/usr/bin/env bash
 # =========================================================================
-#            CMINEWAR AI CORE - CLIENTE TERMINAL INTERACTIVO OMARCHY
+#            🛸 GOOGLE ANTIGRAVITY AGENT WORKSPACE - INTERACTIVE CLI 🛸
 # =========================================================================
 
-# Clear and show banner
+# Clear screen and show premium loader
 clear
-echo -e "\033[1;36m"
+echo -e "\033[1;35m"
 echo "  ┌────────────────────────────────────────────────────────┐"
-echo "  │        🐉 CMINEWAR COGNITIVE CENTRAL CORE CLI 🐉       │"
-echo "  └────────────────────────────────────────────────────────┘"
+204:   echo "  │        🛸 ANTIGRAVITY AGENT CONTAINER CLI v2.4 🛸      │"
+205:   echo "  └────────────────────────────────────────────────────────┘"
 echo -e "\033[0m"
-echo -e "\033[1;30mConectado al Kernel Lógico Local. Escribe \033[33mexit\033[30m para salir.\033[0m"
-echo -e "\033[1;30mEscribe tu consulta para recibir asistencia del núcleo de IA...\033[0m"
+
+echo -e "\033[1;33m[⚙] Inicializando subsistemas lógicos de Antigravity...\033[0m"
+sleep 0.5
+echo -e "    ▷ Conectando con Google AI Control Plane..."
+sleep 0.4
+echo -e "    ▷ Solicitando modelo de agente \033[1;36mantigravity-preview-05-2026\033[0m..."
+sleep 0.4
+echo -e "    ▷ Levantando entorno de sandbox remoto (\033[1;32mremote-sandbox-8291a\033[0m)..."
+sleep 0.5
+echo -e "    ▷ Sincronizando árbol de archivos CMineWar Workspace..."
+sleep 0.3
+echo -e "\033[1;32m[✔] ¡Sandbox listo y montado correctamente!\033[0m"
+echo ""
+echo -e "\033[1;30mConectado al runtime remoto. Escribe \033[31mexit\033[30m o \033[31mquit\033[30m para salir del sandbox.\033[0m"
+echo -e "\033[1;30mEscribe tu requerimiento para que el Agente Antigravity compile o investigue...\033[0m"
 echo ""
 
 HISTORY="[]"
 
 while true; do
-  echo -ne "\033[1;32m┌──(usuario㉿cminewar-core)-[~]\n└─$ \033[0m"
+  echo -ne "\033[1;35mantigravity-agent㉿sandbox-cli\033[1;30m:~\033[1;32m# \033[0m"
   read -r USER_INPUT
   
   if [ -z "$USER_INPUT" ]; then
@@ -147,12 +152,35 @@ while true; do
   fi
   
   if [ "$USER_INPUT" = "exit" ] || [ "$USER_INPUT" = "quit" ]; then
-    echo -e "\033[1;33mDesconectando hilos lógicos del AI Core...\033[0m"
-    sleep 1
+    echo -e "\033[1;33m[!] Saliendo del Sandbox de Antigravity...\033[0m"
+    echo -e "\033[1;30mDesconectando hilos lógicos y liberando contenedor virtual... [OK]\033[0m"
+    sleep 0.8
     break
   fi
   
-  echo -e "\033[1;30m[Procesando enlaces de CMineWar AI Core...]\033[0m"
+  # Dynamic progression simulation
+  echo -e ""
+  echo -e "\033[1;34m[THOUGHT]\033[0m \033[1;30m(Step 1/3) Analizando solicitud del usuario:\033[0m \"$USER_INPUT\""
+  sleep 0.7
+  
+  # Detect command execution intent
+  LOW_INPUT=$(echo "$USER_INPUT" | tr '[:upper:]' '[:lower:]')
+  if [[ "$LOW_INPUT" == *"ejecuta"* ]] || [[ "$LOW_INPUT" == *"corre"* ]] || [[ "$LOW_INPUT" == *"comando"* ]] || [[ "$LOW_INPUT" == *"crea"* ]] || [[ "$LOW_INPUT" == *"archivo"* ]]; then
+    echo -e "\033[1;36m[BASH_CALL]\033[0m \033[1;30minvoking sandbox shell compiler... ($SHELL -c ...)\033[0m"
+    sleep 0.8
+    echo -e "\033[1;32m[BASH_RESULT]\033[0m \033[1;30mstdout: Code checked. Preparing environment execution context.\033[0m"
+    sleep 0.4
+  elif [[ "$LOW_INPUT" == *"busca"* ]] || [[ "$LOW_INPUT" == *"investiga"* ]] || [[ "$LOW_INPUT" == *"google"* ]] || [[ "$LOW_INPUT" == *"web"* ]]; then
+    echo -e "\033[1;36m[SEARCH_CALL]\033[0m \033[1;30mgrounding via Google Search Core...\033[0m"
+    sleep 0.9
+    echo -e "\033[1;32m[SEARCH_RESULT]\033[0m \033[1;30mretrieved 4 high-authority citations for context extraction.\033[0m"
+    sleep 0.5
+  fi
+  
+  echo -e "\033[1;34m[THOUGHT]\033[0m \033[1;30m(Step 2/3) Ejecutando modelo de razonamiento reflexivo (Thinking)... \033[0m"
+  sleep 0.8
+  echo -e "\033[1;34m[THOUGHT]\033[0m \033[1;30m(Step 3/3) Sintetizando respuesta óptima para el usuario...\033[0m"
+  echo -e ""
   
   # Preparar JSON para la petición
   ESCAPED_INPUT=$(echo "$USER_INPUT" | jq -R .)
@@ -165,12 +193,13 @@ while true; do
     http://localhost:3000/api/cminewar/chat 2>/dev/null)
     
   if [ -z "$RESPONSE" ] || [ "$(echo "$RESPONSE" | jq -r 'type' 2>/dev/null)" != "object" ]; then
-    AI_TEXT="[ALERTA DE SISTEMA - SERVIDOR INACTIVO]\nNo se pudo establecer conexión con el socket 'localhost:3000'. Asegúrate de que cminewar.service está corriendo.\n\n*Respuesta de emergencia*: Hola, usuario. Sigo aquí de fondo."
+    AI_TEXT="[ALERTA DE SISTEMA - SERVIDOR INACTIVO]\nNo se pudo establecer conexión con el socket local 'localhost:3000'.\nPor favor, verifica que el servicio 'cminewar.service' o el servidor Express estén iniciados."
   else
     AI_TEXT=$(echo "$RESPONSE" | jq -r '.text')
   fi
   
-  echo -e "\n\033[1;36m🐉 CMineWar AI Core:\033[0m"
+  # Print the awesome agent text
+  echo -e "\033[1;35m🛸 AGENTE ANTIGRAVITY:\033[0m"
   echo -e "$AI_TEXT"
   echo ""
   
@@ -180,6 +209,8 @@ while true; do
 done
 AICLI
 chmod +x /usr/local/bin/cminewar-ai-cli
+ln -sf /usr/local/bin/cminewar-ai-cli /usr/local/bin/antigravity-cli
+ln -sf /usr/local/bin/cminewar-ai-cli /usr/local/bin/antigravity
 
 # B. Desplegar Gestor de Comunicaciones e Interfaces en /usr/local/bin/cminewar-network-panel
 cat << 'NETPANEL' > /usr/local/bin/cminewar-network-panel
@@ -367,61 +398,37 @@ DASHBOARD
 chmod +x /usr/local/bin/cminewar-omarchy-dashboard
 
 
-# Definir la receta autostart para Openbox que levanta el entorno gráfico completo de terminal Omarchy
-cat << 'OBAUTO' > /tmp/cminewaros_openbox_autostart
-#!/bin/sh
-# Autostart para Openbox / CMineWar OS Omarchy Workspace
-xset s off || true
-xset -dpms || true
-xset s noblank || true
+# Crear el servicio de systemd para el Dashboard interactivo de Omarchy en TTY1 (reemplaza Openbox de forma limpia)
+echo "[+] Creando servicio systemd para Omarchy TUI en tty1 (Consola Pura sin Openbox)..."
 
-# Asegurar loopback de red activa
-ifconfig lo up || ip link set lo up || true
+cat << 'EOF' > /etc/systemd/system/omarchy-tui.service
+[Unit]
+Description=CMineWar OS - Omarchy TUI Dashboard on TTY1 (Consola Pura)
+After=cminewar.service
+Conflicts=getty@tty1.service
 
-# Esperar activamente a que el servidor Express local en el puerto 3000 responda de fondo
-for i in $(seq 1 30); do
-  if wget -qO- http://localhost:3000/api/cminewar/system-status &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
-    break
-  fi
-  sleep 1
-done
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c 'while ! curl -s http://localhost:3000/api/cminewar/system-status; do sleep 1; done'
+ExecStart=/usr/local/bin/cminewar-omarchy-dashboard
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+Restart=always
+RestartSec=2
+WorkingDirectory=/root
+Environment=TERM=xterm-256color
 
-# Arrancar terminal maximizado con el orquestador Omarchy tmux
-if command -v lxterminal &>/dev/null; then
-  lxterminal -f --geometry=125x42 -e "cminewar-omarchy-dashboard" &
-elif command -v xterm &>/dev/null; then
-  # Suministrar un xterm de pantalla completa impecable con fondo negro y fuente legible
-  xterm -maximized -fullscreen -bg black -fg cyan -fa "monospace" -fs 11 -e "cminewar-omarchy-dashboard" &
-else
-  # Lanzar de fondo directo
-  cminewar-omarchy-dashboard &
-fi
-OBAUTO
+[Install]
+WantedBy=multi-user.target
+EOF
 
-# Aplicar el script de autostart a nivel del sistema (para todos los usuarios que abran Openbox)
-cp /tmp/cminewaros_openbox_autostart /etc/xdg/openbox/autostart || true
-chmod +x /etc/xdg/openbox/autostart || true
+systemctl daemon-reload
+systemctl enable omarchy-tui.service || true
+systemctl restart omarchy-tui.service || true
 
-# Aplicar también para el usuario root y usuarios del sistema si poseen perfil configurado
-if [ -d "$HOME/.config" ]; then
-  mkdir -p "$HOME/.config/openbox" || true
-  cp /tmp/cminewaros_openbox_autostart "$HOME/.config/openbox/autostart" || true
-  chmod +x "$HOME/.config/openbox/autostart" || true
-fi
-
-# Hacer lo mismo para el usuario físico no-root en caso de existir en /home
-for user_dir in /home/*; do
-  if [ -d "$user_dir" ]; then
-    mkdir -p "$user_dir/.config/openbox" || true
-    cp /tmp/cminewaros_openbox_autostart "$user_dir/.config/openbox/autostart" || true
-    chmod +x "$user_dir/.config/openbox/autostart" || true
-    # Asegurar que el usuario es dueño del directorio y el script
-    user_name=$(basename "$user_dir")
-    chown -R "$user_name:$user_name" "$user_dir/.config" || true
-  fi
-done
-
-echo "[✔] Entorno de escritorio Openbox pre-configurado con éxito para Kiosco auto-arrancable."
+echo "[✔] Servicio 'omarchy-tui.service' habilitado y configurado en tty1 para arranque de consola directo sin entorno gráfico."
 
 # 6. Escribir el Gestor de Cortafuegos Físico de Debian (Anti-WAN)
 echo "[+] Desplegando script de control del cortafuegos de internet en /usr/local/bin/cminewar-firewall..."

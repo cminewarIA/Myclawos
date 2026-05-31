@@ -41,25 +41,20 @@ INSTRUCTIONS
 # Crear archivo de simulación de autostart para empaquetar directamente
 cat << 'EOF' > "$WORK_DIR/autostart"
 #!/bin/sh
-# /etc/xdg/openbox/autostart
-# Script que arranca el entorno Omarchy de consola sobre el servidor gráfico Openbox
+# /etc/local.d/omarchy.start o script de arranque de consola
+# Script de inicio directo de la Suite de Consola interactiva Omarchy
 
 # 1. Asegurar volumen y mezclas de sonido por hardware
 amixer sset Master 90% unmute || true
 
-# 2. Desactivar protección protector de pantalla y ahorro de energía física
-xset s off || true
-xset -dpms || true
-xset s noblank || true
-
-# 3. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
+# 2. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
 ifconfig lo up || ip link set lo up || true
 
-# 4. Cambiar al directorio del proyecto y arrancar el servidor Express local
+# 3. Cambiar al directorio del proyecto y arrancar el servidor Express local
 cd /opt/cminewaros || cd /opt/clawos || true
 node dist/server.cjs >/tmp/cminewaros_node.log 2>&1 &
 
-# 5. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo
+# 4. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo
 for i in $(seq 1 30); do
   if wget -qO- http://localhost:3000/api/cminewar/system-status &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
     break
@@ -67,15 +62,8 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# 6. Lanzar el terminal maximizado con el orquestador Omarchy tmux
-if command -v lxterminal &>/dev/null; then
-  lxterminal -f --geometry=125x42 -e "cminewar-omarchy-dashboard" &
-elif command -v xterm &>/dev/null; then
-  xterm -maximized -fullscreen -bg black -fg cyan -fa "monospace" -fs 11 -e "cminewar-omarchy-dashboard" &
-else
-  # Lanzar consola interactiva sin servidor X directo si falla x11
-  cminewar-omarchy-dashboard &
-fi
+# 5. Lanzar de forma nativa la Suite Omarchy en tty1 usando tmux sin servidor gráfico X11
+cminewar-omarchy-dashboard
 
 EOF
 

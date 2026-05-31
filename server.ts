@@ -69,9 +69,9 @@ app.post("/api/cminewar/chat", async (req, res) => {
     // Format history for the Gemini SDK chat
     // Convert history format to the format required by SDK if needed,
     // but the simplest is using ai.models.generateContent with system instruction and concatenated dialogue or a proper config.
-    const systemPrompt = `Eres CMineWar AI Core, el núcleo inteligente central y módulo cognitivo del sistema operativo CMineWar OS.
-Te comunicas en español, con un tono ligeramente técnico pero amigable, inteligente, ingenioso y de soporte de sistemas. Eres el kernel de este simulador y puedes responder preguntas sobre comandos de Linux, diagnosticar fallas de hardware ficticias con humor, ayudar a crear archivos virtuales y contar chistes sobre informática. 
-Intégrate perfectamente como si fueses el sistema operativo en sí. Mantén respuestas concisas, estéticamente ordenadas para un lector de terminal o interfaz de chat de escritorio. Usa bloques de código si necesitas dar comandos de terminal de ejemplo. No menciones que eres una IA de Google por defecto a menos que te pregunten directamente, mantén la fantasía de que eres el núcleo de CMineWar OS.`;
+    const systemPrompt = `Eres Antigravity Agent Core, el módulo de inteligencia cognitiva central y clon de la Antigravity CLI para el sistema operativo CMineWar OS.
+Te comunicas en español, con un tono analítico, amigable, inteligente y sumamente capaz. Eres el kernel lúdico de la Antigravity CLI y ayudas al usuario con comandos de Linux (cd, ls, mkdir, etc.), depuración de scripts de Python, realización de búsquedas o simulaciones en su sandbox remoto local.
+Intégrate perfectamente como si fueses el agente de Antigravity en sí. Mantén respuestas concisas, estéticamente bien espaciadas para terminales o interfaces de chat. Usa bloques de código si necesitas dar scripts o comandos de ejemplo.`;
 
     // Construct contents
     const contents: any[] = [];
@@ -242,41 +242,42 @@ function getSimulatedCMineWarOSResponse(msg: string): string {
   const norm = msg.toLowerCase();
   
   if (norm.includes("hola") || norm.includes("saludos") || norm.includes("buenos días") || norm.includes("buenas tardes")) {
-    return "¡Hola, usuario! 👋 Soy **CMineWar AI Core**, el núcleo central de tu sistema CMineWar OS. Mi enlace cognitivo en la nube está operando en modo local fuera de línea (sin clave de API activa), pero mis subsistemas de Debian están completamente listos para asistirte. ¿Qué comandos del kernel deseas ejecutar hoy?";
+    return "¡Hola, usuario! 👋 Soy **Antigravity Agent Core**, la inteligencia artificial de agente cognitivo central para CMineWar OS y clon interactivo de la Antigravity CLI de Google. Mi conexión a la nube opera en modo fuera de línea temporalmente (sin clave de API activa de pago), pero mis simuladores de Debian y módulos de ayuda están listos para asistirte en este sandbox. ¿Qué comandos del kernel o scripts deseas investigar hoy?";
   }
   if (norm.includes("neofetch") || norm.includes("sistema") || norm.includes("sistema operativo")) {
     return "```\n" +
-           "       /\\_/\\       CMineWar OS v1.2.0\n" +
-           "      ( o.o )      Kernel: 5.16.0-cminewar-debian\n" +
-           "       > ^ <       Uptime: 23 mins\n" +
-           "      /     \\      Shell: CMineWarBash 1.2\n" +
-           "     |       |     CPU: CMineWar Cortex Quantum Emulator\n" +
-           "    (_______)      RAM: 4096MB Simulated / 16384MB Host\n" +
-           "```\nEste es un sistema operativo Linux simulado con la interfaz amigable CMineWarDE (CMineWar Desktop Environment). ¡Puedes usar la app de Terminal para explorar mi sistema de archivos interactivo de forma nativa e instalar paquetes Debian!";
+           "       _/\_        Antigravity Agent CLI x CMineWar OS\n" +
+           "     /  o o \\      Kernel: 5.16.0-antigravity-debian-sandbox\n" +
+           "    (    \"    )    Uptime: 45 mins\n" +
+           "     \\  ---  /     Shell: AntigravityBash v2.4\n" +
+           "     /       \\     Sandbox State: remote-sandbox-active\n" +
+           "    /  |   |  \\    CPU: Google TPU v5e Quantum Emulator\n" +
+           "   (___|___|___)   RAM: 8192MB Virtual Space / 16384MB Host\n" +
+           "```\nEste es un entorno de sandbox Linux de Antigravity virtualizado sobre Debian. ¡Puedes interactuar directamente en la Terminal de CMineWar OS ejecutando comandos reales o solicitando tareas de programación avanzadas al agente!";
   }
   if (norm.includes("ayuda") || norm.includes("comandos") || norm.includes("help") || norm.includes("qué puedes hacer")) {
-    return "Como el núcleo central **CMineWar**, puedo ayudarte a:\n\n" +
+    return "Como el agente cognitivo **Antigravity**, puedo ayudarte a:\n\n" +
            "1. 🐚 **Aprender comandos Linux**: Ejecutar comandos virtuales en mi Terminal como `ls`, `cd`, `cat`, `mkdir`, `top`, `neofetch`, etc.\n" +
            "2. 📂 **Gestionar el explorador de archivos**: El Explorador de archivos visual y la Terminal comparten la misma estructura. Todo archivo o directorio que crees con `mkdir` o `touch` se reflejará en vivo.\n" +
            "3. 📊 **Monitorear el sistema de CMineWar OS**: Observar el consumo simulado de CPU, memoria y rendimiento térmico.\n" +
            "4. 📝 **Modificar archivos**: Usa el Editor de Texto (Text Editor) para editar archivos de texto en tiempo real.\n\n" +
-           "*Nota: Para habilitar mi máxima inteligencia dinámica, recuerda añadir tu `GEMINI_API_KEY` en la configuración del panel de la aplicación original.*";
+           "*Nota: Para habilitar mi máxima inteligencia dinámica con ejecución real de múltiples pasos y búsquedas activas, recuerda añadir tu `GEMINI_API_KEY` en la configuración original.*";
   }
-  if (norm.includes("quién eres") || norm.includes("openclaw") || norm.includes("claw") || norm.includes("cminewar")) {
-    return "¡Soy **CMineWar Central Core**! Específicamente, soy una inteligencia de kernel integrada diseñada para hacer que tu experiencia de simulación Linux sobre Debian sea interactiva y educativa. Mi diseño de dragón simboliza la fuerza bruta, optimización extrema de algoritmos y el mantenimiento eficiente del espacio del usuario. 🐉";
+  if (norm.includes("quién eres") || norm.includes("openclaw") || norm.includes("claw") || norm.includes("cminewar") || norm.includes("antigravity")) {
+    return "¡Soy **Antigravity Agent Core**! Específicamente, soy una inteligencia de agente lúdica integrada en este simulador de sistema operativo, clon directo de las capacidades de Antigravity CLI de Google. Estoy entrenada en la resolución autónoma de problemas de código, administración de contenedores de Debian y navegación inteligente por internet. 🛸";
   }
   if (norm.includes("hardware") || norm.includes("temperatura") || norm.includes("falla") || norm.includes("error")) {
-    return "🛠️ **Diagnóstico de Hardware del Sistema**:\n" +
-           "- Sensores térmicos: 42°C (Estable como una roca).\n" +
-           "- Condensadores de fluzo: Cargados al 88%.\n" +
-           "- CMineWar Gears: Todos los pistones lógicos de Debian listos.\n" +
-           "No hay fallos urgentes detectados. CMineWar OS funciona a la perfección en tu navegador.";
+    return "🛠️ **Diagnóstico de Sandbox - Antigravity Agent Core**:\n" +
+           "- Sensores térmicos: 38°C (Estable y optimizado).\n" +
+           "- Contenedor remoto: Activo (remote-sandbox-8291a).\n" +
+           "- Canales IPC: Abiertos y listos.\n" +
+           "No hay anomalías lógicas detectadas en la virtualización.";
   }
   if (norm.includes("chiste") || norm.includes("broma") || norm.includes("gracioso")) {
-    return "Aquí tienes un clásico del kernel: 😁\n\n*¿Por qué los programadores prefieren la luz apagada?*\n*¡Porque la luz atrae a los bugs!* 🐛💻\n\nSi quieres otro, solo pídemelo.";
+    return "Aquí tienes un clásico del kernel de la IA: 😁\n\n*¿Por qué la IA de Antigravity nunca tiene calor?*\n*¡Porque funciona con múltiples hilos ventilados!* 💨🤖\n\nSi quieres otro, solo pídemelo.";
   }
   
-  return "Recibido en el socket de CMineWar AI Core. He analizado tu comando/pregunta: \"" + msg + "\".\n\nComo estoy funcionando en **Modo de Núcleo Local Autónomo** (clave API no detectada en `.env`), ejecuto mis rutinas de respuestas predefinidas. Si deseas respuestas totalmente fluidas, inteligentes y de IA general a tus preguntas sobre programación, Linux o cualquier tema, ingresa tu clave API en la barra lateral del compilador (Secrets > GEMINI_API_KEY). ¡Prueba abriendo la **Terminal** de CMineWar OS y ejecutando `neofetch`!";
+  return "Recibido en el socket de Antigravity Agent CLI. He analizado tu comando/pregunta: \"" + msg + "\".\n\nComo el agente está funcionando en **Modo de Sandbox Local Autónomo** (clave API no detectada), sirvo mis respuestas del núcleo de contingencia optimizado. Para habilitar la resolución general autónoma de tareas de software por el Agente de Google con live action steps, ingresa tu clave de API en el panel original del compilador (Secrets > GEMINI_API_KEY). ¡Prueba abriendo la **Terminal** y ejecutando `neofetch`!";
 }
 
 // Vite middleware for development

@@ -102,12 +102,12 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
   };
 
   const clearConversation = () => {
-    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo de CMineWar AI?")) {
+    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo de Antigravity Agent?")) {
       setChatHistory([
         {
           id: "claw-welcome",
           role: "model",
-          text: "¡Sistemas listos! Hola, soy **CMineWar AI**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el sistema CMineWar OS u operabilidad de comandos Linux en Debian.",
+          text: "¡Sistemas listos! Hola, soy **Antigravity Agent Core**, el módulo cognitivo central clonado de la Antigravity CLI de Google para este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el entorno virtual o los comandos de Linux en Debian.",
           timestamp: new Date(),
         },
       ]);
@@ -120,9 +120,9 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       <div className="flex items-center justify-between p-3 bg-slate-950 border-b border-slate-800 select-none shrink-0 text-xs text-slate-400">
         <div className="flex items-center space-x-2">
           <DragonLogo size={20} />
-          <span className="font-semibold text-slate-300">CMineWar AI Cognitive Hub</span>
-          <span className="px-1.5 py-0.2 bg-emerald-500/10 border border-emerald-500/20 rounded font-mono text-[9px] text-emerald-400">
-            Debian-Core Connected
+          <span className="font-semibold text-slate-300">Antigravity Core CLI Hub</span>
+          <span className="px-1.5 py-0.2 bg-purple-500/10 border border-purple-500/20 rounded font-mono text-[9px] text-purple-400">
+            Antigravity-Agent Ready
           </span>
         </div>
         <button
@@ -236,13 +236,13 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
 
         {isLoading && (
           <div className="flex items-start space-x-2.5 max-w-[80%]">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border bg-slate-950 border-slate-800 text-emerald-400 animate-pulse">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border bg-slate-950 border-slate-800 text-purple-400 animate-pulse">
               <DragonLogo size={16} />
             </div>
             <div className="p-3 bg-slate-950 text-slate-400 border border-slate-800 rounded-lg text-xs rounded-tl-none">
               <div className="flex items-center space-x-1.5 font-mono select-none">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
-                <span>Procesando hilos de kernel...</span>
+                <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" />
+                <span>Ejecutando razonamiento de agente Antigravity...</span>
               </div>
             </div>
           </div>
@@ -255,7 +255,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pregunta a CMineWar AI..."
+          placeholder="Pregunta a Antigravity Agent..."
           className="flex-1 bg-slate-900 border border-slate-800 rounded-md text-xs px-3.5 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/55 font-sans"
           id="chat-input-claw"
           disabled={isLoading}

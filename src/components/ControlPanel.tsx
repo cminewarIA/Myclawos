@@ -241,7 +241,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   // List of applications we want to track in the real-time bandwidth summary table
   const trackedApps = [
     { id: "chromium", label: "Navegador Chromium (Kiosco)", process: "chromium", baseWeight: 65, colorClass: "text-amber-400" },
-    { id: "openclaw_core", label: "CMineWar AI Core (Núcleo de IA)", process: "cminewar-ai-core", baseWeight: 22, colorClass: "text-cyan-400" },
+    { id: "openclaw_core", label: "Antigravity Agent CLI (Agente de IA)", process: "antigravity-cli", baseWeight: 22, colorClass: "text-purple-400" },
     { id: "terminal", label: "Consola de Comandos Bash", process: "cminewar-bash", baseWeight: 4, colorClass: "text-emerald-400" },
     { id: "file_manager", label: "Explorador de Archivos (CMineWarFM)", process: "cminewar-fm", baseWeight: 2, colorClass: "text-indigo-400" },
     { id: "control_panel", label: "Panel de Monitoreo de Red", process: "cminewar-control", baseWeight: 3, colorClass: "text-violet-400" },
