@@ -36,6 +36,27 @@ export default function ClawInstaller({
 }: ClawInstallerProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   
+  const [availableDisks, setAvailableDisks] = useState<{name: string, size: string, type: string, transport: string}[]>([
+    { name: "sda", size: "20.0G", type: "disk", transport: "sata" },
+    { name: "sdb", size: "128.0G", type: "disk", transport: "usb" },
+    { name: "sdc", size: "500.0G", type: "disk", transport: "usb" }
+  ]);
+
+  useEffect(() => {
+    fetch("/api/cminewar/disks")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.disks && Array.isArray(data.disks)) {
+          setAvailableDisks(data.disks);
+          if (data.disks.length > 0) {
+            // Predeterminar el primer disco disponible
+            setSelectedDisk(data.disks[0].name);
+          }
+        }
+      })
+      .catch(err => console.error("Error loading physical disks:", err));
+  }, []);
+  
   // Custom Kernel & User configuration states
   const [omitStandardUser, setOmitStandardUser] = useState(true);
   const [disableSleep, setDisableSleep] = useState(true);
@@ -226,121 +247,67 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
     }, 2000);
   };
 
-  // Run simulated curl install beta script pipeline
-  const runKernelInstallation = () => {
+  // Run physical core system install process programmatically on the target machine
+  const runKernelInstallation = async () => {
     setIsInstalling(true);
     setInstallProgress(0);
-    
-    // Construct install arguments dynamically
-    const installArgs = `--beta${omitStandardUser ? " --root --no-user" : ""}${disableSleep ? " --disable-acpi-sleep" : ""}${defaultBrowserChromium ? " --default-browser=chromium" : ""}${isPortableToGo ? " --portable-to-go --with-universal-drivers" : ""}`;
-    
     setInstallLogs([
-      `$ curl -fsSL https://cminewar.ai/install.sh | bash -s -- ${installArgs}`,
-      "[%] Iniciando descarga TLS segura desde cminewar.ai...",
-      "[%] Certificado CA verificado con firma SHA256",
-      "[%] Descargando script de instalación (v1.1.2-stable)... ok",
-      `[%] Ejecutando bash con argumentos: ${installArgs}`,
-      "---------------------------------------------------------",
-      "   ____ __  __ _            __        __        ",
-      "  / ___|  \\/  (_)_ __   ___ \\ \\      / /_ _ _ __ ",
-      " | |   | |\\/| | | '_ \\ / _ \\ \\ \\ /\\ / / _` | '__|",
-      " | |___| |  | | | | | |  __/  \\ V  V / (_| | |   ",
-      "  \\____|_|  |_|_|_| |_|\\___|   \\_/\\_/ \\__,_|_|   ",
-      "                                                 ",
-      " [Nucleo Súper Directo Inteligente CMineWar AI Setup Suite]",
-      "---------------------------------------------------------",
-      `[INFO] Comprobando integridad de la unidad de destino /dev/${selectedDisk}... OK`,
-      `[INFO] Particiones de destino detectadas: /dev/${selectedDisk}1 [EFI], ${persistenceOnUSB && selectedDisk !== "sda" ? `/dev/${selectedDisk}2 [PERSISTENCIA], ` : ""}/dev/${selectedDisk}3 [RAÍZ]`,
-      `[INFO] Montando partición raíz virtual en /mnt/cminewar_root (apuntando a /dev/${selectedDisk}3)...`,
+      "[%] Iniciando puente cognitivo con el demonio del sistema operativo...",
+      "[%] Solicitando inicialización de instalación física en la unidad..."
     ]);
 
-    const logsList = [
-      "[INFO] Descargando binarios precompilados del kernel (kernel-5.16.0-cminewar-direct-root)...",
-      "[NET] Descargado: 14.8 MB / 92.5 MB (Velocidad: 18.2 MB/s)",
-      "[NET] Descargado: 92.5 MB / 92.5 MB (100% completado)",
-      "[INFO] Desempaquetando archivos del Núcleo de Superusuario CMineWar AI...",
-      isPortableToGo ? `[INFO] [CMINEWAR-TO-GO] Configurando soporte portátil multidisco...` : "",
-      isPortableToGo && persistenceOnUSB && selectedDisk !== "sda" 
-        ? `[VFS] Configurando módulo de persistencia: Creando enlace OverlayFS de /dev/${selectedDisk}2 con /home y /var/lib` 
-        : "",
-      isPortableToGo && withUniversalDrivers 
-        ? `[INFO] [DRIVERS] Inyectando pila de controladores universales de vídeo y GPU (Mesa-DRI, Nouveau, AMDGPU)...` 
-        : "",
-      isPortableToGo && withUniversalDrivers && installWifi 
-        ? `[DRIVERS] [WiFi] Cargando firmware de red inalámbrica (iwlwifi para Intel, ath10k para Qualcomm, b43 para Broadcom)...`
-        : "",
-      isPortableToGo && withUniversalDrivers && installBluetooth 
-        ? `[DRIVERS] [BT] Cargando pila Bluetooth corporativa (bluez) y microcódigo firmware Realtek BT / Intel BT...`
-        : "",
-      isPortableToGo && withUniversalDrivers && installLte 
-        ? `[DRIVERS] [LTE-Cellular] Inyectando ModemManager, usb-modeswitch y controladores CDC Ethernet / QMI / MBIM...`
-        : "",
-      isPortableToGo && withUniversalDrivers 
-        ? `[VFS] Generando reglas dinámicas en /etc/udev/rules.d/70-hardware-probe.rules para ajustar controladores de sonido, vídeo y red al cambiar de ordenador...` 
-        : "",
-      "[VFS] Escribiendo /lib/modules/5.16.0-cminewar-generic/kernel/core.bin",
-      "[VFS] Escribiendo /boot/initramfs-cminewar-direct.img (Alineación udev auto-detect universal)",
-      "[VFS] Escribiendo /boot/vmlinuz-cminewar",
-      omitStandardUser 
-        ? "[INFO] [MODO ROOT] Omitiendo la creación de un usuario estándar básico..."
-        : "[INFO] Sincronizando directorio compartido /home/user...",
-      omitStandardUser 
-        ? "[INFO] [MODO ROOT] Configurando acceso de sesión directa como usuario 'root'..."
-        : "[INFO] Creando usuario local user_cminewar_developer...",
-      omitStandardUser 
-        ? "[INFO] [MODO ROOT] Anulando la solicitud de contraseñas de seguridad (Inicio Directo, Autologin RAÍZ)..."
-        : "",
-      disableSleep 
-        ? "[INFO] [ACPI] Desactivando de forma permanente la suspensión y la hibernación del kernel..."
-        : "",
-      disableSleep 
-        ? "[VFS] Generando directivas restrictivas de energía en /etc/systemd/sleep.conf..."
-        : "",
-      defaultBrowserChromium 
-        ? "[INFO] [APPS] Descargando e integrando navegador predeterminado Chromium..."
-        : "",
-      defaultBrowserChromium 
-        ? "[VFS] Configurando Chromium como controlador predeterminado de enlaces html en /etc/chromium/browser.conf..."
-        : "",
-      "[INFO] Inicializando puente cognitivo síncrono con la API de soporte general...",
-      "[INFO] Clave de API principal detectada y enlazada de forma segura...",
-      `[INFO] Configurando gestor de arranque GRUB 2.06 compatible con BIOS Legacy y UEFI en /dev/${selectedDisk}...`,
-      "[VFS] Configurando módulo CMineWar OS Shell predeterminado en /bin/cminewarbash",
-      "[INFO] Depurando configuraciones y estableciendo permisos udev...",
-      "[SUCCESS] ¡Proceso de instalación completado con éxito!",
-      isPortableToGo && persistenceOnUSB && selectedDisk !== "sda"
-        ? `[SUCCESS] ¡Instalación CMineWar-To-Go lista! Tus datos se mantendrán grabados físicamente en la unidad y podrás iniciar de inmediato en cualquier PC.`
-        : omitStandardUser 
-          ? "[SUCCESS] ¡CMineWar OS Root Core listo! El sistema te iniciará directamente como administrador de privilegios sin interrupciones."
-          : "[SUCCESS] CMineWar AI Linux Beta ya está listo para arrancar en el espacio del usuario.",
-    ].filter(Boolean);
+    try {
+      const response = await fetch("/api/cminewar/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disk: selectedDisk,
+          omitStandardUser,
+          disableSleep,
+          defaultBrowserChromium
+        })
+      });
 
-    let currentLogIndex = 0;
-    const intervalTime = 250; // slightly faster installs
-    let currentProgress = 0;
-
-    const progressTimer = setInterval(() => {
-      const stepAmt = 6 + Math.floor(Math.random() * 9);
-      const next = Math.min(currentProgress + stepAmt, 100);
-      currentProgress = next;
-      setInstallProgress(next);
-      
-      // Feed logs proportional to progress
-      if (currentLogIndex < logsList.length && next > (currentLogIndex * (100 / logsList.length))) {
-        setInstallLogs((old) => [...old, logsList[currentLogIndex]]);
-        currentLogIndex++;
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Fallo en la comunicación inicial con el instalador.");
       }
 
-      if (next >= 100) {
-        clearInterval(progressTimer);
-        setIsInstalling(false);
-        
-        let updatedVfs = vfs;
-        
-        const successFile: VFSNode = {
-          name: "certificacion_instalacion_beta.txt",
-          type: "file",
-          content: `=====================================================
+      setInstallLogs((old) => [...old, "[+] Instalador físico iniciado con éxito. Monitorizando proceso de copia..."]);
+
+      let failedAttempts = 0;
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch("/api/cminewar/install-status");
+          if (!statusRes.ok) {
+            failedAttempts++;
+            if (failedAttempts > 5) {
+              clearInterval(pollInterval);
+              setIsInstalling(false);
+              setInstallLogs((old) => [...old, "[ERROR] Pérdida de comunicación con el daemon del instalador."]);
+            }
+            return;
+          }
+
+          const statusData = await statusRes.json();
+          const progressVal = parseInt(statusData.progress) || 0;
+          
+          if (statusData.logs && Array.isArray(statusData.logs)) {
+            setInstallLogs(statusData.logs);
+          }
+
+          setInstallProgress(progressVal);
+
+          if (progressVal >= 100) {
+            clearInterval(pollInterval);
+            setIsInstalling(false);
+            
+            // Sincronizar el sistema virtual local del usuario para reflejar las certificaciones reales
+            let updatedVfs = vfs;
+            const successFile: VFSNode = {
+              name: "certificacion_instalacion_beta.txt",
+              type: "file",
+              content: `=====================================================
 CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO CMINEWAR OS
 =====================================================
 
@@ -350,15 +317,15 @@ Kernel Core: CMineWar OS Beta Suite v1.1.0 (Multiplexed Cognition Module)
 Estado: Completamente Operativo, Conectado al CPU Virtual.
 
 ¡Gracias por instalar CMineWar OS!`,
-        };
+            };
 
-        if (omitStandardUser) {
-          localStorage.setItem("cminewar_is_root", "true");
-          
-          const rootReadme: VFSNode = {
-            name: "leeme_root.txt",
-            type: "file",
-            content: `=====================================================
+            if (omitStandardUser) {
+              localStorage.setItem("cminewar_is_root", "true");
+              
+              const rootReadme: VFSNode = {
+                name: "leeme_root.txt",
+                type: "file",
+                content: `=====================================================
 ENTORNO DE ADMINISTRADOR CMINEWAR OS - ACCESO ROOT DIRECTO
 =====================================================
 
@@ -372,12 +339,12 @@ POLÍTICAS APLICADAS:
 * Navegador predeterminado: Chromium Web Browser
 
 Usa comandos avanzados sin 'sudo'. Todo comando tiene privilegios directos de superusuario sin interrupción.`,
-          };
-          
-          const rootCert: VFSNode = {
-            name: "certificacion_instalacion_root.txt",
-            type: "file",
-            content: `=====================================================
+              };
+              
+              const rootCert: VFSNode = {
+                name: "certificacion_instalacion_root.txt",
+                type: "file",
+                content: `=====================================================
 CERTIFICADO DE INSTALACIÓN EXITOSA DEL NÚCLEO CMINEWAR OS (ROOT ACCESS)
 =====================================================
 
@@ -387,67 +354,76 @@ Kernel Core: CMineWar OS Core System v1.1.2 (Direct Superuser Privileges Enabled
 Estado: Operación Directa Privilegiada Activa, Autologin Directo como ROOT.
 
 ¡Gracias por configurar su estación súper-servidora de CMineWar OS!`,
-          };
+              };
 
-          updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
-          updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
-        } else {
-          localStorage.setItem("cminewar_is_root", "false");
-          updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
-        }
+              updatedVfs = setNodeAtPath(updatedVfs, ["root"], "leeme_root.txt", rootReadme);
+              updatedVfs = setNodeAtPath(updatedVfs, ["root"], "certificacion_instalacion_root.txt", rootCert);
+            } else {
+              localStorage.setItem("cminewar_is_root", "false");
+              updatedVfs = setNodeAtPath(updatedVfs, ["home", "user"], "certificacion_instalacion_beta.txt", successFile);
+            }
 
-        if (defaultBrowserChromium) {
-          localStorage.setItem("cminewar_default_browser", "chromium");
-          const chromConfig: VFSNode = {
-            name: "browser.conf",
-            type: "file",
-            content: `[Default Browser Configuration]
+            if (defaultBrowserChromium) {
+              localStorage.setItem("cminewar_default_browser", "chromium");
+              const chromConfig: VFSNode = {
+                name: "browser.conf",
+                type: "file",
+                content: `[Default Browser Configuration]
 BROWSER_BINARY=/bin/chromium-browser
 DEFAULT_BROWSER=Chromium
 CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage"
 URL_HOME=https://cminewar.ai`,
-          };
-          updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
-          // Also write a system bin link for running chromium
-          updatedVfs = setNodeAtPath(updatedVfs, ["bin"], "chromium", {
-            name: "chromium",
-            type: "file",
-            content: "[Binary Executable - Chromium Web Browser default system browser]",
-          });
-        } else {
-          localStorage.setItem("cminewar_default_browser", "custom");
-        }
+              };
+              updatedVfs = setNodeAtPath(updatedVfs, ["etc", "chromium"], "browser.conf", chromConfig);
+              // Also write a system bin link for running chromium
+              updatedVfs = setNodeAtPath(updatedVfs, ["bin"], "chromium", {
+                name: "chromium",
+                type: "file",
+                content: "[Binary Executable - Chromium Web Browser default system browser]",
+              });
+            } else {
+              localStorage.setItem("cminewar_default_browser", "custom");
+            }
 
-        if (disableSleep) {
-          localStorage.setItem("cminewar_sleep_disabled", "true");
-          const sleepConfig: VFSNode = {
-            name: "sleep.conf",
-            type: "file",
-            content: `[Sleep/Hibernation Disable Configuration]
+            if (disableSleep) {
+              localStorage.setItem("cminewar_sleep_disabled", "true");
+              const sleepConfig: VFSNode = {
+                name: "sleep.conf",
+                type: "file",
+                content: `[Sleep/Hibernation Disable Configuration]
 # Desactivación estricta de suspensiones por parámetros del Kernel de Súper Usuario
 AllowSuspend=no
 AllowHibernation=no
 AllowHybridSleep=no
 AllowSuspendThenHibernate=no`,
-          };
-          updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
-        } else {
-          localStorage.removeItem("cminewar_sleep_disabled");
+              };
+              updatedVfs = setNodeAtPath(updatedVfs, ["etc", "systemd"], "sleep.conf", sleepConfig);
+            } else {
+              localStorage.removeItem("cminewar_sleep_disabled");
+            }
+
+            setVfs(updatedVfs);
+
+            setTimeout(() => {
+              setStep(4);
+              triggerNotification(
+                omitStandardUser 
+                  ? "¡CMineWar OS instalado correctamente en modo Root!" 
+                  : "¡Instalación exitosa! CMineWar OS Kernel enlazado.", 
+                "success"
+              );
+            }, 600);
+          }
+        } catch (pollErr) {
+          console.error("Fallo al sondear estado:", pollErr);
         }
+      }, 700);
 
-        setVfs(updatedVfs);
-
-        setTimeout(() => {
-          setStep(4);
-          triggerNotification(
-            omitStandardUser 
-              ? "¡CMineWar OS instalado correctamente en modo Root!" 
-              : "¡Instalación exitosa! CMineWar OS Kernel enlazado.", 
-            "success"
-          );
-        }, 600);
-      }
-    }, intervalTime);
+    } catch (err: any) {
+      console.error("Fallo general en la instalación:", err);
+      setIsInstalling(false);
+      setInstallLogs((old) => [...old, `[ERROR] Excepción crítica al instalar: ${err.message || err}`]);
+    }
   };
 
   const handleFinishInstaller = () => {
@@ -828,58 +804,33 @@ AllowSuspendThenHibernate=no`,
               </p>
             </div>
 
-            {/* Simulated drive select */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedDisk("sda")}
-                className={`p-3 rounded-lg border text-left transition ${
-                  selectedDisk === "sda"
-                    ? "bg-slate-950 border-cyan-500 text-slate-100 ring-1 ring-cyan-500/20"
-                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
-                }`}
-                id="disk-select-sda"
-              >
-                <div className="font-bold text-xs flex items-center justify-between">
-                  <span>Local HDD /dev/sda</span>
-                  <span className="text-[8px] bg-slate-800 text-slate-300 px-1 py-0.5 rounded">Fijo</span>
-                </div>
-                <div className="text-[9px] text-slate-500 mt-1">20.0 GB Disco de Arranque Interno</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedDisk("sdb")}
-                className={`p-3 rounded-lg border text-left transition ${
-                  selectedDisk === "sdb"
-                    ? "bg-slate-950 border-emerald-500 text-slate-100 ring-1 ring-emerald-500/20"
-                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
-                }`}
-                id="disk-select-sdb"
-              >
-                <div className="font-bold text-xs flex items-center justify-between">
-                  <span>Portable USB /dev/sdb</span>
-                  <span className="text-[8px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded animate-pulse">To-Go (USB)</span>
-                </div>
-                <div className="text-[9px] text-slate-500 mt-1">128.0 GB SSD Portable de Alta Velocidad</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedDisk("sdc")}
-                className={`p-3 rounded-lg border text-left transition ${
-                  selectedDisk === "sdc"
-                    ? "bg-slate-950 border-emerald-500 text-slate-100 ring-1 ring-emerald-500/20"
-                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
-                }`}
-                id="disk-select-sdc"
-              >
-                <div className="font-bold text-xs flex items-center justify-between">
-                  <span>Disco Móvil /dev/sdc</span>
-                  <span className="text-[8px] bg-emerald-950 text-emerald-400 px-1 py-0.5 rounded">To-Go (Ext)</span>
-                </div>
-                <div className="text-[9px] text-slate-500 mt-1">500.0 GB Disco Duro Externo Adaptable</div>
-              </button>
+            {/* Real and dynamic drive select */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {availableDisks.map((diskItem) => {
+                const isSelected = selectedDisk === diskItem.name;
+                const isUsb = diskItem.transport === "usb" || diskItem.name.startsWith("sd") && diskItem.name !== "sda";
+                return (
+                  <button
+                    key={diskItem.name}
+                    type="button"
+                    onClick={() => setSelectedDisk(diskItem.name)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      isSelected
+                        ? "bg-slate-950 border-emerald-500 text-slate-100 ring-1 ring-emerald-500/20"
+                        : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                    }`}
+                    id={`disk-select-${diskItem.name}`}
+                  >
+                    <div className="font-bold text-xs flex items-center justify-between">
+                      <span className="capitalize">{diskItem.transport || "SATA"} /dev/{diskItem.name}</span>
+                      <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold ${isUsb ? "bg-emerald-950 text-emerald-300 animate-pulse" : "bg-slate-800 text-slate-300"}`}>
+                        {isUsb ? "To-Go" : "Fijo"}
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-slate-500 mt-1">{diskItem.size} Unidad Física {isUsb ? "Portable" : "Interna"}</div>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Visual allocation table representation */}

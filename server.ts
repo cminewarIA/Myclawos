@@ -3,6 +3,8 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { exec, execSync } from "child_process";
+import fs from "fs";
 
 dotenv.config();
 
@@ -44,6 +46,109 @@ app.get("/api/cminewar/system-status", (req, res) => {
     status: "ok",
     instanceId: SERVER_INSTANCE_ID,
     timestamp: Date.now()
+  });
+});
+
+// CMineWar - Real disk scanner endpoint for bare-metal host compatibility
+app.get("/api/cminewar/disks", (req, res) => {
+  // En Linux real, listamos los dispositivos de almacenamiento físico por bus
+  if (process.platform === "linux") {
+    try {
+      const output = execSync("lsblk -d -o NAME,SIZE,TYPE,TRAN -r").toString();
+      const lines = output.trim().split("\n");
+      const disks = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(" ");
+        if (parts.length >= 2 && parts[2] === "disk") {
+          disks.push({
+            name: parts[0],
+            size: parts[1] || "Generic",
+            type: parts[2],
+            transport: parts[3] || "sata"
+          });
+        }
+      }
+
+      if (disks.length > 0) {
+        return res.json({ disks });
+      }
+    } catch (e) {
+      console.error("No se pudo escanear discos con lsblk:", e);
+    }
+  }
+
+  // Fallback a listado de discos representativo compatible con sandbox / container virtual
+  res.json({
+    disks: [
+      { name: "sda", size: "20.0G", type: "disk", transport: "sata" },
+      { name: "sdb", size: "128.0G", type: "disk", transport: "usb" },
+      { name: "sdc", size: "500.0G", type: "disk", transport: "usb" }
+    ]
+  });
+});
+
+// CMineWar - Start real OS installation background service execution
+app.post("/api/cminewar/install", (req, res) => {
+  const { disk, omitStandardUser, disableSleep, defaultBrowserChromium } = req.body;
+
+  if (!disk) {
+    return res.status(400).json({ error: "Dispositivo de destino requirido." });
+  }
+
+  // Prevenir inyección de comandos en parámetros del shell
+  const safeDisk = disk.replace(/[^a-zA-Z0-9]/g, "");
+  const safeOmitUser = omitStandardUser ? "true" : "false";
+  const safeDisableSleep = disableSleep ? "true" : "false";
+  const safeBrowser = defaultBrowserChromium ? "true" : "false";
+
+  try {
+    // Asegurar que el script tenga permisos de ejecución nativos en Linux
+    const scriptPath = path.join(process.cwd(), "bare-metal", "real_install.sh");
+    if (fs.existsSync(scriptPath)) {
+      try {
+        fs.chmodSync(scriptPath, "755");
+      } catch (e) {
+        // En algunos sistemas de archivos FAT32/exFAT de dev esto podría arrojar error benigno
+      }
+    }
+
+    console.log(`[INSTALADOR] Lanzando instalador físico para: /dev/${safeDisk}`);
+    
+    // Lanzar el script de fondo y desvincularlo para permitir streaming asíncrono
+    const child = exec(`bash "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    
+    res.json({
+      status: "started",
+      pid: child.pid,
+      message: "Instalación física en segundo plano inicializada."
+    });
+  } catch (error: any) {
+    console.error("Fallo al lanzar script de instalación físico:", error);
+    res.status(500).json({ error: `Fallo al lanzar instalador: ${error.message}` });
+  }
+});
+
+// CMineWar - Telemetry and output log retriever endpoint
+app.get("/api/cminewar/install-status", (req, res) => {
+  const progressFile = "/tmp/cminewar_install_progress.txt";
+  const logFile = "/tmp/cminewar_install_log.txt";
+
+  let progress = "0";
+  let logs: string[] = [];
+
+  if (fs.existsSync(progressFile)) {
+    progress = fs.readFileSync(progressFile, "utf-8").trim();
+  }
+
+  if (fs.existsSync(logFile)) {
+    const rawLogs = fs.readFileSync(logFile, "utf-8");
+    logs = rawLogs.split("\n").filter(l => l.trim() !== "");
+  }
+
+  res.json({
+    progress,
+    logs
   });
 });
 
