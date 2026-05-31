@@ -358,11 +358,11 @@ export default function Chromium() {
           Estás navegando la dirección: <span className="text-slate-300 font-mono break-all">{url}</span>. Para una mejor experiencia web interactiva, utilice los marcadores sugeridos en la barra superior.
         </p>
         <button 
-          onClick={() => handleNavigate("https://github.com/cminewarIA/Myclawos")} 
+          onClick={() => handleNavigate("https://github.com/cminewarIA/MyCMineWarOS")} 
           className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs rounded-lg font-semibold flex items-center space-x-1.5 text-slate-200 transition"
         >
           <Github size={12} />
-          <span>Volver a Myclawos GitHub</span>
+          <span>Volver a MyCMineWarOS GitHub</span>
         </button>
       </div>
     );

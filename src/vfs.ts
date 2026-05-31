@@ -68,6 +68,43 @@ CARACTERÍSTICAS:
         }
       }
     },
+    boot: {
+      name: "boot",
+      type: "dir",
+      children: {
+        grub: {
+          name: "grub",
+          type: "dir",
+          children: {
+            "grub.cfg": {
+              name: "grub.cfg",
+              type: "file",
+              content: `# /boot/grub/grub.cfg
+set default="0"
+set timeout=5
+
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
+    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
+    linux /boot/vmlinuz-cminewar console=ttyS0 quiet init=/bin/cminewar-omarchy-init
+    initrd /boot/initramfs-cminewar-direct.img
+}
+
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
+    linux /boot/vmlinuz-cminewar console=ttys0 quiet init=/bin/cminewar-kiosk-init
+    initrd /boot/initramfs-cminewar-direct.img
+}
+
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
+    linux /boot/vmlinuz-cminewar console=ttyS0 single quiet init=/bin/cminewar-recovery-init
+    initrd /boot/initramfs-cminewar-direct.img
+}
+`,
+            }
+          }
+        }
+      }
+    },
     bin: {
       name: "bin",
       type: "dir",

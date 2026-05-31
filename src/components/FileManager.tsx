@@ -91,14 +91,14 @@ const DEFAULT_CONNECTIONS: Connection[] = [
     id: "sftp-secure",
     type: "SFTP",
     name: "SFTP - Servidor Seguro SSH",
-    host: "sftp.myclawos.io",
+    host: "sftp.mycminewaros.org",
     port: "22",
     path: "/root/secure_files",
     username: "root",
     files: [
       { name: "authorized_keys", type: "file", size: "400 B", content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCy1Zz8v2Jpx9xSdf... root@openclaw" },
       { name: "database_backup_2026.sql", type: "file", size: "89 MB", content: "-- PostgreSQL Database Dump\n-- Backup created on: 2026-05-28 12:00:23 UTC\n\nCREATE TABLE app_users (\n    id SERIAL PRIMARY KEY,\n    username VARCHAR(100) UNIQUE,\n    is_root BOOLEAN DEFAULT TRUE\n);\n\nINSERT INTO app_users VALUES (1, 'root', true);\nINSERT INTO app_users VALUES (2, 'user_claw_developer', false);" },
-      { name: "auto_update_daemon.py", type: "file", size: "12 KB", content: "import os\nimport sys\n# Daemon de actualización remota síncrona en ClawOS.\ndef check_repo_updates():\n    print('[DAEMON] Buscando actualizaciones remotas en cminewarIA/Myclawos...')\n    # Sincronización git automática activa\n    return True\n\nif __name__ == '__main__':\n    check_repo_updates()" },
+      { name: "auto_update_daemon.py", type: "file", size: "12 KB", content: "import os\nimport sys\n# Daemon de actualización remota síncrona en CMineWar OS.\ndef check_repo_updates():\n    print('[DAEMON] Buscando actualizaciones remotas en cminewarIA/MyCMineWarOS...')\n    # Sincronización git automática activa\n    return True\n\nif __name__ == '__main__':\n    check_repo_updates()" },
     ]
   }
 ];

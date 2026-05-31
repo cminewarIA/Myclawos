@@ -205,7 +205,7 @@ export default function GitHubUpdater({
   });
   const [gitRepo, setGitRepo] = useState(() => {
     const saved = localStorage.getItem("cminewar_git_repo");
-    return (saved && saved !== "cminewaros-core") ? saved : "Myclawos";
+    return (saved && saved !== "cminewaros-core" && saved !== "Myclawos") ? saved : "MyCMineWarOS";
   });
   const [gitBranch, setGitBranch] = useState(() => localStorage.getItem("cminewar_git_branch") || "main");
   const [gitPat, setGitPat] = useState(() => localStorage.getItem("cminewar_git_pat") || "");
@@ -2764,7 +2764,7 @@ echo "========================================================================="
               <button
                 onClick={() => {
                   setGitOwner("cminewarIA");
-                  setGitRepo("Myclawos");
+                  setGitRepo("MyCMineWarOS");
                   setGitBranch("main");
                   triggerNotification("Valores sintonizados por defecto.", "info");
                 }}
