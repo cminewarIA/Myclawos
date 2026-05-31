@@ -11,12 +11,15 @@ interface BootloaderProps {
 export default function Bootloader({ onComplete, selectedServerIp = null, isSafeModeDefault = false }: BootloaderProps) {
   const [bootProgress, setBootProgress] = useState(0);
   const [bootLogs, setBootLogs] = useState<string[]>([]);
-  const [bootPhase, setBootPhase] = useState<"bios" | "safemode" | "finished">("bios");
+  const [bootPhase, setBootPhase] = useState<"grub" | "bios" | "safemode" | "finished">("grub");
   const [safeModePhase, setSafeModePhase] = useState<"menu" | "repairing" | "repair_done">("menu");
   const [repairLogs, setRepairLogs] = useState<string[]>([]);
   const [repairProgress, setRepairProgress] = useState(0);
   const [activeRepairType, setActiveRepairType] = useState("");
   const [isGlitching, setIsGlitching] = useState(false);
+
+  const [grubSelection, setGrubSelection] = useState(0);
+  const [countdown, setCountdown] = useState(6);
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const glitchTimeoutRef = useRef<any>(null);
@@ -37,6 +40,76 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       osc.stop(audioCtx.currentTime + duration);
     } catch (e) {}
   };
+
+  const handleBootEntry = (index: number) => {
+    playPulseSound(880, "sine", 0.08);
+    if (index === 0) {
+      // Omarchy Mode
+      localStorage.setItem("cminewar_boot_mode", "omarchy");
+      localStorage.removeItem("cminewar_safe_mode");
+      setBootPhase("bios");
+    } else if (index === 1) {
+      // Kiosk Mode
+      localStorage.setItem("cminewar_boot_mode", "kiosk");
+      localStorage.removeItem("cminewar_safe_mode");
+      setBootPhase("bios");
+    } else if (index === 2) {
+      // Recovery Mode
+      localStorage.setItem("cminewar_safe_mode", "true");
+      setBootPhase("safemode");
+    }
+  };
+
+  // Jump to safemode directly if safe mode is already forced on load
+  useEffect(() => {
+    const isSafeModeActive = localStorage.getItem("cminewar_safe_mode") === "true" || isSafeModeDefault;
+    if (isSafeModeActive) {
+      setBootPhase("safemode");
+    }
+  }, [isSafeModeDefault]);
+
+  // GRUB Countdown Timer
+  useEffect(() => {
+    if (bootPhase !== "grub") return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleBootEntry(grubSelection);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [bootPhase, grubSelection]);
+
+  // GRUB Keyboard Navigation
+  useEffect(() => {
+    if (bootPhase !== "grub") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        playPulseSound(440, "sine", 0.03);
+        setGrubSelection((prev) => (prev === 0 ? 2 : prev - 1));
+        setCountdown(8); // Reset timer on user activity so they have time to read
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        playPulseSound(440, "sine", 0.03);
+        setGrubSelection((prev) => (prev === 2 ? 0 : prev + 1));
+        setCountdown(8); // Reset timer on user activity so they have time to read
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        handleBootEntry(grubSelection);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [bootPhase, grubSelection]);
 
   // Occasional random CSS glitch during kernel bootloader load to emulate unstable BIOS screen
   useEffect(() => {
@@ -108,6 +181,8 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   }, [bootLogs, repairLogs]);
 
   useEffect(() => {
+    if (bootPhase !== "bios") return;
+
     const ssdMode = localStorage.getItem("cminewar_ssd_portable_mode") || "hybrid";
     const ssdMok = localStorage.getItem("cminewar_ssd_mok_enrolled") !== "false";
     const ssdLba = localStorage.getItem("cminewar_ssd_lba_limit") === "true";
@@ -167,7 +242,7 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, [selectedServerIp, isSafeModeDefault]);
+  }, [selectedServerIp, isSafeModeDefault, bootPhase]);
 
   // Execute emergency repair steps inside Safe Mode Console
   const executeEmergencyRepair = (type: "kernel" | "bootloader" | "vfs") => {
@@ -233,6 +308,104 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   return (
     <div className={`fixed inset-0 z-[9999999] bg-black flex flex-col font-mono text-slate-300 text-xs p-4 overflow-hidden select-none ${isGlitching ? "glitch-unstable" : ""}`}>
       {bootPhase === "bios" && isGlitching && <div className="glitch-overlay" />}
+
+      {/* GNU GRUB BOOT MENU SCREEN */}
+      {bootPhase === "grub" && (
+        <div className="flex-1 flex flex-col justify-center items-center bg-black/95 text-slate-200 font-mono text-[11px] p-6 select-none relative">
+          {/* Scanlines / CRT scan overlay typical of old boot screens */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[length:100%_4px] pointer-events-none" />
+          
+          <div className="w-full max-w-2xl bg-zinc-950 border-2 border-zinc-800 rounded-lg p-5 shadow-2xl shadow-black relative z-10 flex flex-col space-y-4">
+            
+            {/* GRUB Version Banner */}
+            <div className="text-center font-bold tracking-wider text-zinc-400 border-b border-zinc-900 pb-3 uppercase text-[10px] flex justify-between items-center px-1">
+              <span>GNU GRUB  versión 2.06-git-cminewar-core</span>
+              <span className="text-[9px] text-pink-400 font-mono animate-pulse font-extrabold">[ SISTEMA SEGURO ]</span>
+            </div>
+
+            {/* Instruction description */}
+            <p className="text-[10px] text-zinc-400 leading-relaxed text-left font-sans italic">
+              Use las teclas <span className="text-pink-400 font-bold font-mono">↑</span> y <span className="text-pink-400 font-bold font-mono">↓</span> para desplazarse. Presione <span className="text-pink-400 font-bold font-mono">Enter</span> para iniciar la opción destacada, o haga doble clic sobre una de ellas en pantalla.
+            </p>
+
+            {/* Selection Grid Box with double borders simulation */}
+            <div className="border border-zinc-800 rounded-md bg-stone-950 p-4 space-y-2.5 relative">
+              {[
+                {
+                  id: 0,
+                  label: "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)",
+                  desc: "Entorno nativo de terminal con utilidades unificadas y daemon udev activo (Recomendado).",
+                  badge: "Primera Opción"
+                },
+                {
+                  id: 1,
+                  label: "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)",
+                  desc: "Arranque estándar directo a la interfaz completa de DSM y escritorio de componentes.",
+                  badge: "Kiosco GUI"
+                },
+                {
+                  id: 2,
+                  label: "CMineWar OS - Modo de Recuperación (System Safe Mode)",
+                  desc: "Consola de rescate de emergencia para reparar el kernel, inodos de disco y flashear MBR.",
+                  badge: "Recuperación"
+                }
+              ].map((entry) => {
+                const isSelected = grubSelection === entry.id;
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={() => {
+                      playPulseSound(580, "sine", 0.04);
+                      setGrubSelection(entry.id);
+                      setCountdown(8); // Give developer physical reading buffer
+                    }}
+                    onDoubleClick={() => handleBootEntry(entry.id)}
+                    className={`w-full text-left p-3 rounded-md border transition-all active:scale-[0.99] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 cursor-pointer ${
+                      isSelected 
+                        ? "bg-pink-500/10 border-pink-500/50 text-pink-400 shadow-md shadow-pink-950/20" 
+                        : "bg-zinc-950 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/30 text-zinc-400"
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="font-bold flex items-center space-x-2 text-[10.5px]">
+                        <span className={isSelected ? "text-pink-400 font-extrabold" : "text-zinc-700"}>
+                          {isSelected ? "▶" : "•"}
+                        </span>
+                        <span>{entry.label}</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 pl-4">{entry.desc}</p>
+                    </div>
+                    {entry.badge && (
+                      <span className={`text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded shrink-0 self-start sm:self-center ${
+                        isSelected 
+                          ? "bg-pink-500/20 text-pink-300 border border-pink-500/30" 
+                          : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+                      }`}>
+                        {entry.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Countdown / Timer and Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-zinc-900 pt-3 text-[10px] gap-3">
+              <span className="text-zinc-500 font-medium">
+                La opción seleccionada se ejecutará automáticamente en <strong className="text-pink-400 font-black font-mono inline-block animate-pulse text-xs bg-pink-500/5 border border-pink-500/20 px-1 rounded">{countdown}</strong> segundos...
+              </span>
+
+              <button
+                onClick={() => handleBootEntry(grubSelection)}
+                className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white font-extrabold tracking-widest uppercase rounded shadow-lg shadow-pink-950/40 cursor-pointer active:scale-95 transition text-[10px] border border-pink-500/20"
+              >
+                [ BOOT SYSTEM ]
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
       
       {/* HEADER BIOS BANNER */}
       {bootPhase === "bios" && (

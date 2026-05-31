@@ -166,14 +166,20 @@ cat << 'GRUB_CONFIG'
 set default="0"
 set timeout=5
 
-menuentry "CMineWar OS Linux v1.1.2 Live CLI-GUI Environment (x86_64)" {
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttyS0 quiet ${omitStandardUser ? "init=/bin/cminewarbash_root_init" : "init=/bin/cminewarbash_init"} ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    linux /boot/vmlinuz-cminewar console=ttyS0 quiet init=/bin/cminewar-omarchy-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
     initrd /boot/initramfs-cminewar-direct.img
 }
 
-menuentry "CMineWar OS Recovery Console" {
-    linux /boot/vmlinuz-cminewar console=ttyS0 single
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
+    linux /boot/vmlinuz-cminewar console=ttys0 quiet init=/bin/cminewar-kiosk-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-direct.img
+}
+
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
+    linux /boot/vmlinuz-cminewar console=ttyS0 single quiet init=/bin/cminewar-recovery-init
     initrd /boot/initramfs-cminewar-direct.img
 }
 GRUB_CONFIG

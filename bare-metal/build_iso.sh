@@ -72,10 +72,20 @@ echo "[+] Archivo de arranque autostart escrito en: $WORK_DIR/autostart"
 # Crear grub.cfg para UEFI arranque limpio
 cat << 'EOF' > "$WORK_DIR/grub.cfg"
 set default="0"
-set timeout=3
+set timeout=5
 
-menuentry "CMineWar OS Linux v1.1.2 - Kernel Kiosk Bare-Metal (Auto-arrancable)" {
-    linux /boot/vmlinuz-virt console=tty1 quiet loglevel=3 logo.nologo
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
+    linux /boot/vmlinuz-virt console=tty1 quiet loglevel=3 logo.nologo init=/bin/cminewar-omarchy-init
+    initrd /boot/initramfs-virt
+}
+
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+    linux /boot/vmlinuz-virt console=tty1 quiet loglevel=3 logo.nologo init=/bin/cminewar-kiosk-init
+    initrd /boot/initramfs-virt
+}
+
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
+    linux /boot/vmlinuz-virt console=tty1 single quiet loglevel=3 logo.nologo init=/bin/cminewar-recovery-init
     initrd /boot/initramfs-virt
 }
 EOF
