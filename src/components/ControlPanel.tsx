@@ -60,6 +60,24 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   const [totalDataDown, setTotalDataDown] = useState(142.4); // MB
   const [totalDataUp, setTotalDataUp] = useState(38.1); // MB
 
+  // Dynamic window tracking state for network analyzer breakdown
+  const [runningWindows, setRunningWindows] = useState<{ id: string; isOpen: boolean; title: string }[]>(() => {
+    const saved = localStorage.getItem("clawos_windows_state");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((w: any) => ({
+            id: w.id,
+            isOpen: !w.isMinimized && !!w.isOpen, // Only count as fully open if open and not minimized
+            title: w.title || w.id
+          }));
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+
   // Processes state
   const [processes, setProcesses] = useState([
     { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
@@ -137,6 +155,21 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   // Dynamic simulation simulation ticks
   useEffect(() => {
     const timer = setInterval(() => {
+      // Sync running windows dynamically matching real desktop activity
+      const savedWins = localStorage.getItem("clawos_windows_state");
+      if (savedWins) {
+        try {
+          const parsed = JSON.parse(savedWins);
+          if (Array.isArray(parsed)) {
+            setRunningWindows(parsed.map((w: any) => ({
+              id: w.id,
+              isOpen: !w.isMinimized && !!w.isOpen,
+              title: w.title || w.id
+            })));
+          }
+        } catch (e) {}
+      }
+
       // 1. Network simulation updates
       setNetSpeedDown((prev) => {
         const delta = (Math.random() * 4 - 2);
@@ -203,6 +236,88 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
       points += `${i === 0 ? "M" : "L"} ${x} ${y}`;
     }
     return points;
+  };
+
+  // List of applications we want to track in the real-time bandwidth summary table
+  const trackedApps = [
+    { id: "chromium", label: "Navegador Chromium (Kiosco)", process: "chromium", baseWeight: 65, colorClass: "text-amber-400" },
+    { id: "openclaw_core", label: "CMineWar AI Core (Núcleo de IA)", process: "cminewar-ai-core", baseWeight: 22, colorClass: "text-cyan-400" },
+    { id: "terminal", label: "Consola de Comandos Bash", process: "cminewar-bash", baseWeight: 4, colorClass: "text-emerald-400" },
+    { id: "file_manager", label: "Explorador de Archivos (CMineWarFM)", process: "cminewar-fm", baseWeight: 2, colorClass: "text-indigo-400" },
+    { id: "control_panel", label: "Panel de Monitoreo de Red", process: "cminewar-control", baseWeight: 3, colorClass: "text-violet-400" },
+    { id: "installer", label: "Instalador de CMineWar OS", process: "cminewar-installer", baseWeight: 4, colorClass: "text-pink-400" },
+  ];
+
+  // Helper to get open status from dynamic state or defaults
+  const getAppIsOpen = (appId: string) => {
+    if (runningWindows.length > 0) {
+      const found = runningWindows.find(w => w.id === appId);
+      return found ? found.isOpen : false;
+    }
+    // Fallback defaults in case windows list isn't synced yet
+    const defaults: Record<string, boolean> = {
+      chromium: false,
+      openclaw_core: true,
+      terminal: true,
+      control_panel: true,
+      installer: true,
+      file_manager: false,
+    };
+    return defaults[appId] ?? false;
+  };
+
+  // Compute active states and final traffic weights which dynamically adjust to UI windows state
+  const getProcessedAppsWithNetwork = () => {
+    const apps = trackedApps.map(app => {
+      const isOpen = getAppIsOpen(app.id);
+      // If closed, openclaw_core retains a tiny background traffic (2), others go to 0
+      const weight = isOpen ? app.baseWeight : (app.id === "openclaw_core" ? 2 : 0);
+      return {
+        ...app,
+        isOpen,
+        weight
+      };
+    });
+
+    // Add persistent system background daemons (always open/active)
+    apps.push({
+      id: "system_daemons",
+      label: "Servicios del Sistema (Kernel & Daemons)",
+      process: "cminewar-daemons",
+      baseWeight: 2,
+      colorClass: "text-slate-400",
+      isOpen: true,
+      weight: 2
+    });
+
+    const totalWeight = apps.reduce((acc, a) => acc + a.weight, 0) || 1;
+
+    return apps.map(app => {
+      const dlFactor = (app.weight / totalWeight);
+      const dlSpeed = dlFactor * netSpeedDown;
+      const ulSpeed = dlFactor * netSpeedUp;
+      const share = dlFactor * 100;
+
+      return {
+        ...app,
+        dlSpeed,
+        ulSpeed,
+        share
+      };
+    });
+  };
+
+  // Helper to format bandwidth values beautifully
+  const formatNetworkSpeed = (speedMB: number) => {
+    if (speedMB >= 0.1) {
+      return `${speedMB.toFixed(2)} MB/s`;
+    } else {
+      const speedKB = speedMB * 1024;
+      if (speedKB < 0.1) {
+        return "0.0 B/s";
+      }
+      return `${speedKB.toFixed(1)} KB/s`;
+    }
   };
 
   return (
@@ -407,6 +522,81 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" /> CORE-LINK
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* NEW: Bandwidth Usage breakdown per App */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800" id="bandwidth-app-breakdown">
+              <div className="flex items-center justify-between mb-3.5">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5 font-sans">
+                  <Activity size={14} className="text-emerald-400" />
+                  <span>Ancho de Banda por Aplicación de Escritorio</span>
+                </h4>
+                <div className="text-[10px] font-mono bg-slate-900/40 px-2 py-0.5 rounded text-slate-400 border border-slate-900">
+                  Total Red: <span className="text-emerald-400 font-bold font-mono">{(netSpeedDown + netSpeedUp).toFixed(1)} MB/s</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="text-slate-500 text-[10px] border-b border-slate-900 pb-2 uppercase">
+                      <th className="font-semibold pb-2">Aplicación / ID Proceso</th>
+                      <th className="font-semibold pb-2 text-center">Estado Escritorio</th>
+                      <th className="font-semibold pb-2 text-right">Descarga ↓</th>
+                      <th className="font-semibold pb-2 text-right">Subida ↑</th>
+                      <th className="font-semibold pb-2 text-right">Carga %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900/40">
+                    {getProcessedAppsWithNetwork().map((app) => (
+                      <tr key={app.id} className="text-slate-300 hover:bg-slate-900/30 transition-colors">
+                        <td className="py-2.5 font-sans flex items-center space-x-2">
+                          <span className={`${app.colorClass} font-mono font-bold text-[10px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800/40`}>
+                            {app.process}
+                          </span>
+                          <span className="text-slate-300 font-medium text-xs truncate max-w-[210px]" title={app.label}>
+                            {app.label}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-center">
+                          {app.isOpen ? (
+                            <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 font-medium font-sans animate-pulse">
+                              <span className="w-1 h-1 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
+                              Abierta
+                            </span>
+                          ) : app.weight > 0 ? (
+                            <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/10 font-medium font-sans">
+                              <span className="w-1 h-1 rounded-full bg-amber-500 mr-1.5" />
+                              2º Plano
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-slate-900/50 text-slate-500 border border-slate-800/60 font-sans">
+                              Cerrada
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right font-semibold font-mono text-emerald-400">
+                          {formatNetworkSpeed(app.dlSpeed)}
+                        </td>
+                        <td className="py-2.5 text-right font-semibold font-mono text-cyan-400">
+                          {formatNetworkSpeed(app.ulSpeed)}
+                        </td>
+                        <td className="py-2.5 text-right font-mono">
+                          <div className="flex items-center justify-end space-x-2">
+                            <span className="text-[10px] text-slate-450 font-semibold">{app.share.toFixed(0)}%</span>
+                            <div className="w-12 bg-slate-900 rounded-full h-1 overflow-hidden border border-slate-800/80">
+                              <div
+                                className={`h-full rounded-full ${app.isOpen ? 'bg-gradient-to-r from-emerald-500 to-cyan-400' : 'bg-slate-700'}`}
+                                style={{ width: `${app.share}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

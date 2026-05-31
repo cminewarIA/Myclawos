@@ -42,7 +42,7 @@ INSTRUCTIONS
 cat << 'EOF' > "$WORK_DIR/autostart"
 #!/bin/sh
 # /etc/xdg/openbox/autostart
-# Script que arranca CMineWar OS directamente sobre el servidor de video físico X11 / Wayland
+# Script que arranca el entorno Omarchy de consola sobre el servidor gráfico Openbox
 
 # 1. Asegurar volumen y mezclas de sonido por hardware
 amixer sset Master 90% unmute || true
@@ -52,15 +52,6 @@ xset s off || true
 xset -dpms || true
 xset s noblank || true
 
-# 2.5 Prevenir los molestos errores "Failed to execute child process" en Openbox para binarios ausentes
-# Creamos ejecutables dummy en el PATH en caso de que el entorno de escritorio, menús o atajos los invoquen.
-for bin_name in evte obconf lxappearance conky compton picom nitrogen tint2 volumeicon x-terminal-emulator xterm; do
-  if ! command -v $bin_name &>/dev/null; then
-    echo -e '#!/bin/sh\nexit 0' > "/usr/bin/$bin_name" 2>/dev/null || echo -e '#!/bin/sh\nexit 0' > "/usr/local/bin/$bin_name" 2>/dev/null || true
-    chmod +x "/usr/bin/$bin_name" 2>/dev/null || chmod +x "/usr/local/bin/$bin_name" 2>/dev/null || true
-  fi
-done
-
 # 3. Asegurar que la interfaz de red local loopback esté activa para peticiones internas
 ifconfig lo up || ip link set lo up || true
 
@@ -69,57 +60,22 @@ cd /opt/cminewaros || cd /opt/clawos || true
 node dist/server.cjs >/tmp/cminewaros_node.log 2>&1 &
 
 # 5. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo
-# Esto asegura que Chromium nunca muestre una página blanca o blanca de error por carga prematura, soportando discos lentos
 for i in $(seq 1 30); do
-  if wget -qO- http://localhost:3000/api/health &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
+  if wget -qO- http://localhost:3000/api/cminewar/system-status &>/dev/null || wget -qO- http://localhost:3000 &>/dev/null || curl -s http://localhost:3000 &>/dev/null || nc -z localhost 3000 &>/dev/null; then
     break
   fi
   sleep 1
 done
 
-# 6. Detectar si el binario del navegador disponible en el sistema Debian/Alpine
-if command -v chromium &>/dev/null; then
-  CHROME_BIN="chromium"
-elif command -v chromium-browser &>/dev/null; then
-  CHROME_BIN="chromium-browser"
-elif command -v google-chrome &>/dev/null; then
-  CHROME_BIN="google-chrome"
-elif command -v x-www-browser &>/dev/null; then
-  CHROME_BIN="x-www-browser"
+# 6. Lanzar el terminal maximizado con el orquestador Omarchy tmux
+if command -v lxterminal &>/dev/null; then
+  lxterminal -f --geometry=125x42 -e "cminewar-omarchy-dashboard" &
+elif command -v xterm &>/dev/null; then
+  xterm -maximized -fullscreen -bg black -fg cyan -fa "monospace" -fs 11 -e "cminewar-omarchy-dashboard" &
 else
-  CHROME_BIN="chromium"
+  # Lanzar consola interactiva sin servidor X directo si falla x11
+  cminewar-omarchy-dashboard &
 fi
-
-# 7. Iniciar navegador Chromium en pantalla completa (modo Kiosco) consumiendo del servidor local Node HTTP
-# Se ejecuta en un bucle infinito de persistencia: si Chromium se cierra accidentalmente (p. ej. Alt+F4) o falla, se auto-levanta al instante.
-# Eliminamos de raíz los problemas CORS, el bloqueo de almacenamiento local y los assets relativos.
-# Añadimos limpieza de SingletonLock y logs integrados en /tmp/cminewaros_kiosk.log para auditar arranque.
-while true; do
-  rm -f /tmp/chromium-kiosk-profile/SingletonLock 2>/dev/null || true
-  rm -f /tmp/chromium-kiosk-profile/Lock 2>/dev/null || true
-  rm -f /tmp/chromium-kiosk-profile/SingletonSocket 2>/dev/null || true
-  rm -f /tmp/chromium-kiosk-profile/SingletonCookie 2>/dev/null || true
-  
-  $CHROME_BIN --kiosk \
-    --no-sandbox \
-    --no-first-run \
-    --simulate-outdated-no-au \
-    --disable-infobars \
-    --window-size=1920,1080 \
-    --window-position=0,0 \
-    --disable-session-crashed-bubble \
-    --disable-translate \
-    --start-maximized \
-    --user-data-dir=/tmp/chromium-kiosk-profile \
-    --password-store=basic \
-    --no-errdialogs \
-    --autoplay-policy=no-user-gesture-required \
-    --disable-dev-shm-usage \
-    --disable-gpu \
-    http://localhost:3000 >>/tmp/cminewaros_kiosk.log 2>&1
-    
-  sleep 1
-done &
 
 EOF
 
