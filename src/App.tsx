@@ -15,6 +15,7 @@ import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
 import AndroidGateway from "./components/AndroidGateway";
 import Bootloader from "./components/Bootloader";
+import OmarchyTui from "./components/OmarchyTui";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import {
   Terminal as TerminalIcon,
@@ -770,6 +771,19 @@ export default function App() {
         onComplete={() => {
           setBootLifecycle("ready");
           triggerNotification("Colección de dependencias y Kernel listos. ¡Bienvenido a CMineWar OS!", "success");
+        }}
+      />
+    );
+  }
+
+  const currentBootMode = typeof window !== "undefined" ? localStorage.getItem("cminewar_boot_mode") || "kiosk" : "kiosk";
+  if (bootLifecycle === "ready" && currentBootMode === "omarchy") {
+    return (
+      <OmarchyTui
+        connectedServerIp={connectedServerIp}
+        onReboot={() => {
+          localStorage.removeItem("cminewar_boot_mode");
+          setBootLifecycle("bootloader");
         }}
       />
     );
