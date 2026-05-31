@@ -358,9 +358,9 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         addLine("  1                  | systemd              | 0.0   | 0.1   | S (sleep)", "output");
         addLine("  42                 | openclaw-kernel-core | 1.8   | 8.4   | R (running)", "success");
         addLine("  50                 | clawbash-shell       | 0.2   | 1.2   | R (running)", "output");
-        addLine("  120                | xorg-server          | 0.5   | 4.6   | S (sleep)", "output");
+        addLine("  120                | agetty-tty1          | 0.1   | 0.2   | S (sleep)", "output");
         addLine("  204                | code-editor-daemon   | 0.0   | 2.1   | S (sleep)", "output");
-        addLine("  301                | claw-desktop-env     | 1.2   | 5.8   | R (running)", "output");
+        addLine("  301                | tmux-server          | 1.2   | 1.4   | R (running)", "output");
         break;
 
       case "pwd":

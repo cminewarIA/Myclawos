@@ -14,9 +14,9 @@ export function PkgHtop() {
     { pid: 1, user: "root", pri: 20, ni: 0, virt: "14M", res: "2304", cpu: 0.0, mem: 0.1, time: "0:02.15", command: "/sbin/init splash" },
     { pid: 42, user: "root", pri: 20, ni: 0, virt: "582M", res: "420M", cpu: 4.5, mem: 2.5, time: "4:12.35", command: "/usr/bin/cminewar-kernel-core" },
     { pid: 50, user: "user", pri: 20, ni: 0, virt: "45M", res: "22M", cpu: 0.2, mem: 0.1, time: "0:01.44", command: "cminewarbash-shell" },
-    { pid: 120, user: "root", pri: 20, ni: 0, virt: "220M", res: "180M", cpu: 1.2, mem: 1.1, time: "1:22.05", command: "/usr/bin/Xorg :0" },
+    { pid: 120, user: "root", pri: 20, ni: 0, virt: "12M", res: "4096", cpu: 0.1, mem: 0.1, time: "1:02.05", command: "/sbin/agetty -o -p -- \\u --noclear tty1" },
     { pid: 210, user: "root", pri: 20, ni: 0, virt: "105M", res: "85M", cpu: 2.1, mem: 0.5, time: "2:05.11", command: "network-analyzer-daemon" },
-    { pid: 301, user: "user", pri: 20, ni: 0, virt: "380M", res: "250M", cpu: 1.8, mem: 1.5, time: "3:44.20", command: "cminewar-desktop-env" },
+    { pid: 301, user: "user", pri: 20, ni: 0, virt: "80M", res: "12M", cpu: 1.8, mem: 0.2, time: "3:44.20", command: "tmux -f /root/.tmux.conf" },
     { pid: 405, user: "user", pri: 20, ni: 0, virt: "410M", res: "310M", cpu: 5.6, mem: 1.8, time: "0:55.30", command: "google-gemini-channel" },
     { pid: 812, user: "user", ni: 0, pri: 20, virt: "15M", res: "6M", cpu: 15.0, mem: 0.1, time: "0:01.02", command: "htop" }
   ]);

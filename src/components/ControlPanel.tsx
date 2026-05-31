@@ -83,9 +83,9 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
     { pid: 42, name: "openclaw-kernel-core", cpu: 3.5, ram: 420, status: "running" },
     { pid: 50, name: "clawbash-shell", cpu: 0.1, ram: 22, status: "running" },
-    { pid: 120, name: "xorg-server", cpu: 1.2, ram: 180, status: "sleeping" },
+    { pid: 120, name: "agetty-tty1", cpu: 0.1, ram: 10, status: "sleeping" },
     { pid: 210, name: "network-analyzer-daemon", cpu: 2.1, ram: 85, status: "running" },
-    { pid: 301, name: "claw-desktop-env", cpu: 1.8, ram: 250, status: "running" },
+    { pid: 301, name: "tmux-server", cpu: 1.8, ram: 45, status: "running" },
     { pid: 405, name: "google-gemini-channel", cpu: 0, ram: 310, status: "running" },
   ]);
 
@@ -126,9 +126,9 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
       { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
       { pid: 42, name: "openclaw-kernel-core", cpu: 3.5, ram: 420, status: "running" },
       { pid: 50, name: "clawbash-shell", cpu: 0.1, ram: 22, status: "running" },
-      { pid: 120, name: "xorg-server", cpu: 1.2, ram: 180, status: "sleeping" },
+      { pid: 120, name: "agetty-tty1", cpu: 0.1, ram: 10, status: "sleeping" },
       { pid: 210, name: "network-analyzer-daemon", cpu: 2.1, ram: 85, status: "running" },
-      { pid: 301, name: "claw-desktop-env", cpu: 1.8, ram: 250, status: "running" },
+      { pid: 301, name: "tmux-server", cpu: 1.8, ram: 45, status: "running" },
       { pid: 405, name: "google-gemini-channel", cpu: 0, ram: 310, status: "running" },
     ]);
   };

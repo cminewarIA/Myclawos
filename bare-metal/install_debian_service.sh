@@ -121,8 +121,8 @@ cat << 'AICLI' > /usr/local/bin/cminewar-ai-cli
 clear
 echo -e "\033[1;35m"
 echo "  ┌────────────────────────────────────────────────────────┐"
-204:   echo "  │        🛸 ANTIGRAVITY AGENT CONTAINER CLI v2.4 🛸      │"
-205:   echo "  └────────────────────────────────────────────────────────┘"
+echo "  │        🛸 ANTIGRAVITY AGENT CONTAINER CLI v2.4 🛸      │"
+echo "  └────────────────────────────────────────────────────────┘"
 echo -e "\033[0m"
 
 echo -e "\033[1;33m[⚙] Inicializando subsistemas lógicos de Antigravity...\033[0m"
@@ -398,37 +398,46 @@ DASHBOARD
 chmod +x /usr/local/bin/cminewar-omarchy-dashboard
 
 
-# Crear el servicio de systemd para el Dashboard interactivo de Omarchy en TTY1 (reemplaza Openbox de forma limpia)
-echo "[+] Creando servicio systemd para Omarchy TUI en tty1 (Consola Pura sin Openbox)..."
+# Desinstalar por completo servidores gráficos y gestores de ventanas para obligar arranque en consola pura
+echo "[+] Desinstalando por completo Openbox, LightDM, Slim, GDM, SDDM, NoDM, Xorg y servidores gráficos..."
+apt-get purge -y openbox lightdm gdm gdm3 sddm nodm slim xdm lxdm xserver-xorg xorg || true
+apt-get autoremove -y || true
 
-cat << 'EOF' > /etc/systemd/system/omarchy-tui.service
-[Unit]
-Description=CMineWar OS - Omarchy TUI Dashboard on TTY1 (Consola Pura)
-After=cminewar.service
-Conflicts=getty@tty1.service
-
+# Configurar el auto-login de root en la Consola TTY1 para albergar la Suite Omarchy de consola nativa
+echo "[+] Configurando auto-login para el usuario root en tty1 de forma limpia..."
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat << 'EOF' > /etc/systemd/system/getty@tty1.service.d/override.conf
 [Service]
-Type=simple
-ExecStartPre=/bin/sh -c 'while ! curl -s http://localhost:3000/api/cminewar/system-status; do sleep 1; done'
-ExecStart=/usr/local/bin/cminewar-omarchy-dashboard
-StandardInput=tty
-StandardOutput=tty
-TTYPath=/dev/tty1
-TTYReset=yes
-Restart=always
-RestartSec=2
-WorkingDirectory=/root
-Environment=TERM=xterm-256color
+ExecStart=
+ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
+EOF
 
-[Install]
-WantedBy=multi-user.target
+# Deshabilitar y limpiar el antiguo servicio omarchy-tui de systemd si existiese
+systemctl disable omarchy-tui.service 2>/dev/null || true
+rm -f /etc/systemd/system/omarchy-tui.service 2>/dev/null || true
+
+# Inyectar el cargador automático de la Suite Omarchy en el Perfil de root (.profile)
+echo "[+] Inyectando disparador automático de la Suite Omarchy en /root/.profile..."
+sed -i '/cminewar-omarchy-dashboard/d' /root/.profile 2>/dev/null || true
+sed -i '/Auto-arranque de la Suite/d' /root/.profile 2>/dev/null || true
+
+cat << 'EOF' >> /root/.profile
+
+# Auto-arranque de la Suite de Consola Interactiva Omarchy de CMineWar OS
+if [ "$(tty)" = "/dev/tty1" ]; then
+    # Esperar de forma activa a que el servidor Express local responda en el puerto 3000
+    while ! curl -s http://localhost:3000/api/cminewar/system-status &>/dev/null; do
+        sleep 0.5
+    done
+    exec cminewar-omarchy-dashboard
+fi
 EOF
 
 systemctl daemon-reload
-systemctl enable omarchy-tui.service || true
-systemctl restart omarchy-tui.service || true
+systemctl enable getty@tty1.service || true
+systemctl restart getty@tty1.service || true
 
-echo "[✔] Servicio 'omarchy-tui.service' habilitado y configurado en tty1 para arranque de consola directo sin entorno gráfico."
+echo "[✔] Sistema configurado con éxito para arranque automático de la Suite Omarchy en consola pura sobre tty1."
 
 # 6. Escribir el Gestor de Cortafuegos Físico de Debian (Anti-WAN)
 echo "[+] Desplegando script de control del cortafuegos de internet en /usr/local/bin/cminewar-firewall..."
