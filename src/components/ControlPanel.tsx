@@ -81,8 +81,8 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   // Processes state
   const [processes, setProcesses] = useState([
     { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
-    { pid: 42, name: "openclaw-kernel-core", cpu: 3.5, ram: 420, status: "running" },
-    { pid: 50, name: "clawbash-shell", cpu: 0.1, ram: 22, status: "running" },
+    { pid: 42, name: "antigravity-kernel-core", cpu: 3.5, ram: 420, status: "running" },
+    { pid: 50, name: "antigravitybash-shell", cpu: 0.1, ram: 22, status: "running" },
     { pid: 120, name: "agetty-tty1", cpu: 0.1, ram: 10, status: "sleeping" },
     { pid: 210, name: "network-analyzer-daemon", cpu: 2.1, ram: 85, status: "running" },
     { pid: 301, name: "tmux-server", cpu: 1.8, ram: 45, status: "running" },
@@ -99,9 +99,9 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     }
     const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
     const initialServices = [
-      { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+      { id: "openclaw-cog", name: "CMineWar OS Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
       { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
-      { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+      { id: "net-analyzer", name: "CMineWarNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
       { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
       { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
     ];
@@ -124,8 +124,8 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   const handleResetProcesses = () => {
     setProcesses([
       { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
-      { pid: 42, name: "openclaw-kernel-core", cpu: 3.5, ram: 420, status: "running" },
-      { pid: 50, name: "clawbash-shell", cpu: 0.1, ram: 22, status: "running" },
+      { pid: 42, name: "antigravity-kernel-core", cpu: 3.5, ram: 420, status: "running" },
+      { pid: 50, name: "antigravitybash-shell", cpu: 0.1, ram: 22, status: "running" },
       { pid: 120, name: "agetty-tty1", cpu: 0.1, ram: 10, status: "sleeping" },
       { pid: 210, name: "network-analyzer-daemon", cpu: 2.1, ram: 85, status: "running" },
       { pid: 301, name: "tmux-server", cpu: 1.8, ram: 45, status: "running" },
@@ -389,7 +389,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                   <Activity size={16} className="text-emerald-400" />
                   <span>Ancho de Banda de Clonación Virtual (network_analyzer)</span>
                 </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">Diagnóstico y gráfico de tráfico saliente/entrante del emulador ClawOS.</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Diagnóstico y gráfico de tráfico saliente/entrante del emulador CMineWar OS.</p>
               </div>
               <span className="text-[9px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full select-none">
                 Muestreo: 1s
@@ -495,7 +495,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                   <span className="text-emerald-400 text-[10px]">TCP (v4)</span>
                   <span>127.0.0.1:3000</span>
                   <span>0.0.0.0:* (Listen)</span>
-                  <span className="text-emerald-400 text-right text-[11px] font-semibold">OpenClaw Server</span>
+                  <span className="text-emerald-400 text-right text-[11px] font-semibold">CMineWar OS Server</span>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 text-slate-350 py-1.5 border-b border-slate-900/40">
@@ -511,7 +511,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                   <span className="text-violet-400 text-[10px]">UDP</span>
                   <span>localhost:5353</span>
                   <span>*:*</span>
-                  <span className="text-slate-500 text-right text-[11px]">mdns (ClawFinder)</span>
+                  <span className="text-slate-500 text-right text-[11px]">mdns (CMineWarFinder)</span>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 text-slate-350 py-1.5">
@@ -611,7 +611,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                   <Database size={16} className="text-cyan-400" />
                   <span>Configuración de RAM del Kernel & Monitor de Procesos</span>
                 </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">Analizador pormenorizado en tiempo real de hilos y consumos asignados por ClawOS.</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Analizador pormenorizado en tiempo real de hilos y consumos asignados por CMineWar OS.</p>
               </div>
               <button
                 onClick={handleResetProcesses}
@@ -661,7 +661,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 font-sans flex items-center space-x-1.5 select-none shrink-0 border-b border-slate-900 pb-2">
                 <Cpu size={14} className="text-violet-400 animate-spin" style={{ animationDuration: '6s' }} />
-                <span>Interactuar con Procesos (Clawbash CLI & Kernel-Core-Mapp)</span>
+                <span>Interactuar con Procesos (CMineWarBash CLI & Kernel-Core-Mapp)</span>
               </h4>
 
               <div className="space-y-1.5 text-xs font-mono">
@@ -717,7 +717,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                 <Sliders size={16} className="text-violet-400" />
                 <span>Gestión de Demonios del Sistema (Daemons manager)</span>
               </h3>
-              <p className="text-[10px] text-slate-500 mt-0.5">Permite suspender servicios simulados de ClawOS para liberar memoria RAM y ajustar perfiles.</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Permite suspender servicios simulados de CMineWar OS para liberar memoria RAM y ajustar perfiles.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

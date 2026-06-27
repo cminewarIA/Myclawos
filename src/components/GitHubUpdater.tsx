@@ -205,7 +205,7 @@ export default function GitHubUpdater({
   });
   const [gitRepo, setGitRepo] = useState(() => {
     const saved = localStorage.getItem("cminewar_git_repo");
-    return (saved && saved !== "cminewaros-core" && saved !== "Myclawos") ? saved : "MyCMineWarOS";
+    return (saved && saved !== "cminewaros-core" && saved !== "MyCMineWarOS") ? saved : "MyCMineWarOS";
   });
   const [gitBranch, setGitBranch] = useState(() => localStorage.getItem("cminewar_git_branch") || "main");
   const [gitPat, setGitPat] = useState(() => localStorage.getItem("cminewar_git_pat") || "");
@@ -252,63 +252,6 @@ export default function GitHubUpdater({
   const [apkCompileLogs, setApkCompileLogs] = useState<string[]>([]);
   const [apkDownloadUrl, setApkDownloadUrl] = useState<string | null>(null);
   const apkLogsEndRef = useRef<HTMLDivElement>(null);
-
-  // Google OAuth Profile State for secure developer signature
-  const [googleProfile, setGoogleProfile] = useState<{
-    name: string;
-    email: string;
-    picture: string;
-    sub: string;
-  } | null>(() => {
-    const saved = localStorage.getItem("cminewar_google_profile");
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  useEffect(() => {
-    if (googleProfile) {
-      localStorage.setItem("cminewar_google_profile", JSON.stringify(googleProfile));
-    } else {
-      localStorage.removeItem("cminewar_google_profile");
-    }
-  }, [googleProfile]);
-
-  // OAuth postMessage event listener from popup
-  useEffect(() => {
-    const handleOAuthMessage = (event: MessageEvent) => {
-      if (event.data?.type === "GOOGLE_OAUTH_SUCCESS" && event.data?.profile) {
-        setGoogleProfile(event.data.profile);
-        triggerNotification(`Identidad vinculada con éxito. Google Signer listo: ${event.data.profile.email}`, "success");
-      }
-    };
-    window.addEventListener("message", handleOAuthMessage);
-    return () => window.removeEventListener("message", handleOAuthMessage);
-  }, [triggerNotification]);
-
-  const handleGoogleSignIn = async () => {
-    try {
-      const origin = encodeURIComponent(window.location.origin);
-      const res = await fetch(`/api/auth/google/url?origin=${origin}`);
-      if (!res.ok) throw new Error("Fallo al obtener URL de Google Auth.");
-      const { url } = await res.json();
-      
-      const width = 600;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-      
-      const authWindow = window.open(
-        url,
-        "google_oauth_popup",
-        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
-      );
-      if (!authWindow) {
-        triggerNotification("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes.", "info");
-      }
-    } catch (err: any) {
-      console.error(err);
-      triggerNotification(`Error de conexión con el proveedor Google OAuth: ${err.message}`, "info");
-    }
-  };
 
   const [updating, setUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
@@ -475,7 +418,7 @@ export default function GitHubUpdater({
       `Desempaquetando archivos del programa en el sistema raíz virtual...`,
       `Configurando binarios de lanzamiento udev e interfaces compartidas...`,
       `Instalando lanzador gráfico de escritorio en: /usr/share/applications/${packageId}.desktop`,
-      `Registrando metadatos en el Cajón de Aplicaciones de Synology DSM...`,
+      `Registrando metadatos en el Cajón de Aplicaciones de CMineWar OS...`,
       `Reiniciando descriptores de la barra de tareas e indexando binarios...`,
       `¡Paquete '${packageId}' instalado y listo para arrancar en el escritorio!`
     ];
@@ -562,27 +505,15 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
     setApkCompileProgress(0);
     setApkDownloadUrl(null);
     
-    // Set custom logs based on Google identity state
+    // Set custom logs
     const baseLogs = [
-      `$ sudo cminewar-android-compiler --package=${apkPackageName} --version=${apkVersion}` + (googleProfile ? ` --google-signer=${googleProfile.email}` : ""),
+      `$ sudo cminewar-android-compiler --package=${apkPackageName} --version=${apkVersion}`,
       `[INIT] Cargando el entorno de compilación Android SDK (Java Direct VM)...`,
       `[INIT] Encontrado JDK v17.0.8 (Eclipse Temurin) en /usr/lib/jvm/java-17-openjdk`,
       `[INIT] Directorio del compilador gradle: /opt/gradle/gradle-8.4/bin/gradle`,
-      `[PREPARE] Creando estructura del proyecto native-android en /tmp/cminewar-apk-build/`
+      `[PREPARE] Creando estructura del proyecto native-android en /tmp/cminewar-apk-build/`,
+      `[KEYSTORE] Utilizando firma genérica "CMineWar OS Default Developer MD5"...`
     ];
-
-    if (googleProfile) {
-      baseLogs.push(
-        `[KEYSTORE] Autenticación de firma con Google Cloud exitosa.`,
-        `[KEYSTORE] Generando almacén de claves seguro PKCS12 mediante perfil federado:`,
-        `[KEYSTORE] DN: CN=${googleProfile.name}, OU=Google Developer Client, O=CMineWar Mobile, C=ES`,
-        `[KEYSTORE] Clave de firma encriptada con Google Token ID sub:${googleProfile.sub.substring(0, 10)}...`
-      );
-    } else {
-      baseLogs.push(
-        `[KEYSTORE] Sin credenciales Google vinculadas. Utilizando firma genérica "CMineWar OS Default Developer MD5"...`
-      );
-    }
 
     setApkCompileLogs(baseLogs);
 
@@ -598,19 +529,15 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
       `[GRADLE] > :app:preBuild UP-TO-DATE`,
       `[GRADLE] > :app:preReleaseBuild`,
       `[GRADLE] > :app:compileReleaseJavaWithJavac (Compilando 24 clases Java/Kotlin nativas)...`,
-      `[GRADLE] > :app:mergeReleaseAssets (Compilando interfaces de Synology DSM en WebView)`,
+      `[GRADLE] > :app:mergeReleaseAssets (Compilando interfaces de CMineWar OS en WebView)`,
       `[GRADLE] > :app:processReleaseResources (Vinculando assets de sonido, logo y pantalla de carga)`,
       `[GRADLE] > :app:dexBuilderRelease (Dividiendo y optimizando archivos .class a Dalvik Executable .dex)`,
-      googleProfile 
-        ? `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store certificado de Google Creator ${googleProfile.name})...`
-        : `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store genérico local de CMineWar)...`,
-      googleProfile
-        ? `[SIGNING] Firma dual v2 + v3 aplicada con credenciales certificadas por Google Cloud (zipalign 4-byte boundaries OK)...`
-        : `[SIGNING] Aplicando firmas estándar v2 y v3 (zipalign 4-byte boundary OK)...`,
+      `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store genérico local de CMineWar)...`,
+      `[SIGNING] Aplicando firmas estándar v2 y v3 (zipalign 4-byte boundary OK)...`,
       `[COMPILATION SUCCESS] ¡Archivo APK compilado con éxito!`,
       `[INFO] Nombre: cminewar_os_mobile_${apkVersion}.apk`,
       `[INFO] Peso: 11.8 MB`,
-      `[INFO] Estado: ` + (googleProfile ? `Firmado y Verificado Seguro con Google Developer ID` : `Firmado con Keystore genérico local`)
+      `[INFO] Estado: Firmado con Keystore genérico local`
     ];
 
     let currentStep = 0;
@@ -637,7 +564,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
           apkBytes[2] = 0x03; // Local file header signature
           apkBytes[3] = 0x04;
           
-          const headerInfo = `CMineWar OS Mobile Companion APK\nPackage: ${apkPackageName}\nVersion: ${apkVersion}\nUrl: ${window.location.origin}\nSigner: ${googleProfile ? googleProfile.email : "Generic_Keystore"}\nGenerated inside CMineWar-NAS System Settings. Use this package to run CMineWar in fullscreen mode with native sensor locks.`;
+          const headerInfo = `CMineWar OS Mobile Companion APK\nPackage: ${apkPackageName}\nVersion: ${apkVersion}\nUrl: ${window.location.origin}\nSigner: Generic_Keystore\nGenerated inside CMineWar-NAS System Settings. Use this package to run CMineWar in fullscreen mode with native sensor locks.`;
           for (let i = 0; i < headerInfo.length; i++) {
             apkBytes[30 + i] = headerInfo.charCodeAt(i);
           }
@@ -1528,7 +1455,7 @@ echo "========================================================================="
             </div>
           ) : (
             <div className="p-6 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
-              Bluetooth está desactivado en ClawOS. Actívalo en el switch superior para buscar periféricos.
+              Bluetooth está desactivado en CMineWar OS. Actívalo en el switch superior para buscar periféricos.
             </div>
           )}
         </div>
@@ -1764,7 +1691,7 @@ echo "========================================================================="
                         : "bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850"
                     }`}
                   >
-                    <span>{res === "auto" ? "Auto-Ajustable DSM" : res}</span>
+                    <span>{res === "auto" ? "Auto-Ajustable CMineWar OS" : res}</span>
                     <span className="text-[9px] text-slate-500">{res.includes("1080x1920") || res.includes("720x1280") ? "Vertical" : "Horizontal"}</span>
                   </button>
                 ))}
@@ -1808,7 +1735,7 @@ echo "========================================================================="
                     <span className="text-pink-400 font-bold uppercase">{actualOrientation}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Escalado Vertical DSM:</span>
+                    <span className="text-slate-500">Escalado Vertical CMineWar OS:</span>
                     <span className="text-slate-350">{actualOrientation === "portrait" ? "AJUSTADO (9:16)" : "Sintonizado (16:9)"}</span>
                   </div>
                 </div>
@@ -1860,7 +1787,7 @@ echo "========================================================================="
                 </div>
 
                 <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
-                  CMineWar OS está programado con estructuras fluidas y modulares para emular con precisión el entorno Synology DSM. Al compilar la APK, la aplicación se ajustará de forma automática al detectar el cambio de proporciones en el dispositivo. 
+                  CMineWar OS está programado con estructuras fluidas y modulares para emular con precisión el entorno CMineWar OS. Al compilar la APK, la aplicación se ajustará de forma automática al detectar el cambio de proporciones en el dispositivo. 
                 </p>
 
                 {/* Configuration Inputs */}
@@ -1900,69 +1827,6 @@ echo "========================================================================="
                     <span>Auto-Actualización OTA:</span>
                     <span className="text-pink-400 font-bold">AUTOMÁTICA (ACTIVE_LIVE)</span>
                   </div>
-                </div>
-
-                {/* Google Secure Signature Integration Cards */}
-                <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850 space-y-2 font-sans text-left">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-300 flex items-center space-x-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                      <span>Firma Segura APK con Google</span>
-                    </span>
-                    {googleProfile ? (
-                      <span className="text-[8.5px] uppercase font-mono font-black text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.2 rounded">
-                        CONECTADO
-                      </span>
-                    ) : (
-                      <span className="text-[8.5px] uppercase font-mono font-black text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded">
-                        SIN CONFIGURAR
-                      </span>
-                    )}
-                  </div>
-
-                  {googleProfile ? (
-                    <div className="flex items-center space-x-2.5 bg-slate-950/60 p-2 rounded border border-slate-800/40">
-                      <img 
-                        src={googleProfile.picture} 
-                        alt="Google avatar" 
-                        className="w-7 h-7 rounded-full border border-emerald-500/20 shadow-md"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10.5px] font-bold text-slate-200 truncate">{googleProfile.name}</p>
-                        <p className="text-[9px] text-slate-400 font-mono truncate">{googleProfile.email}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setGoogleProfile(null);
-                          triggerNotification("Identidad de Google desvinculada.", "info");
-                        }}
-                        className="text-[9px] text-rose-400 hover:text-rose-300 hover:underline font-mono"
-                      >
-                        Desvincular
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <p className="text-[9.5px] text-slate-400 leading-normal">
-                        Vincule sus credenciales de Google para firmar la APK con su firma de desarrollador auténtica. Esto garantiza que la APK sea reconocida como segura.
-                      </p>
-                      <button
-                        onClick={handleGoogleSignIn}
-                        className="w-full flex items-center justify-center space-x-1.5 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white text-[10px] font-semibold rounded-md transition"
-                      >
-                        <span className="flex space-x-0.5 text-[10px] font-extrabold mr-1">
-                          <span className="text-blue-400">G</span>
-                          <span className="text-red-400">o</span>
-                          <span className="text-yellow-400">o</span>
-                          <span className="text-blue-400">g</span>
-                          <span className="text-green-400">l</span>
-                          <span className="text-red-400">e</span>
-                        </span>
-                        <span>Vincular Cuenta de Google</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* Compilation Visualizer or triggers */}
@@ -2046,7 +1910,7 @@ echo "========================================================================="
               </div>
 
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
-                <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico DSM Móvil:</span>
+                <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico CMineWar OS Móvil:</span>
                 <p className="text-[10px]">
                   Al abrir la URL de desarrollo de AI Studio en tu Navegador Web móvil (Chrome/Safari), el sistema detectará al instante si giras la pantalla de tu móvil para adecuar los widgets, barras y el lanzador al vuelo.
                 </p>
@@ -2323,7 +2187,7 @@ echo "========================================================================="
           <div className="border-b border-slate-800 pb-3">
             <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
               <LayoutGrid size={14} className="text-emerald-400" />
-              <span>Centro de Paquetes de Linux y Cajón de Apps DSM</span>
+              <span>Centro de Paquetes de Linux y Cajón de Apps CMineWar OS</span>
             </h4>
             <p className="text-[10px] text-slate-500 mt-0.5">Instala paquetes de sistema operativos libres en CMineWar OS. Aparecerán al instante en tu Cajón de Aplicaciones del escritorio.</p>
           </div>

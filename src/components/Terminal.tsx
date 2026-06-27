@@ -59,7 +59,7 @@ export default function Terminal({
     } else {
       baseLines.push({
         id: "init-2",
-        text: "Kernel con núcleo de inteligencia central: OpenClaw ONLINE.",
+        text: "Kernel con núcleo de inteligencia central: CMineWar OS Core ONLINE.",
         type: "success",
       });
     }
@@ -73,7 +73,7 @@ export default function Terminal({
   const [inputValue, setInputValue] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("claw_terminal_history");
-    return saved ? JSON.parse(saved) : ["neofetch", "ls", "cd home/user", "help", "openclaw hola", "uname -a"];
+    return saved ? JSON.parse(saved) : ["neofetch", "ls", "cd home/user", "help", "cminewar hola", "uname -a"];
   });
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [themeColor, setThemeColor] = useState<"green" | "amber" | "white">("green");
@@ -137,17 +137,23 @@ export default function Terminal({
     const isRoot = localStorage.getItem("claw_is_root") === "true";
     const promptUser = isRoot ? "root" : "user";
     const promptChar = isRoot ? "#" : "$";
-    const pathPrompt = `${promptUser}@openclaw:${getPathString(currentPath)}${promptChar}`;
+    const pathPrompt = `${promptUser}@cminewar:${getPathString(currentPath)}${promptChar}`;
     addLine(`${pathPrompt} ${trimmed}`, "input");
 
     // Parse command name and arguments
     const parts = trimmed.split(/\s+/);
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1);
+    let cmd = parts[0].toLowerCase();
+    let args = parts.slice(1);
+
+    // Automatical superuser assimilation (strips sudo prefix and executes with root permissions)
+    if (cmd === "sudo" && args.length > 0) {
+      cmd = args[0].toLowerCase();
+      args = args.slice(1);
+    }
 
     switch (cmd) {
       case "help":
-        addLine("Comandos de ClawBash disponibles:", "info");
+        addLine("Comandos de CMineWarBash disponibles:", "info");
         addLine("  ls [dir]          - Listar archivos y directorios virtuales.", "output");
         addLine("  cd [dir]          - Cambiar de directorio (es posible usar '..').", "output");
         addLine("  pwd               - Imprimir la ruta del directorio de trabajo actual.", "output");
@@ -160,7 +166,7 @@ export default function Terminal({
         addLine("  whoami            - Mostrar el usuario con sesión activa.", "output");
         addLine("  uname -a          - Imprimir detalles del firmware y kernel central.", "output");
         addLine("  top               - Mostrar procesos clave ejecutándose en segundo plano.", "output");
-        addLine("  openclaw [msg]    - Enviar directamente una pregunta al núcleo de IA OpenClaw.", "success");
+        addLine("  agy [msg]         - Enviar directamente una pregunta a Antigravity CLI.", "success");
         addLine("  git [cmd]         - Gestionar y refrescar actualizaciones de GitHub.", "success");
         addLine("  download-iso      - Compilar y descargar la imagen ISO oficial (.iso).", "success");
         addLine("  history           - Ver, buscar y re-ejecutar comandos anteriores.", "success");
@@ -171,7 +177,7 @@ export default function Terminal({
 
       case "history":
         setIsHistoryOpen(true);
-        addLine("Abriendo la ventana emergente de historial interactivo de ClawOS...", "success");
+        addLine("Abriendo la ventana emergente de historial interactivo de CMineWar OS...", "success");
         break;
 
       case "clear":
@@ -184,7 +190,7 @@ export default function Terminal({
           const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
           const defaultBrowserChromium = localStorage.getItem("claw_default_browser") === "chromium";
 
-          addLine("Iniciando compilador del firmware ClawOS ISO-9660...", "info");
+          addLine("Iniciando compilador del firmware CMineWar OS ISO-9660...", "info");
           addLine("Sincronizando volumen del sistema de archivos actual (VFS)...", "info");
           addLine("Escribiendo sector de arranque GRUB bootloader con configuraciones locales...", "info");
 
@@ -203,8 +209,8 @@ export default function Terminal({
             const isoDataContent = `========================================================================
 CLAWOS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
 ========================================================================
-Volume Label:  CLAWOS_LIVE_V112
-Publisher:     OpenClaw OS Foundation
+Volume Label:  CMINEWAR_OS_LIVE_V112
+Publisher:     CMineWar OS Foundation
 Architecture:  x86_amd64 / Intel Virtualization Cores
 Build Date:    2026-05-28 21:00 UTC
 Virtual Size:  142.6 MB
@@ -223,21 +229,21 @@ cat << 'GRUB_CONFIG'
 set default="0"
 set timeout=5
 
-menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI Nativas x86)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttyS0 quiet init=/bin/cminewar-omarchy-init ${sleepDisabled ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-omarchy-init ${sleepDisabled ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI x86 Nativas)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttys0 quiet init=/bin/cminewar-kiosk-init ${sleepDisabled ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-kiosk-init ${sleepDisabled ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
-    linux /boot/vmlinuz-cminewar console=ttyS0 single quiet init=/bin/cminewar-recovery-init
-    initrd /boot/initramfs-cminewar-direct.img
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode x86)" {
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 single quiet init=/bin/cminewar-recovery-init
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 GRUB_CONFIG
 
@@ -245,7 +251,7 @@ GRUB_CONFIG
 * RECREATING THE WORKSPACE LOCAL COGNITIVE STRUCTURE (JSON SNAPSHOT) *
 ------------------------------------------------------------------------
 This snapshot matches your current virtual disk environment precisely.
-You can import or paste this VFS dump into ClawOS back-restores:
+You can import or paste this VFS dump into CMineWar OS back-restores:
 
 VFS_SNAPSHOT_BEGIN
 ${vfsJson}
@@ -255,18 +261,18 @@ VFS_SNAPSHOT_END
 * BASH BOOTSTRAP DEPLOYMENT SCRIPT (install.sh) *
 ------------------------------------------------------------------------
 #!/usr/bin/env bash
-# ClawOS Virtual deployment script
-echo "=== CLAWOS DEPLOYMENT INITIALIZER ==="
+# CMineWar OS Virtual deployment script
+echo "=== CMINEWAR OS DEPLOYMENT INITIALIZER ==="
 echo "Montando estructura virtual..."
-mkdir -p /mnt/claw_root
-mount -t ext4 /dev/sda3 /mnt/claw_root
+mkdir -p /mnt/cminewar_root
+mount -t ext4 /dev/sda3 /mnt/cminewar_root
 
 echo "Escribiendo configuraciones del kernel..."
-echo "${isRoot ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/claw_root/etc/clawos/auth.conf
-echo "${sleepDisabled ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/claw_root/etc/systemd/sleep.conf
+echo "${isRoot ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/cminewar_root/etc/cminewar/auth.conf
+echo "${sleepDisabled ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/cminewar_root/etc/systemd/sleep.conf
 
 echo "Iniciando descarga de modulos cognitivos..."
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://cminewar.ai/install.sh | bash
 
 echo "Sincronizando volumen de archivos del usuario..."
 sync
@@ -277,14 +283,14 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `clawos-v1.1.2-live-${isRoot ? "root" : "user"}.iso`;
+            link.download = `cminewar-os-v1.1.2-live-${isRoot ? "root" : "user"}.iso`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
             addLine("[SUCCESS] ¡Proceso de compilación de firmware completado con éxito!", "success");
-            addLine(`[SUCCESS] Se descargó el archivo 'clawos-v1.1.2-live-${isRoot ? "root" : "user"}.iso'.`, "success");
+            addLine(`[SUCCESS] Se descargó el archivo 'cminewar-os-v1.1.2-live-${isRoot ? "root" : "user"}.iso'.`, "success");
           }, 1200);
         }
         break;
@@ -305,7 +311,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           const subGit = args[0]?.toLowerCase();
           if (subGit === "pull" || subGit === "sync") {
             addLine("Conectando con api.github.com mediante túnel seguro...", "info");
-            addLine("Comparando hash local de ClawOS con la rama remota de producción...", "info");
+            addLine("Comparando hash local de CMineWar OS con la rama remota de producción...", "info");
             addLine("Para sincronizar y aplicar la actualización completamente por consola o daemon de automatización:", "success");
             addLine("1. Inicie la aplicación gráfica 'Actualizador de GitHub' en su Escritorio.", "output");
             addLine("2. Configure su repositorio o pulse en 'Actualizar desde GitHub Ahora'.", "output");
@@ -316,7 +322,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             addLine("nada para hacer commit, el árbol de trabajo está limpio.", "output");
           } else if (subGit === "log") {
             addLine("commit a59e81b3f9dc23d8c1920ac349e1e2d93e1b7fcf", "success");
-            addLine("Author: openclaw <admin@openclaw.org>", "output");
+            addLine("Author: cminewar <admin@cminewar.org>", "output");
             addLine("Date:   Thu May 28 19:28:15 2026 -0400", "output");
             addLine("    feat: Añadir módulo de sincronización GitHub auto-actualizable", "info");
           } else {
@@ -327,7 +333,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
 
       case "uname":
         if (args.includes("-a") || args.includes("-r")) {
-          addLine("Linux clawos-kernel 5.16.0-openclaw-generic-quantum #1 SMP PREEMPT Thu May 28 18:43:12 UTC 2026 x86_64 GNU/Linux", "output");
+          addLine("Linux cminewar-kernel 5.16.0-cminewar-generic-quantum #1 SMP PREEMPT Thu May 28 18:43:12 UTC 2026 x86_64 GNU/Linux", "output");
         } else {
           addLine("Linux", "output");
         }
@@ -346,24 +352,24 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "neofetch":
         {
           const isRoot = localStorage.getItem("claw_is_root") === "true";
-          addLine(`       /\\_/\\       ${isRoot ? "root" : "user"}@openclaw.linux.os`, "success");
+          addLine(`       /\\_/\\       ${isRoot ? "root" : "user"}@cminewar.linux.os`, "success");
           addLine(`      ( o.o )      ----------------------------`, "success");
-          addLine(`       > ^ <       OS: OpenClaw Linux v1.1.0`, "success");
-          addLine(`      /     \\      Kernel: 5.16.0-openclaw-${isRoot ? "direct-root" : "generic"}`, "success");
+          addLine(`       > ^ <       OS: CMineWar OS Linux v1.1.0`, "success");
+          addLine(`      /     \\      Kernel: 5.16.0-cminewar-${isRoot ? "direct-root" : "generic"}`, "success");
           addLine(`     |       |     Uptime: 1 hour, 42 mins`, "success");
-          addLine(`    (_______)      Shell: ClawBash 3.2`, "success");
-          addLine(`                   Theme: ClawDE (Modern Dark)`, "success");
+          addLine(`    (_______)      Shell: CMineWarBash 3.2`, "success");
+          addLine(`                   Theme: CMineWarDE (Modern Dark)`, "success");
           addLine(`                   CPU: Cortex Quantum Emulator (4 Cores)`, "success");
           addLine(`                   Memory: 4096MB / 16384MB (32%)`, "success");
-          addLine(`                   OpenClaw AI Engine: ONLINE (Active)`, "success");
+          addLine(`                   CMineWar OS Core AI Engine: ONLINE (Active)`, "success");
         }
         break;
 
       case "top":
         addLine("ID de Proceso (PID)  | NOMBRE               | CPU % | MEM % | ESTADO", "info");
         addLine("  1                  | systemd              | 0.0   | 0.1   | S (sleep)", "output");
-        addLine("  42                 | openclaw-kernel-core | 1.8   | 8.4   | R (running)", "success");
-        addLine("  50                 | clawbash-shell       | 0.2   | 1.2   | R (running)", "output");
+        addLine("  42                 | cminewar-kernel-core | 1.8   | 8.4   | R (running)", "success");
+        addLine("  50                 | cminewarbash-shell   | 0.2   | 1.2   | R (running)", "output");
         addLine("  120                | agetty-tty1          | 0.1   | 0.2   | S (sleep)", "output");
         addLine("  204                | code-editor-daemon   | 0.0   | 2.1   | S (sleep)", "output");
         addLine("  301                | tmux-server          | 1.2   | 1.4   | R (running)", "output");
@@ -391,9 +397,9 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           if (savedServices.length === 0) {
             const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
             savedServices = [
-              { id: "openclaw-cog", name: "OpenClaw Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
+              { id: "openclaw-cog", name: "CMineWar OS Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
               { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
-              { id: "net-analyzer", name: "ClawNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
+              { id: "net-analyzer", name: "CMineWarNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
               { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
               { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
             ];
@@ -548,38 +554,36 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         break;
 
       case "sudo":
-        addLine("Privilegios root solicitados...", "info");
-        setTimeout(() => {
-          addLine("[ALERTA] user is not in the sudoers file. This incident will be reported to OpenClaw Central Core.", "error");
-        }, 300);
+        addLine("[SISTEMA] Ya tienes privilegios de root (superusuario) de forma permanente en CMineWar OS.", "info");
+        addLine("Cualquier cambio se ejecuta de forma directa sin trabas ni restricciones de permisos.", "success");
         break;
 
-      case "openclaw":
+      case "agy":
         const chatPrompt = args.join(" ");
         if (!chatPrompt.trim()) {
-          addLine("Uso: openclaw [un mensaje para el núcleo de inteligencia central]", "error");
-          addLine("Ejemplo: openclaw ¿cómo puedo ordenar carpetas en linux?", "info");
+          addLine("Uso: agy [un mensaje para Antigravity CLI]", "error");
+          addLine("Ejemplo: agy ¿cómo puedo ordenar carpetas en linux?", "info");
           break;
         }
         
-        addLine("Estableciendo túnel cuántico directo con OpenClaw Core...", "info");
+        addLine("Estableciendo enlace de baja latencia con Antigravity CLI...", "info");
         
         try {
-          const response = await fetch("/api/openclaw/chat", {
+          const response = await fetch("/api/cminewar/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: chatPrompt }),
           });
           const data = await response.json();
           
-          addLine("--- Respuesta de OpenClaw Core ---", "success");
+          addLine("--- Antigravity CLI Response (agy) ---", "success");
           addLine(data.text, "success");
-          addLine("----------------------------------", "success");
+          addLine("--------------------------------------", "success");
           
           // Also synch and open the central chat app for convenient interaction
           onPostChatMessageFromShell(chatPrompt);
         } catch (e: any) {
-          addLine(`Error de kernel: Fallo de enlace síncrono. Detalle: ${e.message}`, "error");
+          addLine(`Error de enlace Antigravity CLI: ${e.message}`, "error");
         }
         break;
 
@@ -743,7 +747,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             { label: "neofetch", cmd: "neofetch" },
             { label: "whoami", cmd: "whoami" },
             { label: "uname -a", cmd: "uname -a" },
-            { label: "openclaw", cmd: "openclaw ¿qué servicios están activos?" },
+            { label: "cminewar", cmd: "cminewar ¿qué servicios están activos?" },
             { label: "top", cmd: "top" },
           ].map((btn, i) => (
             <button
@@ -763,7 +767,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       {/* Shell interactive command builder */}
       <div className="flex items-center space-x-1.5 border-t border-slate-900/60 pt-3 mt-4 shrink-0">
         <span className={`${colorClasses.text} font-bold shrink-0`}>
-          {localStorage.getItem("claw_is_root") === "true" ? "root" : "user"}@openclaw:{getPathString(currentPath)}{localStorage.getItem("claw_is_root") === "true" ? "#" : "$"}
+          {localStorage.getItem("claw_is_root") === "true" ? "root" : "user"}@cminewar:{getPathString(currentPath)}{localStorage.getItem("claw_is_root") === "true" ? "#" : "$"}
         </span>
         <div className="flex-1 relative flex items-center">
           <input
@@ -831,7 +835,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         </div>
         <div className="flex items-center space-x-1 text-slate-400 bg-sky-950/40 border border-sky-500/20 px-1.5 py-0.5 rounded">
           <Sparkles size={10} className="text-cyan-400 animate-pulse" />
-          <span>Nucleo OpenClaw Vinculado</span>
+          <span>Núcleo CMineWar OS Vinculado</span>
         </div>
       </div>
 
@@ -846,7 +850,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             <div className={`flex items-center space-x-2 ${colorClasses.text}`}>
               <Clock size={14} className="animate-pulse text-emerald-400" />
               <span className="font-bold tracking-wider uppercase text-[11px] text-slate-100">
-                Historial de Comandos de ClawOS
+                Historial de Comandos de CMineWar OS
               </span>
             </div>
             <button

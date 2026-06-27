@@ -11,7 +11,7 @@ interface BootloaderProps {
 export default function Bootloader({ onComplete, selectedServerIp = null, isSafeModeDefault = false }: BootloaderProps) {
   const [bootProgress, setBootProgress] = useState(0);
   const [bootLogs, setBootLogs] = useState<string[]>([]);
-  const [bootPhase, setBootPhase] = useState<"grub" | "bios" | "safemode" | "finished">("grub");
+  const [bootPhase, setBootPhase] = useState<"grub" | "bios" | "safemode" | "finished">("bios");
   const [safeModePhase, setSafeModePhase] = useState<"menu" | "repairing" | "repair_done">("menu");
   const [repairLogs, setRepairLogs] = useState<string[]>([]);
   const [repairProgress, setRepairProgress] = useState(0);
@@ -340,7 +340,7 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
                 {
                   id: 1,
                   label: "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)",
-                  desc: "Arranque estándar directo a la interfaz completa de DSM y escritorio de componentes.",
+                  desc: "Arranque estándar directo a la interfaz completa de CMineWar OS y escritorio de componentes.",
                   badge: "Kiosco GUI"
                 },
                 {

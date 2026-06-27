@@ -166,21 +166,21 @@ cat << 'GRUB_CONFIG'
 set default="0"
 set timeout=5
 
-menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI Nativas x86)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttyS0 quiet init=/bin/cminewar-omarchy-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-omarchy-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI x86 Nativas)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttys0 quiet init=/bin/cminewar-kiosk-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-kiosk-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
-    linux /boot/vmlinuz-cminewar console=ttyS0 single quiet init=/bin/cminewar-recovery-init
-    initrd /boot/initramfs-cminewar-direct.img
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode x86)" {
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 single quiet init=/bin/cminewar-recovery-init
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 GRUB_CONFIG
 

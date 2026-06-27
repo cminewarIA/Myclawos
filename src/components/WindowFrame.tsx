@@ -106,10 +106,10 @@ export default function WindowFrame({
   const style: React.CSSProperties = win.isMaximized
     ? {
         position: "absolute",
-        top: 0,
+        top: "44px", // top bar height (h-11)
         left: 0,
         right: 0,
-        bottom: "48px", // taskbar height
+        bottom: 0, // no bottom taskbar
         zIndex: win.zIndex,
       }
     : {

@@ -14,6 +14,7 @@ import Chromium from "./components/Chromium";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
 import AndroidGateway from "./components/AndroidGateway";
+import UbuntuGateway from "./components/UbuntuGateway";
 import Bootloader from "./components/Bootloader";
 import OmarchyTui from "./components/OmarchyTui";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
@@ -54,6 +55,17 @@ export default function App() {
   const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">("gateway");
 
   const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
+
+  // Gateway Platform selection: "android" (Mobile Shell Launcher) or "ubuntu" (Ubuntu Desktop Client)
+  const [gatewayPlatform, setGatewayPlatform] = useState<"android" | "ubuntu">(() => {
+    if (typeof window !== "undefined") {
+      const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+      const isTouchPoints = navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth < 1024;
+      return (isCoarse || isTouchPoints || isSmallScreen) ? "android" : "ubuntu";
+    }
+    return "ubuntu";
+  });
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -189,12 +201,14 @@ export default function App() {
     };
   }, []);
 
+  // Force claw_is_root to true permanently to prevent any permission hurdles
+  if (typeof window !== "undefined") {
+    localStorage.setItem("claw_is_root", "true");
+  }
+
   // Virtual File System State
   const [vfs, setVfs] = useState<VFSNode>(initialVFS);
-  const [currentPath, setCurrentPath] = useState<string[]>(() => {
-    const isRoot = localStorage.getItem("claw_is_root") === "true";
-    return isRoot ? ["root"] : ["home", "user"];
-  });
+  const [currentPath, setCurrentPath] = useState<string[]>(["root"]);
 
   // List of active system services for dynamic bg-molding
   const [services, setServices] = useState<any[]>(() => {
@@ -244,7 +258,7 @@ export default function App() {
     {
       id: "claw-welcome",
       role: "model",
-      text: "¡Sistemas listos! Hola, soy **CMineWar AI**, el núcleo cognitivo virtual de este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el sistema CMineWar OS u operabilidad de de comandos Linux en Debian.",
+      text: "¡Sistemas listos! Hola, soy **Antigravity CLI** (mando `agy`), el módulo cognitivo central de CMineWar OS. Puedo interactuar con tus comandos de terminal o guiarte de forma directa a través de esta terminal interactiva. Escribe tus dudas sobre el entorno de desarrollo o los comandos de Linux en Debian y las ejecutaré sin ninguna traba de permisos.",
       timestamp: new Date(),
     },
   ]);
@@ -700,7 +714,7 @@ export default function App() {
       case "terminal":
         return "CMineWarBash Terminal";
       case "openclaw_core":
-        return "CMineWar AI Core";
+        return "Antigravity CLI (agy)";
       case "file_manager":
         return "Explorador de Archivos (CMineWarFM)";
       case "text_editor":
@@ -749,17 +763,50 @@ export default function App() {
 
   if (bootLifecycle === "gateway") {
     return (
-      <AndroidGateway
-        onSelectDemo={() => {
-          setBootLifecycle("bootloader");
-          triggerNotification("Iniciando CMineWar OS en modo solitario demo.", "info");
-        }}
-        onSelectServer={(ip) => {
-          setConnectedServerIp(ip);
-          setBootLifecycle("bootloader");
-          triggerNotification(`Cargando instalación nativa desde servidor remoto [${ip}]...`, "info");
-        }}
-      />
+      <div className="relative w-full h-screen">
+        {gatewayPlatform === "ubuntu" ? (
+          <UbuntuGateway
+            onSelectServer={(ip) => {
+              setConnectedServerIp(ip);
+              setBootLifecycle("bootloader");
+              triggerNotification(`Enlazando con nodo local Ubuntu [${ip}]...`, "success");
+            }}
+          />
+        ) : (
+          <AndroidGateway
+            onSelectServer={(ip) => {
+              setConnectedServerIp(ip);
+              setBootLifecycle("bootloader");
+              triggerNotification(`Cargando instalación nativa desde servidor remoto [${ip}]...`, "info");
+            }}
+          />
+        )}
+
+        {/* Elegant Platform Switcher Top Badge */}
+        <div className="fixed top-1.5 sm:top-12 right-1.5 sm:right-6 z-[999999] flex items-center space-x-1 bg-slate-950/90 border border-slate-800/80 px-2 py-0.5 rounded-full shadow-lg backdrop-blur text-[10px] sm:text-[11px] font-sans text-slate-300 select-none">
+          <span className="text-slate-500 mr-1 font-bold pl-1 uppercase tracking-wide text-[9px]">Cliente:</span>
+          <button
+            onClick={() => setGatewayPlatform("android")}
+            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer font-bold uppercase tracking-wider text-[9px] ${
+              gatewayPlatform === "android" 
+                ? "bg-pink-600 text-slate-950 font-black shadow" 
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Android
+          </button>
+          <button
+            onClick={() => setGatewayPlatform("ubuntu")}
+            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer font-bold uppercase tracking-wider text-[9px] ${
+              gatewayPlatform === "ubuntu" 
+                ? "bg-orange-500 text-slate-950 font-black shadow" 
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Ubuntu
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -776,7 +823,7 @@ export default function App() {
     );
   }
 
-  const currentBootMode = typeof window !== "undefined" ? localStorage.getItem("cminewar_boot_mode") || "kiosk" : "kiosk";
+  const currentBootMode = typeof window !== "undefined" ? localStorage.getItem("cminewar_boot_mode") || "omarchy" : "omarchy";
   if (bootLifecycle === "ready" && currentBootMode === "omarchy") {
     return (
       <OmarchyTui
@@ -848,52 +895,139 @@ export default function App() {
         ))}
       </div>
 
-      {/* Synology DSM-style Translucent Top Bar */}
+      {/* CMineWar OS Style Translucent Top Bar */}
       <div 
         className="w-full h-11 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0 select-none z-[99]"
         id="dsm-desktop-top-bar"
       >
-        <div className="flex items-center space-x-3 flex-row">
+        <div className="flex items-center space-x-3 flex-row min-w-0 flex-1 mr-4">
           {/* Main Menu Toggle */}
           <button
             onClick={() => {
-              setAppDrawerOpen(true);
+              setAppDrawerOpen(!appDrawerOpen);
             }}
-            className="flex items-center justify-center p-1.5 bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:bg-slate-850 rounded-lg text-emerald-400 transition cursor-pointer"
-            title="Centro de Aplicaciones DSM"
+            className={`flex items-center justify-center p-1.5 rounded-lg transition-all cursor-pointer ${
+              appDrawerOpen
+                ? "bg-emerald-950 border border-emerald-500/50 text-emerald-300"
+                : "bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:bg-slate-850 text-emerald-400"
+            }`}
+            title="Centro de Aplicaciones CMineWar OS"
             id="dsm-menu-button"
           >
             <LayoutGrid size={15} />
           </button>
+
+          {/* Minimize / Restore All Windows (Show Desktop) */}
+          <button
+            onClick={() => {
+              const hasOpenVisible = windows.some(w => w.isOpen && !w.isMinimized);
+              setWindows(prev => prev.map(w => {
+                if (w.isOpen) {
+                  return { ...w, isMinimized: hasOpenVisible };
+                }
+                return w;
+              }));
+            }}
+            className="flex items-center justify-center p-1.5 bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:bg-slate-850 rounded-lg text-cyan-400 transition cursor-pointer"
+            title="Mostrar Escritorio"
+            id="dsm-desktop-button"
+          >
+            <Laptop size={15} />
+          </button>
           
-          <div className="h-4 w-[1px] bg-slate-800"></div>
+          <div className="h-4 w-[1px] bg-slate-800 shrink-0"></div>
           
-          <span className="font-sans font-bold text-xs tracking-wider text-slate-200">
+          <span className="font-sans font-bold text-xs tracking-wider text-slate-200 shrink-0 hidden md:inline-block">
             {connectedServerIp ? `CMineWar-NAS [${connectedServerIp}]` : "CMineWar-NAS (Demo)"}
           </span>
+
+          <div className="h-4 w-[1px] bg-slate-800 shrink-0 hidden md:inline-block"></div>
+
+          {/* Active Application Representation Tabs inside Top Bar (exactly like CMineWar OS) */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1 max-w-full">
+            {windows.map((win) => {
+              const active = win.isOpen && !win.isMinimized;
+              if (!win.isOpen) return null;
+              
+              return (
+                <button
+                  key={win.id}
+                  onClick={() => {
+                    if (win.isMinimized) {
+                      handleFocusWindow(win.id);
+                    } else {
+                      handleMinimizeWindow(win.id);
+                    }
+                  }}
+                  className={`select-none font-sans font-medium flex items-center transition border px-2.5 py-1 text-[10px] space-x-1.5 rounded-md shrink-0 ${
+                    active
+                      ? "bg-slate-900 text-emerald-400 border-emerald-500/40 font-bold"
+                      : "bg-slate-950/50 hover:bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                  id={`taskbar-tab-${win.id}`}
+                >
+                  {win.id === "terminal" && <TerminalIcon size={11} />}
+                  {win.id === "openclaw_core" && <DragonLogo size={12} />}
+                  {win.id === "file_manager" && <FolderOpen size={11} />}
+                  {win.id === "text_editor" && <FileText size={11} />}
+                  {win.id === "system_monitor" && <Cpu size={11} />}
+                  {win.id === "control_panel" && <Sliders size={11} />}
+                  {win.id === "installer" && <Download size={11} />}
+                  {win.id === "updater_github" && <Settings size={11} className="text-pink-400" />}
+                  {win.id === "chromium" && <Globe size={11} />}
+                  {win.id === "pkg_htop" && <Cpu size={11} className="text-emerald-400" />}
+                  {win.id === "pkg_neofetch" && <Laptop size={11} className="text-emerald-400" />}
+                  {win.id === "pkg_cmatrix" && <TerminalIcon size={11} className="text-emerald-400" />}
+                  {win.id === "pkg_nginx" && <Network size={11} className="text-emerald-400" />}
+                  {win.id === "pkg_retroarch" && <Tv size={11} className="text-emerald-400" />}
+                  <span className="truncate max-w-[85px]">{getFriendlyAppName(win.id).replace(" (CMineWarFM)", "").replace(" (CMineWarEdit)", "").replace(" (CMineWarMonitor)", "")}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Center status label */}
-        <div className="hidden sm:flex items-center space-x-1.5 bg-slate-900/60 border border-slate-800 px-2 py-0.5 rounded text-[9px] font-mono text-slate-400">
+        {/* Center status label - hidden if screen space is needed */}
+        <div className="hidden lg:flex items-center space-x-1.5 bg-slate-900/60 border border-slate-800/80 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-slate-400 mr-4">
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-          <span>SISTEMA SALUDABLE (DSM 7.2)</span>
+          <span>SISTEMA SALUDABLE (CMineWar OS)</span>
         </div>
 
-        {/* Right Info Widgets trigger */}
-        <div className="flex items-center space-x-3">
+        {/* Right Info Widgets trigger and System Tray */}
+        <div className="flex items-center space-x-2 shrink-0">
+          {/* Volume, Network, Battery status tray icons */}
+          <div className="hidden sm:flex items-center space-x-2 text-slate-400 border-r border-slate-800 pr-2">
+            <Volume2 size={13} className="hover:text-slate-200 cursor-pointer" title="Volumen: 80%" />
+            <Battery size={13} className="hover:text-slate-200 cursor-pointer text-emerald-400" title="Batería: 100% cargada" />
+            <Wifi size={13} className="text-emerald-400 cursor-pointer" title="Red: Gigabit Ethernet virtual conectada" />
+          </div>
+
           {/* Toggle Widget Panel Button */}
           <button
             onClick={() => setWidgetsOpen(!widgetsOpen)}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md border text-[9.5px] font-mono font-bold uppercase transition duration-200 cursor-pointer ${
+            className={`flex items-center space-x-1 px-2 py-1 rounded-md border text-[9.5px] font-mono font-bold uppercase transition duration-200 cursor-pointer ${
               widgetsOpen
                 ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                : "bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200"
+                : "bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200"
             }`}
             id="dsm-widgets-toggle"
           >
-            <Activity size={11} className={widgetsOpen ? "animate-pulse text-emerald-405" : "text-slate-500"} />
-            <span>ESTADO NAS</span>
+            <Activity size={10} className={widgetsOpen ? "animate-pulse text-emerald-400" : "text-slate-500"} />
+            <span className="hidden sm:inline">ESTADO NAS</span>
           </button>
+
+          {/* User profile avatar pill */}
+          <div className="hidden sm:flex items-center space-x-1 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded-lg text-[9px] font-mono text-slate-300">
+            <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold font-mono text-[8px]">U</span>
+            <span className="text-slate-450">root</span>
+          </div>
+
+          {/* System Date & Time */}
+          <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-2 py-1 rounded-lg text-[9.5px] font-semibold text-slate-300 font-mono">
+            <span>
+              {systemTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -906,7 +1040,7 @@ export default function App() {
             : "grid grid-flow-row absolute left-6 top-6 gap-6 w-24"
         }`}>
           {[
-            { id: "openclaw_core", name: "CMineWar AI", icon: <DragonLogo size={touchMode ? 25 : 32} />, border: "group-hover:border-rose-500/60" },
+            { id: "openclaw_core", name: "Antigravity CLI", icon: <DragonLogo size={touchMode ? 25 : 32} />, border: "group-hover:border-rose-500/60" },
             { id: "terminal", name: "Terminal", icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" },
             { id: "file_manager", name: "Archivos VFS", icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" },
             { id: "text_editor", name: "Editor Notas", icon: <FileText className={`text-amber-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" },
@@ -964,7 +1098,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Custom Synology DSM-style Desktop Widget Panel */}
+        {/* Custom CMineWar OS style Desktop Widget Panel */}
         {widgetsOpen && (
           <div 
             className={`bg-slate-950/90 border border-slate-800/80 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md rounded-xl p-4 font-sans z-[90] pointer-events-auto transition-all ${
@@ -975,7 +1109,7 @@ export default function App() {
             id="dsm-desktop-widget-panel"
           >
             {touchMode ? (
-              /* DSM Mobile Widget display */
+              /* CMineWar OS Mobile Widget display */
               <div className="w-full flex items-center justify-between gap-4 select-none shrink-0 min-w-[340px]">
                 {/* Health indicator */}
                 <div className="flex items-center space-x-2.5 shrink-0">
@@ -1024,13 +1158,13 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              /* DSM PC Widget card (Full detail widget) */
+              /* CMineWar OS PC Widget card (Full detail widget) */
               <>
                 {/* Health Section */}
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                   <div className="flex items-center space-x-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-200 font-sans">Monitor de Recursos DSM</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-200 font-sans">Monitor de Recursos CMineWar OS</h4>
                   </div>
                   <button 
                     onClick={() => setWidgetsOpen(false)}
@@ -1267,115 +1401,12 @@ export default function App() {
         </div>
       )}
 
-      {/* Decorative desktop greeting in the center */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none select-none opacity-20 animate-pulse" style={{ animationDuration: '8s' }}>
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-widest font-sans bg-clip-text text-transparent bg-gradient-to-b from-slate-200 to-slate-400">
-          CMINEWAR OS
-        </h1>
-        <p className="text-xs sm:text-sm tracking-wide font-mono mt-2 text-emerald-400 uppercase">
-          Debian GNU/Linux Native Engine
-        </p>
-      </div>
+      {/* Decorative desktop greeting in the center removed as per user request */}
 
-      {/* Bottom Taskbar */}
-      <div className={`bg-slate-950/95 border-t border-slate-800/85 px-4 flex items-center justify-between z-[9999] select-none shrink-0 pointer-events-auto transition-all duration-300 ${
-        touchMode ? "h-13 py-1.5" : "h-12"
-      }`}>
-        <div className="flex items-center space-x-3.5">
-          {/* Start button */}
-          <button
-            onClick={() => setStartMenuOpen(!startMenuOpen)}
-            className={`flex items-center space-x-2 rounded-md font-sans border transition-all ${
-              touchMode
-                ? "px-3 py-1.5 text-xs shadow shadow-emerald-500/10 font-bold scale-100"
-                : "px-3 py-1.5 text-xs font-semibold tracking-wide"
-            } ${
-              startMenuOpen
-                ? "bg-emerald-950 border-emerald-500 text-emerald-300"
-                : "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
-            }`}
-            id="btn-start-system"
-          >
-            <Bot size={touchMode ? 14 : 13} className="text-white shrink-0 animate-bounce" style={{ animationDuration: '3s' }} />
-            <span>CMineWar OS</span>
-          </button>
-
-          {/* Quick shortcuts and active application representation tabs */}
-          <div className="hidden md:flex items-center space-x-2 border-l border-slate-800 pl-3">
-            {windows.map((win) => {
-              const active = win.isOpen && !win.isMinimized;
-              
-              return (
-                <button
-                  key={win.id}
-                  onClick={() => {
-                    if (!win.isOpen) {
-                      handleOpenWindow(win.id);
-                    } else if (win.isMinimized) {
-                      handleFocusWindow(win.id);
-                    } else {
-                      handleMinimizeWindow(win.id);
-                    }
-                  }}
-                  className={`select-none font-sans font-medium flex items-center transition border ${
-                    touchMode ? "px-3 py-1.5 text-xs space-x-1.5 rounded" : "px-3 py-1.5 text-xs space-x-1.5 rounded"
-                  } ${
-                    active
-                      ? "bg-slate-900 text-emerald-400 border-slate-800 font-semibold"
-                      : win.isOpen
-                      ? "bg-slate-950 hover:bg-slate-900 border-dashed border-slate-900 text-slate-400"
-                      : "hidden"
-                  }`}
-                  id={`taskbar-tab-${win.id}`}
-                >
-                  {win.id === "terminal" && <TerminalIcon size={12} />}
-                  {win.id === "openclaw_core" && <DragonLogo size={14} />}
-                  {win.id === "file_manager" && <FolderOpen size={12} />}
-                  {win.id === "text_editor" && <FileText size={12} />}
-                  {win.id === "system_monitor" && <Cpu size={12} />}
-                  {win.id === "control_panel" && <Sliders size={12} />}
-                  {win.id === "installer" && <Download size={12} />}
-                  {win.id === "updater_github" && <Settings size={12} className="text-pink-400" />}
-                  {win.id === "chromium" && <Globe size={12} />}
-                  {win.id === "pkg_htop" && <Cpu size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_neofetch" && <Laptop size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_cmatrix" && <TerminalIcon size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_nginx" && <Network size={12} className="text-emerald-400" />}
-                  {win.id === "pkg_retroarch" && <Tv size={12} className="text-emerald-400" />}
-                  <span className="truncate max-w-[110px]">{getFriendlyAppName(win.id)}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* System tray parameters with Tactile Mode indicator toggle */}
-        <div className="flex items-center space-x-4 text-xs text-slate-400">
-
-          {/* Signal and hardware tray indicators */}
-          <div className="hidden sm:flex items-center space-x-3 text-slate-500 border-r border-slate-900 pr-4">
-            <Wifi size={14} className="text-emerald-500" title="Link status: Gigabit Ethernet virtual" />
-            <span className="text-[10px] font-mono select-none text-slate-400">ONLINE</span>
-            <Battery size={14} className="text-slate-400" title="Bateria: 100% conectada" />
-            <Volume2 size={14} className="text-slate-400" />
-          </div>
-
-          {/* System Date Clock */}
-          <div className="flex flex-col items-end justify-center select-none cursor-default font-semibold text-slate-200">
-            <span className="font-mono text-[11px] leading-tight">
-              {systemTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
-            <span className="text-[9px] text-slate-500 leading-tight">
-              {systemTime.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* App Drawer Fullscreen Overlay (Synology DSM Style Main Menu) */}
+      {/* App Drawer Fullscreen Overlay (CMineWar OS Style Main Menu) */}
       {appDrawerOpen && (
         <div 
-          className="absolute inset-x-0 top-0 bottom-12 z-[9999] bg-slate-950/90 backdrop-blur-xl animate-fade-in flex flex-col p-6 overflow-hidden text-sans select-none"
+          className="absolute inset-x-0 top-0 bottom-0 z-[9999] bg-slate-950/90 backdrop-blur-xl animate-fade-in flex flex-col p-6 overflow-hidden text-sans select-none"
           id="cajon-apps-overlay"
         >
           {/* Header filter & Title bar */}
@@ -1383,7 +1414,7 @@ export default function App() {
             <div>
               <h2 className="text-sm font-black text-slate-100 flex items-center space-x-2">
                 <LayoutGrid className="text-emerald-400 w-5 h-5" />
-                <span>Centro del Cajón de Aplicaciones — ClawOS Main Menu</span>
+                <span>Centro del Cajón de Aplicaciones — CMineWar OS Main Menu</span>
               </h2>
               <p className="text-[10px] text-slate-500">Ejecuta herramientas del sistema, complementos inteligentes y paquetes instalados de Linux.</p>
             </div>
@@ -1415,7 +1446,7 @@ export default function App() {
               
               {/* Loop over static and dynamic apps */}
               {[
-                { id: "openclaw_core", name: "CMineWar AI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
+                { id: "openclaw_core", name: "Antigravity CLI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
                 { id: "terminal", name: "Terminal", desc: "Consola CMineWarBash", icon: TerminalIcon, system: true },
                 { id: "file_manager", name: "Archivos VFS", desc: "Explorador de ficheros", icon: FolderOpen, system: true, iconCol: "text-cyan-400" },
                 { id: "text_editor", name: "Editor Notas", desc: "Editor de textos rápido", icon: FileText, system: true, iconCol: "text-amber-400" },

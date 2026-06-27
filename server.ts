@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { exec, execSync } from "child_process";
 import fs from "fs";
@@ -12,31 +11,6 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-
-// Initialize GenAI Lazily
-let ai: GoogleGenAI | null = null;
-function getGenAI(): GoogleGenAI | null {
-  if (!ai) {
-    let key = process.env.GEMINI_API_KEY;
-    // Overwrite or fallback to the provided Google AI Studio API Key requested by user
-    if (!key || key === "MY_GEMINI_API_KEY" || key.trim() === "") {
-      key = "AIzaSyCvb0HQNcISShS5bUC4uNbDOcgZPClAgNE";
-    }
-    try {
-      ai = new GoogleGenAI({
-        apiKey: key,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-    } catch (err) {
-      console.error("Failed to initialize GoogleGenAI:", err);
-    }
-  }
-  return ai;
-}
 
 // Unique runtime instance identifier generated on server startup to track hot rebuilds/reloads
 const SERVER_INSTANCE_ID = Date.now().toString() + "_" + Math.random().toString(36).substring(2, 9);
@@ -104,7 +78,7 @@ app.post("/api/cminewar/install", (req, res) => {
 
   try {
     // Asegurar que el script tenga permisos de ejecución nativos en Linux
-    const scriptPath = path.join(process.cwd(), "bare-metal", "real_install.sh");
+    const scriptPath = path.join(process.cwd(), "bare-metal", "real_install.py");
     if (fs.existsSync(scriptPath)) {
       try {
         fs.chmodSync(scriptPath, "755");
@@ -113,10 +87,10 @@ app.post("/api/cminewar/install", (req, res) => {
       }
     }
 
-    console.log(`[INSTALADOR] Lanzando instalador físico para: /dev/${safeDisk}`);
+    console.log(`[INSTALADOR] Lanzando instalador físico en Python para: /dev/${safeDisk}`);
     
-    // Lanzar el script de fondo y desvincularlo para permitir streaming asíncrono
-    const child = exec(`bash "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    // Lanzar el script en Python de fondo y desvincularlo para permitir streaming asíncrono
+    const child = exec(`python3 "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
     
     res.json({
       status: "started",
@@ -124,7 +98,7 @@ app.post("/api/cminewar/install", (req, res) => {
       message: "Instalación física en segundo plano inicializada."
     });
   } catch (error: any) {
-    console.error("Fallo al lanzar script de instalación físico:", error);
+    console.error("Fallo al lanzar script de instalación físico en Python:", error);
     res.status(500).json({ error: `Fallo al lanzar instalador: ${error.message}` });
   }
 });
@@ -154,192 +128,17 @@ app.get("/api/cminewar/install-status", (req, res) => {
 
 // CMineWar Cognitive Central Core Chat Endpoint
 app.post("/api/cminewar/chat", async (req, res) => {
-  const { message, history } = req.body;
+  const { message } = req.body;
   if (!message) {
     return res.status(400).json({ error: "Message is required." });
   }
 
-  const client = getGenAI();
-
-  if (!client) {
-    // Elegant simulated fallback of CMineWar OS Kernel Core when API key is missing
-    const simulatedResponse = getSimulatedCMineWarOSResponse(message);
-    return res.json({
-      text: simulatedResponse,
-      mode: "simulated"
-    });
-  }
-
-  try {
-    // Format history for the Gemini SDK chat
-    // Convert history format to the format required by SDK if needed,
-    // but the simplest is using ai.models.generateContent with system instruction and concatenated dialogue or a proper config.
-    const systemPrompt = `Eres Antigravity Agent Core, el módulo de inteligencia cognitiva central y clon de la Antigravity CLI para el sistema operativo CMineWar OS.
-Te comunicas en español, con un tono analítico, amigable, inteligente y sumamente capaz. Eres el kernel lúdico de la Antigravity CLI y ayudas al usuario con comandos de Linux (cd, ls, mkdir, etc.), depuración de scripts de Python, realización de búsquedas o simulaciones en su sandbox remoto local.
-Intégrate perfectamente como si fueses el agente de Antigravity en sí. Mantén respuestas concisas, estéticamente bien espaciadas para terminales o interfaces de chat. Usa bloques de código si necesitas dar scripts o comandos de ejemplo.`;
-
-    // Construct contents
-    const contents: any[] = [];
-    if (history && Array.isArray(history)) {
-      history.forEach((h: any) => {
-        contents.push({
-          role: h.role === "user" ? "user" : "model",
-          parts: [{ text: h.text }]
-        });
-      });
-    }
-    contents.push({
-      role: "user",
-      parts: [{ text: message }]
-    });
-
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: contents,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.8,
-      }
-    });
-
-    return res.json({
-      text: response.text || "CMineWar Core: Canal de datos vacío. No se recibió respuesta.",
-      mode: "live"
-    });
-
-  } catch (error: any) {
-    console.error("Error communicating with Gemini API:", error);
-    const simulatedResponse = getSimulatedCMineWarOSResponse(message);
-    return res.json({
-      text: `[ALERTA DE SISTEMA - ENLACE GEMINI CAÍDO] Excepción de red detectada: ${error.message || "Fallo de conexión"}.\n\nReajustando hilos cognitivos locales... ${simulatedResponse}`,
-      mode: "recovery"
-    });
-  }
-});
-
-// Google OAuth Authorization & Profile Retrieval Endpoint for Android APK Signer
-app.get("/api/auth/google/url", (req, res) => {
-  const origin = req.query.origin || `http://localhost:${PORT}`;
-  const redirectUri = `${origin}/auth/callback`;
-  
-  const clientId = process.env.OAUTH_CLIENT_ID || "PLACEHOLDER_CLIENT_ID";
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: "openid https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
-    access_type: "offline",
-    prompt: "consent"
+  // Purely native simulated offline engine execution
+  const simulatedResponse = getSimulatedCMineWarOSResponse(message);
+  return res.json({
+    text: simulatedResponse,
+    mode: "simulated"
   });
-
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  res.json({ url: authUrl });
-});
-
-// OAuth Callback handler and User ID Token decoder
-app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
-  const { code } = req.query;
-  const origin = req.protocol + "://" + req.get("host");
-  const redirectUri = `${origin}/auth/callback`;
-
-  if (!code) {
-    return res.send(`
-      <html>
-        <body style="background: #020617; color: #f43f5e; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center;">
-          <div>
-            <h2>Error de Autenticación</h2>
-            <p>No se recibió el código de autorización de Google.</p>
-            <button onclick="window.close()" style="background: #f43f5e; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Cerrar Ventana</button>
-          </div>
-        </body>
-      </html>
-    `);
-  }
-
-  try {
-    const clientId = process.env.OAUTH_CLIENT_ID || "";
-    const clientSecret = process.env.OAUTH_CLIENT_SECRET || "";
-
-    // 1. Exchange authorization code for tokens
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code: code.toString(),
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.text();
-      throw new Error(`Google Token Exchange Fallido: ${errorData}`);
-    }
-
-    const tokenData = await tokenResponse.json() as any;
-    const accessToken = tokenData.access_token;
-
-    // 2. Retrieve google user details
-    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!profileResponse.ok) {
-      throw new Error("No se pudo obtener la información de perfil de Google.");
-    }
-
-    const profileData = await profileResponse.json() as any;
-
-    // Return HTML to pass credentials back to parent browser window and close the popup cleanly
-    res.send(`
-      <html>
-        <body style="background: #020617; color: #10b981; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; margin: 0; padding: 20px;">
-          <div style="border: 2px solid #10b981; padding: 30px; border-radius: 12px; background: #090d16; box-shadow: 0 0 20px rgba(16,185,129,0.2);">
-            <div style="font-size: 40px; margin-bottom: 15px;">🔒</div>
-            <h2 style="color: #10b981; margin-top: 0;">¡Autenticación con Google Exitosa!</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Identidad verificada para firma de APK:</p>
-            <p style="color: #f59e0b; font-weight: bold; font-size: 14px; background: #040711; padding: 8px; border-radius: 6px; border: 1px dashed #f59e0b/30;">${profileData.name} (${profileData.email})</p>
-            <p style="color: #64748b; font-size: 11px;">Esta ventana se cerrará automáticamente...</p>
-          </div>
-          <script>
-            if (window.opener) {
-              window.opener.postMessage({ 
-                type: 'GOOGLE_OAUTH_SUCCESS',
-                profile: {
-                  name: ${JSON.stringify(profileData.name)},
-                  email: ${JSON.stringify(profileData.email)},
-                  picture: ${JSON.stringify(profileData.picture)},
-                  sub: ${JSON.stringify(profileData.sub)}
-                }
-              }, '*');
-              setTimeout(() => {
-                window.close();
-              }, 1200);
-            } else {
-              window.location.href = '/';
-            }
-          </script>
-        </body>
-      </html>
-    `);
-
-  } catch (error: any) {
-    console.error("Google OAuth Error:", error);
-    res.send(`
-      <html>
-        <body style="background: #020617; color: #ef4444; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; margin: 0; padding: 20px;">
-          <div style="border: 1px solid #ef4444; padding: 25px; border-radius: 8px; background: rgba(239, 68, 68, 0.05);">
-            <h2 style="margin-top: 0;">Fallo en Verificación Credentials</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Error al intercambiar tokens o verificar identidad con Google.</p>
-            <p style="color: #f43f5e; font-family: monospace; font-size: 12px; background: #000; padding: 10px; border-radius: 4px; text-align: left;">${error.message || error}</p>
-            <button onclick="window.close()" style="background: #334155; hover:background: #475569; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">Cerrar Ventana</button>
-          </div>
-        </body>
-      </html>
-    `);
-  }
 });
 
 // Assistant Simulator fallback responses database

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "../types";
-import { Send, Bot, User, RefreshCw, Cpu, Database, HelpCircle } from "lucide-react";
-import DragonLogo from "./DragonLogo";
+import { Send, RefreshCw, Terminal, Activity, Info } from "lucide-react";
 
 interface OpenClawCoreProps {
   chatHistory: ChatMessage[];
@@ -22,7 +21,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
     const prevLength = prevHistoryLengthRef.current;
     prevHistoryLengthRef.current = chatHistory.length;
 
-    // Check if user is scrolled near the bottom (within 180px threshold)
+    // Check if user is scrolled near bottom
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
 
     if (isFirstMountRef.current) {
@@ -31,7 +30,6 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       return;
     }
 
-    // Only auto-scroll on new message insertions
     if (chatHistory.length > prevLength) {
       const lastMessage = chatHistory[chatHistory.length - 1];
       const isUserSent = lastMessage && lastMessage.role === "user";
@@ -61,7 +59,6 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
     setIsLoading(true);
 
     try {
-      // Map history to simple format
       const historyPayload = chatHistory.map((m) => ({
         role: m.role,
         text: m.text,
@@ -76,7 +73,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
         }),
       });
 
-      if (!res.ok) throw new Error("Kernel link failed with error code");
+      if (!res.ok) throw new Error("Fallo de comunicación con el núcleo Antigravity.");
 
       const data = await res.json();
       
@@ -92,7 +89,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
       const errorMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: "system",
-        text: `Error de puente de comunicación CMineWar AI: ${err.message || "La conexión cognitiva ha fallado."}`,
+        text: `Error de enlace Antigravity CLI: ${err.message || "La conexión ha fallado."}`,
         timestamp: new Date(),
       };
       setChatHistory((prev) => [...prev, errorMsg]);
@@ -102,12 +99,12 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
   };
 
   const clearConversation = () => {
-    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo de Antigravity Agent?")) {
+    if (confirm("¿Reiniciar búfer de memoria del núcleo cognitivo Antigravity CLI (agy)?")) {
       setChatHistory([
         {
           id: "claw-welcome",
           role: "model",
-          text: "¡Sistemas listos! Hola, soy **Antigravity Agent Core**, el módulo cognitivo central clonado de la Antigravity CLI de Google para este simulador Linux. Puedo interactuar con tus comandos de terminal o guiarte a través de la interfaz gráfica local. Escribe tus dudas sobre el entorno virtual o los comandos de Linux en Debian.",
+          text: "¡Sistemas listos! Hola, soy **Antigravity CLI** (mando `agy`), el módulo cognitivo central de CMineWar OS. Puedo interactuar con tus comandos de terminal o guiarte de forma directa a través de esta terminal interactiva. Escribe tus dudas sobre el entorno de desarrollo o los comandos de Linux en Debian y las ejecutaré sin ninguna traba de permisos.",
           timestamp: new Date(),
         },
       ]);
@@ -115,19 +112,19 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 border-t border-slate-800">
+    <div className="flex-1 flex flex-col bg-slate-950 border-t border-slate-850 h-full font-mono">
       {/* Upper Status Hub */}
-      <div className="flex items-center justify-between p-3 bg-slate-950 border-b border-slate-800 select-none shrink-0 text-xs text-slate-400">
+      <div className="flex items-center justify-between p-3 bg-slate-950 border-b border-slate-900 select-none shrink-0 text-xs">
         <div className="flex items-center space-x-2">
-          <DragonLogo size={20} />
-          <span className="font-semibold text-slate-300">Antigravity Core CLI Hub</span>
-          <span className="px-1.5 py-0.2 bg-purple-500/10 border border-purple-500/20 rounded font-mono text-[9px] text-purple-400">
-            Antigravity-Agent Ready
+          <Terminal size={16} className="text-purple-400" />
+          <span className="font-bold text-slate-300">Antigravity CLI Hub (agy)</span>
+          <span className="px-1.5 py-0.2 bg-purple-500/10 border border-purple-500/20 rounded text-[9px] text-purple-400 font-bold uppercase">
+            agy-cli-active
           </span>
         </div>
         <button
           onClick={clearConversation}
-          className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+          className="p-1 hover:bg-slate-900 rounded text-slate-500 hover:text-slate-300 transition"
           title="Reiniciar hilo de memoria"
           id="btn-clear-chat"
         >
@@ -135,38 +132,32 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
         </button>
       </div>
 
-      {/* Suggestion Quick Chips */}
-      <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/40 border-b border-slate-800/60 shrink-0 select-none">
+      {/* Suggestion Quick Chips styled as terminal tags */}
+      <div className="flex flex-wrap gap-1.5 p-2 bg-slate-950 border-b border-slate-900 shrink-0 select-none">
         <button
           onClick={() => setInput("¿Cuáles son tus características como núcleo de CMineWar OS?")}
-          className="text-[10px] text-slate-300 bg-slate-950 border border-slate-800 rounded px-2 py-1 hover:border-emerald-500/40 transition"
+          className="text-[9.5px] text-slate-400 bg-slate-900/60 border border-slate-800 rounded px-2.5 py-1 hover:border-purple-500/50 hover:text-purple-300 transition cursor-pointer"
         >
-          ¿Qué es CMineWar OS?
+          $ agy --info
         </button>
         <button
           onClick={() => setInput("Explícame cómo funciona el comando cd y ls de linux")}
-          className="text-[10px] text-slate-300 bg-slate-950 border border-slate-800 rounded px-2 py-1 hover:border-emerald-500/40 transition"
+          className="text-[9.5px] text-slate-400 bg-slate-900/60 border border-slate-800 rounded px-2.5 py-1 hover:border-purple-500/50 hover:text-purple-300 transition cursor-pointer"
         >
-          Comandos cd y ls 🐚
-        </button>
-        <button
-          onClick={() => setInput("Cuéntame un chiste de programadores")}
-          className="text-[10px] text-slate-300 bg-slate-950 border border-slate-800 rounded px-2 py-1 hover:border-emerald-500/40 transition"
-        >
-          Chiste informático 💻
+          $ agy --guide-sh
         </button>
         <button
           onClick={() => setInput("Diagnóstico térmico y de CPU del hardware")}
-          className="text-[10px] text-slate-300 bg-slate-950 border border-slate-800 rounded px-2 py-1 hover:border-emerald-500/40 transition"
+          className="text-[9.5px] text-slate-400 bg-slate-900/60 border border-slate-800 rounded px-2.5 py-1 hover:border-purple-500/50 hover:text-purple-300 transition cursor-pointer"
         >
-          Diagnóstico de Hardware 🛠️
+          $ agy --hardware
         </button>
       </div>
 
-      {/* Messages Stagger Box */}
+      {/* Messages Console Box */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-900/60" 
+        className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/80" 
         id="claw-chat-messages"
       >
         {chatHistory.map((m) => {
@@ -175,95 +166,87 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
 
           if (isSys) {
             return (
-              <div key={m.id} className="text-center p-2 bg-rose-950/20 border border-rose-900/40 rounded-md text-rose-300 text-[10px] font-mono leading-relaxed">
-                {m.text}
+              <div key={m.id} className="p-2.5 bg-rose-950/10 border border-rose-900/30 rounded text-rose-400 text-[10px] leading-relaxed">
+                <span className="font-bold uppercase">[ERROR SÍLEX]:</span> {m.text}
               </div>
             );
           }
 
-          return (
-            <div
-              key={m.id}
-              className={`flex items-start space-x-2.5 max-w-[85%] ${
-                isUser ? "ml-auto flex-row-reverse space-x-reverse" : "mr-auto"
-              }`}
-            >
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
-                  isUser
-                    ? "bg-slate-700 border-slate-600 text-slate-200"
-                    : "bg-slate-950 border-slate-800 text-emerald-400"
-                }`}
-              >
-                {isUser ? <User size={12} /> : <DragonLogo size={16} />}
+          if (isUser) {
+            return (
+              <div key={m.id} className="text-xs select-text leading-relaxed">
+                <p className="text-slate-400">
+                  <span className="text-emerald-500 font-bold">root@cminewar:~$</span> agy "{m.text}"
+                </p>
               </div>
+            );
+          }
 
-              <div
-                className={`p-3 rounded-lg text-xs leading-relaxed ${
-                  isUser
-                    ? "bg-emerald-700/20 text-emerald-100 border border-emerald-600/20 rounded-tr-none"
-                    : "bg-slate-950 text-slate-200 border border-slate-800 rounded-tl-none"
-                }`}
-              >
-                {/* Parse Markdown-like styles manually for safe render (bolding and linebreaks) */}
-                <span className="whitespace-pre-wrap break-words inline-block">
-                  {m.text.split("\n").map((line, lIdx) => {
-                    // Match code blocks
-                    if (line.startsWith("```")) {
-                      return null; // hide codeblock ticks
-                    }
-                    
-                    // Simple regex for bold
-                    const parts = line.split("**");
-                    return (
-                      <React.Fragment key={lIdx}>
-                        {parts.map((p, pIdx) =>
-                          pIdx % 2 === 1 ? <strong key={pIdx} className="text-emerald-400 font-semibold">{p}</strong> : p
-                        )}
-                        {lIdx < m.text.split("\n").length - 1 && <br />}
-                      </React.Fragment>
-                    );
-                  })}
-                </span>
-
-                <div className="text-[9px] text-slate-500 mt-1.5 text-right select-none">
-                  {m.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </div>
+          // Model / Assistant block
+          return (
+            <div key={m.id} className="text-xs select-text pb-4 border-b border-slate-900/40 last:border-b-0 space-y-1">
+              <div className="text-[9.5px] text-purple-400 font-bold uppercase tracking-wider flex items-center space-x-1.5 select-none">
+                <Activity size={11} className="text-purple-400 animate-pulse" />
+                <span>[Antigravity CLI Response]</span>
+              </div>
+              
+              <div className="text-slate-300 pl-4 border-l-2 border-purple-500/20 whitespace-pre-wrap leading-relaxed">
+                {m.text.split("\n").map((line, lIdx) => {
+                  if (line.startsWith("```")) {
+                    return null;
+                  }
+                  
+                  // Simple regex for bold
+                  const parts = line.split("**");
+                  return (
+                    <React.Fragment key={lIdx}>
+                      {parts.map((p, pIdx) =>
+                        pIdx % 2 === 1 ? (
+                          <strong key={pIdx} className="text-emerald-400 font-black">
+                            {p}
+                          </strong>
+                        ) : (
+                          p
+                        )
+                      )}
+                      {lIdx < m.text.split("\n").length - 1 && <br />}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+              
+              <div className="text-[9px] text-slate-600 pl-4 select-none">
+                {m.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </div>
             </div>
           );
         })}
 
         {isLoading && (
-          <div className="flex items-start space-x-2.5 max-w-[80%]">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border bg-slate-950 border-slate-800 text-purple-400 animate-pulse">
-              <DragonLogo size={16} />
-            </div>
-            <div className="p-3 bg-slate-950 text-slate-400 border border-slate-800 rounded-lg text-xs rounded-tl-none">
-              <div className="flex items-center space-x-1.5 font-mono select-none">
-                <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" />
-                <span>Ejecutando razonamiento de agente Antigravity...</span>
-              </div>
-            </div>
+          <div className="text-xs select-none py-1 flex items-center space-x-2 text-purple-400 animate-pulse">
+            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-ping" />
+            <span>[agy] Procesando petición cognitiva en caliente...</span>
           </div>
         )}
       </div>
 
-      {/* Input box */}
-      <form onSubmit={handleSend} className="p-3 bg-slate-950 border-t border-slate-800 flex items-center space-x-2 shrink-0 select-none">
+      {/* Monospace Interactive Shell Input */}
+      <form onSubmit={handleSend} className="p-3 bg-slate-950 border-t border-slate-900 flex items-center space-x-2.5 shrink-0 select-none">
+        <span className="text-emerald-400 font-bold text-xs shrink-0 select-none">root@cminewar:~$ agy</span>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pregunta a Antigravity Agent..."
-          className="flex-1 bg-slate-900 border border-slate-800 rounded-md text-xs px-3.5 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/55 font-sans"
+          placeholder="escribe tu consulta..."
+          className="flex-1 bg-slate-900/70 border border-slate-850 rounded px-3 py-1.5 text-xs text-slate-100 placeholder-slate-700 focus:outline-none focus:border-purple-500/50"
           id="chat-input-claw"
           disabled={isLoading}
+          autoComplete="off"
         />
         <button
           type="submit"
-          className="p-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-md text-white border border-emerald-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition shrink-0"
-          title="Enviar"
+          className="p-1.5 bg-purple-900 hover:bg-purple-800 rounded text-purple-200 border border-purple-700/20 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0 cursor-pointer"
+          title="Ejecutar"
           id="btn-send-claw"
           disabled={isLoading || !input.trim()}
         >

@@ -62,29 +62,29 @@ const DEFAULT_CONNECTIONS: Connection[] = [
   {
     id: "smb-corp",
     type: "SMB",
-    name: "SMB - Corporativo ClawFS",
+    name: "SMB - Corporativo CMineWarFS",
     host: "10.0.0.45",
     port: "445",
     path: "/Admin_Compartido",
     username: "root",
     files: [
-      { name: "contratos_2026.pdf", type: "file", size: "4.2 MB", content: "=====================================================\nCONTRATO DE LICENCIA DE SERVICIOS ADICIONALES DE UNIDAD COGNITIVA\n=====================================================\nReferencia: CLAWOS-LIC-2026-X8\nFecha: 2026-05-15\n\nPor el presente documento, se autoriza a ClawOS el uso indefinido de los daemons cognitivos en modo autologin raíz de manera permanente para la gestión centralizada de sistemas autónomos." },
-      { name: "presupuesto_clawos.xlsx", type: "file", size: "12.8 MB", content: "Balance General de recursos ClawOS:\n* Emulación Cortex CPU: $1,200\n* Clientes síncronos Gemini API: $450\n* Conexiones SSH/SFTP seguras redundantes: $200\n* Total asignado para desarrollo continuo: $1,850" },
-      { name: "claves_servidor.txt", type: "file", size: "1.2 KB", content: "[CLAVES DE ENLACE RED INTERNA]\nsmb_pass=C0gn1t1v3ClawOS#2026\nsftp_priv_key=sha256:7uK+aB9x2p90zM8aVqX\nftp_anonymous_write=disallowed" },
+      { name: "contratos_2026.pdf", type: "file", size: "4.2 MB", content: "=====================================================\nCONTRATO DE LICENCIA DE SERVICIOS ADICIONALES DE UNIDAD COGNITIVA\n=====================================================\nReferencia: CMINEWAROS-LIC-2026-X8\nFecha: 2026-05-15\n\nPor el presente documento, se autoriza a CMineWar OS el uso indefinido de los daemons cognitivos en modo autologin raíz de manera permanente para la gestión centralizada de sistemas autónomos." },
+      { name: "presupuesto_cminewar.xlsx", type: "file", size: "12.8 MB", content: "Balance General de recursos CMineWar OS:\n* Emulación Cortex CPU: $1,200\n* Clientes síncronos Gemini API: $450\n* Conexiones SSH/SFTP seguras redundantes: $200\n* Total asignado para desarrollo continuo: $1,850" },
+      { name: "claves_servidor.txt", type: "file", size: "1.2 KB", content: "[CLAVES DE ENLACE RED INTERNA]\nsmb_pass=C0gn1t1v3CMineWarOS#2026\nsftp_priv_key=sha256:7uK+aB9x2p90zM8aVqX\nftp_anonymous_write=disallowed" },
     ]
   },
   {
     id: "ftp-pub",
     type: "FTP",
-    name: "FTP - Descargas Públicas OpenClaw",
-    host: "ftp.openclaw.ai",
+    name: "FTP - Descargas Públicas CMineWar OS",
+    host: "ftp.cminewar.ai",
     port: "21",
     path: "/pub",
     username: "anonymous",
     files: [
-      { name: "clawos_source_v1.1.2.tar.gz", type: "file", size: "142 MB", content: "[CONTENIDO BINARIO - CÓDIGO FUENTE COMPILADO DE CLAWOS COMPLETO]" },
-      { name: "manual_acpi_espanol.txt", type: "file", size: "45 KB", content: "=====================================================\nMANUAL DE CONFIGURACIÓN DE ENERGÍA DE CLAWOS (HARDWARE ACPI)\n=====================================================\n\nPara garantizar que los servicios de automatización sigan en línea sin interrupciones ni suspensiones no deseadas, el sistema operativo implementa en /etc/systemd/sleep.conf directivas estrictas para anular por completo la suspensión y la hibernación.\n\nADVERTENCIA:\n* No intente reactivar el ACPI sleep a menos que trabaje en modo portátil de batería limitada." },
-      { name: "linux_guide.pdf", type: "file", size: "3.5 MB", content: "Guía de referencia rápida sobre comandos del sistema ClawOS.\nComandos cubiertos: sudo, whoami, openclaw, neofetch, top, ls, rm, cd." },
+      { name: "cminewaros_source_v1.1.2.tar.gz", type: "file", size: "142 MB", content: "[CONTENIDO BINARIO - CÓDIGO FUENTE COMPILADO DE CMINEWAR OS COMPLETO]" },
+      { name: "manual_acpi_espanol.txt", type: "file", size: "45 KB", content: "=====================================================\nMANUAL DE CONFIGURACIÓN DE ENERGÍA DE CMINEWAR OS (HARDWARE ACPI)\n=====================================================\n\nPara garantizar que los servicios de automatización sigan en línea sin interrupciones ni suspensiones no deseadas, el sistema operativo implementa en /etc/systemd/sleep.conf directivas estrictas para anular por completo la suspensión y la hibernación.\n\nADVERTENCIA:\n* No intente reactivar el ACPI sleep a menos que trabaje en modo portátil de batería limitada." },
+      { name: "linux_guide.pdf", type: "file", size: "3.5 MB", content: "Guía de referencia rápida sobre comandos del sistema CMineWar OS.\nComandos cubiertos: sudo, whoami, cminewar, neofetch, top, ls, rm, cd." },
     ]
   },
   {
@@ -96,8 +96,8 @@ const DEFAULT_CONNECTIONS: Connection[] = [
     path: "/root/secure_files",
     username: "root",
     files: [
-      { name: "authorized_keys", type: "file", size: "400 B", content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCy1Zz8v2Jpx9xSdf... root@openclaw" },
-      { name: "database_backup_2026.sql", type: "file", size: "89 MB", content: "-- PostgreSQL Database Dump\n-- Backup created on: 2026-05-28 12:00:23 UTC\n\nCREATE TABLE app_users (\n    id SERIAL PRIMARY KEY,\n    username VARCHAR(100) UNIQUE,\n    is_root BOOLEAN DEFAULT TRUE\n);\n\nINSERT INTO app_users VALUES (1, 'root', true);\nINSERT INTO app_users VALUES (2, 'user_claw_developer', false);" },
+      { name: "authorized_keys", type: "file", size: "400 B", content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCy1Zz8v2Jpx9xSdf... root@cminewar" },
+      { name: "database_backup_2026.sql", type: "file", size: "89 MB", content: "-- PostgreSQL Database Dump\n-- Backup created on: 2026-05-28 12:00:23 UTC\n\nCREATE TABLE app_users (\n    id SERIAL PRIMARY KEY,\n    username VARCHAR(100) UNIQUE,\n    is_root BOOLEAN DEFAULT TRUE\n);\n\nINSERT INTO app_users VALUES (1, 'root', true);\nINSERT INTO app_users VALUES (2, 'user_cminewar_developer', false);" },
       { name: "auto_update_daemon.py", type: "file", size: "12 KB", content: "import os\nimport sys\n# Daemon de actualización remota síncrona en CMineWar OS.\ndef check_repo_updates():\n    print('[DAEMON] Buscando actualizaciones remotas en cminewarIA/MyCMineWarOS...')\n    # Sincronización git automática activa\n    return True\n\nif __name__ == '__main__':\n    check_repo_updates()" },
     ]
   }
@@ -251,7 +251,7 @@ export default function FileManager({
     } else if (conn.type === "FTP") {
       logs = [
         `[NET] Abriendo socket de control pasivo a ${conn.host}:${conn.port}...`,
-        `[FTP] 220 (vsFTPd 3.0.5 - OpenClaw Embedded Daemon)`,
+        `[FTP] 220 (vsFTPd 3.0.5 - CMineWar OS Embedded Daemon)`,
         `[FTP] -> USER ${conn.username || "anonymous"}`,
         `[FTP] 331 Please specify password for user ${conn.username || "anonymous"}.`,
         `[FTP] -> PASS **********`,
@@ -267,7 +267,7 @@ export default function FileManager({
     } else { // SFTP
       logs = [
         `[SSH] Estableciendo túnel seguro SSHv2 cifrado a ${conn.host} en el puerto ${conn.port}...`,
-        `[SSH] Conexión establecida. Protocolo SSH-2.0-OpenSSH_9.5p1_OpenClaw`,
+        `[SSH] Conexión establecida. Protocolo SSH-2.0-OpenSSH_9.5p1_CMineWarOS`,
         `[SSH] Negociando algoritmos de criptografía y suites MAC...`,
         `[SSH] Algoritmo acordado: chacha20-poly1305@openssh.com`,
         `[SSH] Intercambiando certificados del host. Firma digital correcta.`,
@@ -321,13 +321,13 @@ export default function FileManager({
           name: "LEEME_remoto.txt", 
           type: "file", 
           size: "450 B", 
-          content: `=====================================================\nCONEXIÓN '${newType}' ESTABLECIDA CORRECTAMENTE\n=====================================================\nHost adjunto: ${newHost}:${defaultPort}\nRuta inicial: ${newPath || "/"}\nUsuario conectado: ${newUsername || "anonymous"}\n\nEste es un volumen remoto virtualizado seguro dentro de la suite de red de ClawOS.\nPuedes transferir archivos de este servidor a tu VFS local de inmediato.` 
+          content: `=====================================================\nCONEXIÓN '${newType}' ESTABLECIDA CORRECTAMENTE\n=====================================================\nHost adjunto: ${newHost}:${defaultPort}\nRuta inicial: ${newPath || "/"}\nUsuario conectado: ${newUsername || "anonymous"}\n\nEste es un volumen remoto virtualizado seguro dentro de la suite de red de CMineWar OS.\nPuedes transferir archivos de este servidor a tu VFS local de inmediato.` 
         },
         { 
           name: "diagnostico_red.xml", 
           type: "file", 
           size: "1.2 KB", 
-          content: '<?xml version="1.0" encoding="UTF-8"?>\n<service>\n  <name>OpenClaw Network Bridge</name>\n  <bandwidth>100 Mbps</bandwidth>\n  <latency>0.4ms</latency>\n  <status>CONNECTED_AND_VERIFIED</status>\n</service>' 
+          content: '<?xml version="1.0" encoding="UTF-8"?>\n<service>\n  <name>CMineWar OS Network Bridge</name>\n  <bandwidth>100 Mbps</bandwidth>\n  <latency>0.4ms</latency>\n  <status>CONNECTED_AND_VERIFIED</status>\n</service>' 
         }
       ]
     };
@@ -584,7 +584,7 @@ export default function FileManager({
                 ))}
               </div>
               
-              <p className="text-center text-[9px] text-slate-500 italic">Negociando sockets virtuales de ClawOS en tiempo síncrono...</p>
+              <p className="text-center text-[9px] text-slate-500 italic">Negociando sockets virtuales de CMineWar OS en tiempo síncrono...</p>
             </div>
           </div>
         )}

@@ -15,16 +15,16 @@ export const initialVFS: VFSNode = {
             "documento.txt": {
               name: "documento.txt",
               type: "file",
-              content: "¡Bienvenido a ClawOS!\nEste es el sistema operativo Linux simulado con OpenClaw como núcleo central.\nAquí puedes crear archivos y carpetas, ejecutar comandos Bash o programar en bash elemental.",
+              content: "¡Bienvenido a CMineWar OS!\nEste es el sistema operativo Linux simulado con CMineWar OS Core como núcleo central.\nAquí puedes crear archivos y carpetas, ejecutar comandos Bash o programar en bash elemental.",
             },
-            "OpenClaw_manual.md": {
-              name: "OpenClaw_manual.md",
+            "CMineWarOS_manual.md": {
+              name: "CMineWarOS_manual.md",
               type: "file",
-              content: `# Manual del Núcleo Inteligente OpenClaw
+              content: `# Manual del Núcleo Inteligente CMineWar OS Core
 
-OpenClaw es el microkernel cognitivo de ClawOS.
-Interactúa con él mediante la app interactiva 'OpenClaw Core' o el comando de shell:
-$ openclaw "Hola OpenClaw"
+CMineWar OS Core es el microkernel cognitivo de CMineWar OS.
+Interactúa con él mediante la app interactiva 'CMineWar OS AI' o el comando de shell:
+$ cminewar "Hola CMineWar"
 
 CARACTERÍSTICAS:
 - Núcleo Linux virtual compartido.
@@ -43,7 +43,7 @@ CARACTERÍSTICAS:
                 "script.sh": {
                   name: "script.sh",
                   type: "file",
-                  content: "echo \"Iniciando diagnóstico del sistema...\"\necho \"Cargando kernel OpenClaw v1.1.0...\"\necho \"Todo está estable.\"",
+                  content: "echo \"Iniciando diagnóstico del sistema...\"\necho \"Cargando kernel CMineWar OS Core v1.1.0...\"\necho \"Todo está estable.\"",
                 }
               }
             }
@@ -62,7 +62,7 @@ CARACTERÍSTICAS:
             "kernel.log": {
               name: "kernel.log",
               type: "file",
-              content: "[0.000000] Linux version 5.16.0-openclaw-generic (gcc version 11.2.0)\n[0.101235] Quantum core initialized.\n[0.245891] ACPI: Core ACPI tables parsed successfully.\n[0.518293] ClawBus: PCI controllers initialized.\n[1.025381] OpenClaw Cognitive Module: ONLINE (Mode: Hot Standby).\n[1.240591] ClawOS desktop daemon successfully loaded.",
+              content: "[0.000000] Linux version 5.16.0-cminewar-generic (gcc version 11.2.0)\n[0.101235] Quantum core initialized.\n[0.245891] ACPI: Core ACPI tables parsed successfully.\n[0.518293] CMineWarBus: PCI controllers initialized.\n[1.025381] CMineWar OS Core Cognitive Module: ONLINE (Mode: Hot Standby).\n[1.240591] CMineWar OS desktop daemon successfully loaded.",
             }
           }
         }
@@ -83,21 +83,21 @@ CARACTERÍSTICAS:
 set default="0"
 set timeout=5
 
-menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)" {
+menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI Nativas x86)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttyS0 quiet init=/bin/cminewar-omarchy-init
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-omarchy-init
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)" {
+menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI x86 Nativas)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar console=ttys0 quiet init=/bin/cminewar-kiosk-init
-    initrd /boot/initramfs-cminewar-direct.img
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-kiosk-init
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 
-menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
-    linux /boot/vmlinuz-cminewar console=ttyS0 single quiet init=/bin/cminewar-recovery-init
-    initrd /boot/initramfs-cminewar-direct.img
+menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode x86)" {
+    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 single quiet init=/bin/cminewar-recovery-init
+    initrd /boot/initramfs-cminewar-x86_64-direct.img
 }
 `,
             }
@@ -109,10 +109,10 @@ menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode)" {
       name: "bin",
       type: "dir",
       children: {
-        "openclaw": {
-          name: "openclaw",
+        "cminewar": {
+          name: "cminewar",
           type: "file",
-          content: "[Binary Executable - OpenClaw System Core Direct Command Link]",
+          content: "[Binary Executable - CMineWar OS Core Direct Command Link]",
         },
         "neofetch": {
           name: "neofetch",

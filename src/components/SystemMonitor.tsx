@@ -162,7 +162,7 @@ export default function SystemMonitor() {
       <div className="bg-slate-950/50 p-3 rounded border border-slate-800/80 flex items-start space-x-2.5 text-xs text-slate-400 leading-relaxed font-sans mt-auto">
         <ShieldAlert size={16} className="text-slate-500 shrink-0 mt-0.5" />
         <div>
-          <p className="font-semibold text-slate-300">Entorno Simulado de Contenedor ClawOS</p>
+          <p className="font-semibold text-slate-300">Entorno Simulado de Contenedor CMineWar OS</p>
           <p className="text-[11px] text-slate-500">
             Todo proceso de software, disco de archivos y consola que utilices funciona localmente en memoria virtual de forma reactiva y protegida de la máquina host.
           </p>
