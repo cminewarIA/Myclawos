@@ -87,10 +87,18 @@ app.post("/api/cminewar/install", (req, res) => {
       }
     }
 
+    // Limpiar o inicializar archivos de estado de instalación
+    try {
+      fs.writeFileSync("/tmp/cminewar_install_progress.txt", "0");
+      fs.writeFileSync("/tmp/cminewar_install_log.txt", "[+] Inicializando instalador físico de CMineWar OS...\n");
+    } catch (err) {
+      console.error("No se pudieron inicializar los archivos de log:", err);
+    }
+
     console.log(`[INSTALADOR] Lanzando instalador físico en Python para: /dev/${safeDisk}`);
     
-    // Lanzar el script en Python de fondo y desvincularlo para permitir streaming asíncrono
-    const child = exec(`python3 "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    // Lanzar el script en Python de fondo de forma desvinculada redirigiendo salida en tiempo real al archivo de log
+    const child = exec(`python3 -u "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}" > /tmp/cminewar_install_log.txt 2>&1`);
     
     res.json({
       status: "started",

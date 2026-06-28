@@ -26,9 +26,11 @@ def run_cmd(cmd, check=True, shell=False):
     print(f"[EJECUTANDO] {cmd}")
     # En entornos sandbox simulamos comandos de disco de forma segura si fallan
     try:
-        result = subprocess.run(cmd, shell=shell, check=check, capture_output=True, text=True)
-        if result.stdout:
-            print(result.stdout.strip())
+        # En vez de capture_output=True, permitimos que la salida se transmita en tiempo real a stdout/stderr
+        if isinstance(cmd, list) and not shell:
+            result = subprocess.run(cmd, check=check)
+        else:
+            result = subprocess.run(cmd, shell=True, check=check)
         return result
     except Exception as e:
         print(f"[AVISO DE SIMULACIÓN/SANDBOX] Error ejecutando comando ({e}). Continuando simulación...")
@@ -204,14 +206,44 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mount --bind /proc {mount_point}/proc", shell=True)
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
-        run_cmd(f"{chroot_cmd} apt update", shell=True)
-        run_cmd(f"{chroot_cmd} apt install -y linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm xserver-xorg xinit chromium nodejs npm curl", shell=True)
         
         # Instalar GRUB de forma removable/portable
         run_cmd(f"{chroot_cmd} grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CMineWarOS --removable {full_disk}", shell=True)
         run_cmd(f"{chroot_cmd} update-grub", shell=True)
 
-        # Configurar autologin o crear usuario
+        # 6.2 Copiar la Suite CMineWar OS (React Frontend + Node.js Backend) al disco portátil
+        print("[+] Desplegando el servidor local de CMineWar OS en el volumen portátil...")
+        run_cmd(f"mkdir -p {mount_point}/opt/cminewar", shell=True)
+        run_cmd(f"cp -r dist {mount_point}/opt/cminewar/", shell=True)
+        run_cmd(f"cp package.json package-lock.json download-wrapper.cjs {mount_point}/opt/cminewar/", shell=True)
+        
+        print("[+] Instalando dependencias de producción de Node.js en el sistema portátil...")
+        run_cmd(f"{chroot_cmd} npm --prefix /opt/cminewar install --omit=dev", shell=True)
+
+        # 6.3 Registrar el daemon de servicio cminewar.service
+        service_content = """[Unit]
+Description=CMineWar OS Server - Estacion de Trabajo Cognitiva
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cminewar
+ExecStart=/usr/bin/node dist/server.cjs
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production PORT=3000
+
+[Install]
+WantedBy=multi-user.target
+"""
+        with open(f"{mount_point}/etc/systemd/system/cminewar.service", "w") as f:
+            f.write(service_content)
+        run_cmd(f"{chroot_cmd} systemctl enable cminewar.service", shell=True)
+
+        # 6.4 Configurar autologin o crear usuario
         if username == "root":
             run_cmd(f"mkdir -p {mount_point}/etc/systemd/system/getty@tty1.service.d", shell=True)
             with open(f"{mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf", "w") as f:
@@ -221,16 +253,56 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
             run_cmd(f"{chroot_cmd} echo '{username}:{password}' | chpasswd", shell=True)
             run_cmd(f"{chroot_cmd} usermod -aG sudo {username}", shell=True)
 
+        # 6.5 Configurar autologin gráfico en LightDM para el usuario configurado
+        print(f"[+] Configurando inicio de sesión gráfico automático para el usuario '{username}'...")
+        run_cmd(f"{chroot_cmd} groupadd -r autologin || true", shell=True)
+        run_cmd(f"{chroot_cmd} gpasswd -a {username} autologin || true", shell=True)
+
+        run_cmd(f"mkdir -p {mount_point}/etc/lightdm", shell=True)
+        lightdm_config = f"""
+[Seat:*]
+autologin-user={username}
+autologin-user-timeout=0
+autologin-session=xfce
+"""
+        with open(f"{mount_point}/etc/lightdm/lightdm.conf", "a") as f:
+            f.write(lightdm_config)
+
+        # 6.6 Configurar inicio automático del navegador Chromium en modo Kiosko en XFCE
+        print("[+] Configurando lanzador del entorno de escritorio en modo Kiosco de pantalla completa...")
+        autostart_dir = f"{mount_point}/etc/xdg/autostart"
+        run_cmd(f"mkdir -p {autostart_dir}", shell=True)
+        
+        kiosk_desktop = """[Desktop Entry]
+Type=Application
+Name=CMineWar OS Kiosk
+Exec=sh -c "xset s off -dpms || true; sleep 5; chromium --no-sandbox --test-type --kiosk --start-maximized --no-first-run --simulate-outdated-no-deprecation-warning --autoplay-policy=no-user-gesture-required http://localhost:3000"
+Terminal=false
+Icon=chromium
+Comment=Launch CMineWar OS UI in fullscreen Kiosk mode
+"""
+        with open(f"{autostart_dir}/cminewar-kiosk.desktop", "w") as f:
+            f.write(kiosk_desktop)
+
+        # 6.7 Establecer el objetivo de arranque del sistema en modo Gráfico
+        run_cmd(f"{chroot_cmd} systemctl set-default graphical.target", shell=True)
+        run_cmd(f"{chroot_cmd} systemctl enable lightdm.service", shell=True)
+
         # Limpieza de binds (con fallback de desmontaje perezoso 'lazy' en caso de bloqueo)
         run_cmd(f"umount {mount_point}/dev || umount -l {mount_point}/dev", shell=True)
         run_cmd(f"umount {mount_point}/proc || umount -l {mount_point}/proc", shell=True)
         run_cmd(f"umount {mount_point}/sys || umount -l {mount_point}/sys", shell=True)
     else:
         print("[SANDBOX] Descargado kernel Linux vmlinuz-x86_64, initramfs y cargador GRUB portable en ESP.")
+        print("[SANDBOX] Desplegando el servidor local de CMineWar OS en /opt/cminewar...")
+        print("[SANDBOX] Instalando dependencias de Node.js y habilitando cminewar.service...")
         if username != "root":
             print(f"[SANDBOX] Creado usuario '{username}' con privilegios sudo.")
+            print(f"[SANDBOX] Configurado autologin de LightDM en grupo autologin para el usuario '{username}'.")
         else:
-            print("[SANDBOX] Configurado autologin de superusuario 'root' en tty1.")
+            print("[SANDBOX] Configurado autologin de superusuario 'root' en tty1 y LightDM.")
+        print("[SANDBOX] Registrado archivo de autostart /etc/xdg/autostart/cminewar-kiosk.desktop para iniciar Chromium en Kiosk mode.")
+        print("[SANDBOX] Establecido por defecto systemd set-default graphical.target con LightDM.")
         time.sleep(1.5)
 
     # 7. Finalización
