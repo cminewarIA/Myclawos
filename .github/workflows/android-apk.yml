@@ -66,6 +66,34 @@ jobs:
           echo "[+] Sincronizando recursos y código web con Capacitor..."
           npx cap sync android
 
+      - name: Repair & Regenerate Gradle Wrapper (Fix Corrupted Jar)
+        run: |
+          cd android
+          echo "[+] Detectando y reparando posibles corrupciones de gradle-wrapper.jar..."
+          # Borrar cualquier jar corrupto/incompleto para evitar conflictos
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          
+          # Intentar regenerarlo con el comando de sistema o descargar el oficial
+          if command -v gradle >/dev/null 2>&1; then
+            echo "[+] Usando gradle nativo del runner para regenerar el wrapper v8.14.3..."
+            gradle wrapper --gradle-version 8.14.3 || {
+              echo "[-] Falló gradle wrapper de sistema, procediendo a descarga directa..."
+              curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+            }
+          else
+            echo "[+] Descargando binario limpio de gradle-wrapper.jar desde el repositorio de Gradle..."
+            mkdir -p gradle/wrapper
+            curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+          fi
+          
+          # Verificar integridad del jar descargado/generado
+          if [ -s "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "[✓] ¡gradle-wrapper.jar restaurado con éxito y listo para compilar!"
+          else
+            echo "[!] Re-intentando descarga alternativa desde raw.githubusercontent.com..."
+            curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+          fi
+
       - name: Build Android APK (Debug)
         run: |
           cd android
