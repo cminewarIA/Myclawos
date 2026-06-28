@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { exec, execSync } from "child_process";
+import { spawn } from "child_process";
 import fs from "fs";
 
 dotenv.config();
@@ -97,8 +97,10 @@ app.post("/api/cminewar/install", (req, res) => {
 
     console.log(`[INSTALADOR] Lanzando instalador físico en Python para: /dev/${safeDisk}`);
     
-    // Lanzar el script en Python de fondo de forma desvinculada
-    const child = exec(`python3 -u "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    // Lanzar el script en Python sin shell, pasando argumentos de forma segura
+    const child = spawn("python3", ["-u", scriptPath, safeDisk, safeOmitUser, safeDisableSleep, safeBrowser], {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
     
     // Capturar y escribir en tiempo real la salida en el archivo de log para evitar conflictos de redirección de shell
     child.stdout?.on("data", (data) => {
