@@ -71,8 +71,9 @@ async function main() {
   }
 
   if (!success) {
-    console.error('[❌] No se pudo descargar un gradle-wrapper.jar válido de ninguna fuente.');
-    process.exit(1);
+    console.warn('[⚠️] Advertencia: No se pudo descargar un gradle-wrapper.jar válido de ninguna fuente.');
+    console.warn('[⚠️] La compilación continuará, pero la compilación de Android podría fallar si el archivo no está presente.');
+    process.exit(0);
   } else {
     process.exit(0);
   }

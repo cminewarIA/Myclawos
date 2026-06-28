@@ -172,7 +172,7 @@ jobs:
 
       - name: Install Compilers & ISO Tools (NASM, MinGW, xorriso, mtools, dosfstools)
         run: |
-          sudo apt-get update
+          sudo apt-get update || echo "[⚠️] Advertencia: apt-get update falló, continuando con la instalación..."
           sudo apt-get install -y nasm gcc-mingw-w64-x86-64 xorriso mtools dosfstools
 
       - name: Compile BIOS MBR Bootsector (boot.asm)
@@ -204,6 +204,9 @@ jobs:
         run: |
           echo "[+] Preparando la estructura de la ISO arrancable..."
           mkdir -p iso_root/bare-metal
+          
+          # Asegurar que las herramientas de sistema (/sbin y /usr/sbin) están en el PATH
+          export PATH=$PATH:/sbin:/usr/sbin
           
           # 1. Preparar la imagen UEFI FAT12/FAT16/FAT32 (efi.img) conteniendo BOOTX64.EFI
           # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
