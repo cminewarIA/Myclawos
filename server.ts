@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { exec, execSync } from "child_process";
+import { exec, execSync, execFileSync } from "child_process";
 import fs from "fs";
 import os from "os";
 
@@ -222,6 +222,19 @@ app.post("/api/cminewar/services/control", (req, res) => {
     return res.status(400).json({ error: "Faltan parámetros: serviceId y action" });
   }
 
+  const allowedActions = new Set(["start", "stop", "restart"]);
+  const serviceMap: Record<string, string> = {
+    "cminewar-service": "cminewar"
+  };
+
+  if (!allowedActions.has(action)) {
+    return res.status(400).json({ error: "Acción inválida. Permitidas: start, stop, restart" });
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(serviceMap, serviceId)) {
+    return res.status(400).json({ error: "serviceId inválido." });
+  }
+
   if (process.platform !== "linux") {
     return res.json({
       success: true,
@@ -231,10 +244,9 @@ app.post("/api/cminewar/services/control", (req, res) => {
   }
 
   try {
-    const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : serviceId;
-    const cmd = `sudo systemctl ${action} ${sysSrvName}`;
-    console.log(`[SISTEMA] Ejecutando control de servicio: ${cmd}`);
-    execSync(cmd);
+    const sysSrvName = serviceMap[serviceId];
+    console.log(`[SISTEMA] Ejecutando control de servicio: sudo systemctl ${action} ${sysSrvName}`);
+    execFileSync("sudo", ["systemctl", action, sysSrvName]);
     res.json({
       success: true,
       message: `Acción ${action.toUpperCase()} aplicada al servicio ${serviceId} con éxito.`
