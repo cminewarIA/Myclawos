@@ -426,6 +426,7 @@ rm -f /etc/systemd/system/omarchy-tui.service 2>/dev/null || true
 
 # Inyectar el cargador automático de la Suite Omarchy en el Perfil de root (.profile)
 echo "[+] Inyectando disparador automático de la Suite Omarchy en /root/.profile..."
+touch /root/.profile
 sed -i '/cminewar-omarchy-dashboard/d' /root/.profile 2>/dev/null || true
 sed -i '/Auto-arranque de la Suite/d' /root/.profile 2>/dev/null || true
 

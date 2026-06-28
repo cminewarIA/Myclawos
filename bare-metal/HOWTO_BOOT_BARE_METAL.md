@@ -131,30 +131,30 @@ chmod +x bare-metal/install_debian_service.sh
 sudo ./bare-metal/install_debian_service.sh
 ```
 
-Esto habilitará el daemon `clawos.service`. Puedes controlarlo mediante:
+Esto habilitará el daemon `cminewar.service`. Puedes controlarlo mediante:
 ```bash
 # Comprobar el estado del servidor
-sudo systemctl status clawos.service
+sudo systemctl status cminewar.service
 
 # Detener o iniciar el servicio
-sudo systemctl stop clawos.service
-sudo systemctl start clawos.service
+sudo systemctl stop cminewar.service
+sudo systemctl start cminewar.service
 ```
 
 ### 2. Aislamiento Total de Internet (Anti-WAN Firewall) en Debian:
-El instalador despliega una regla de aislamiento local en `/usr/local/bin/clawos-firewall`. Al invocar este comando se utiliza `iptables` para rechazar la salida WAN (Internet), pero manteniendo intactas las redes privadas locales (LAN 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8):
+El instalador despliega una regla de aislamiento local en `/usr/local/bin/cminewar-firewall`. Al invocar este comando se utiliza `iptables` para rechazar la salida WAN (Internet), pero manteniendo intactas las redes privadas locales (LAN 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8):
 
 *   **Bloquear el acceso de clawOS a Internet (pero mantener LAN de casa):**
     ```bash
-    sudo clawos-firewall block
+    sudo cminewar-firewall block
     ```
 *   **Volver a admitir acceso libre a Internet:**
     ```bash
-    sudo clawos-firewall allow
+    sudo cminewar-firewall allow
     ```
 *   **Comprobar el filtrado y reglas vigentes:**
     ```bash
-    sudo clawos-firewall status
+    sudo cminewar-firewall status
     ```
 
 ### 3. Persistencia de Ventanas y Estado del Escritorio:

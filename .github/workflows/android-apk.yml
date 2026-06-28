@@ -211,16 +211,32 @@ jobs:
           # 1. Preparar la imagen UEFI FAT12/FAT16/FAT32 (efi.img) conteniendo BOOTX64.EFI
           # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
           dd if=/dev/zero of=bare-metal/efi.img bs=1024 count=1440
-          if ! mkfs.vfat -I -F 12 bare-metal/efi.img; then
-            echo "[⚠️] Advertencia: mkfs.vfat con -F 12 falló, intentando formato automático..."
-            mkfs.vfat -I bare-metal/efi.img || echo "[❌] Advertencia: No se pudo formatear efi.img de forma limpia"
-          fi
           
           # Usar MTOOLS_SKIP_CHECK=1 para evitar advertencias de geometría o fallas en el entorno headless
           export MTOOLS_SKIP_CHECK=1
+          
+          if ! mkfs.vfat -I -F 12 bare-metal/efi.img; then
+            echo "[⚠️] Advertencia: mkfs.vfat con -F 12 falló, intentando con mformat de mtools..."
+            mformat -f 1440 -v "EFI-BOOT" -i bare-metal/efi.img :: || {
+              echo "[⚠️] Advertencia: mformat también falló, intentando formato mkfs.vfat básico..."
+              mkfs.vfat -I bare-metal/efi.img || echo "[❌] Advertencia: No se pudo formatear efi.img de forma limpia"
+            }
+          fi
+          
           mmd -i bare-metal/efi.img ::/EFI || true
           mmd -i bare-metal/efi.img ::/EFI/BOOT || true
-          mcopy -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI || true
+          mcopy -o -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI || {
+            echo "[❌] Error: Falló la copia de BOOTX64.EFI a efi.img"
+            exit 1
+          }
+          
+          # Verificar si BOOTX64.EFI está en la imagen para evitar fallos de compilación silenciosos
+          if mdir -i bare-metal/efi.img ::/EFI/BOOT/BOOTX64.EFI >/dev/null 2>&1; then
+            echo "[✓] BOOTX64.EFI verificado correctamente dentro de efi.img"
+          else
+            echo "[❌] Error crítico: BOOTX64.EFI no existe dentro de la imagen de arranque UEFI efi.img generada"
+            exit 1
+          fi
           
           # 2. Rellenar boot.bin con ceros hasta completar 2048 bytes para El Torito (sin emulación)
           dd if=/dev/zero of=bare-metal/boot2048.bin bs=1 count=2048

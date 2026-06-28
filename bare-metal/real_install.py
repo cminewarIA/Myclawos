@@ -125,8 +125,8 @@ def main():
         print("[SANDBOX] Particionamiento simulado completado con éxito.")
         time.sleep(1)
 
-    # Formatos de particiones para NVMe vs SATA
-    p_suffix = "p" if "nvme" in target_disk else ""
+    # Formatos de particiones para NVMe, eMMC, loopback y SD (si termina en dígito) vs SATA (letra)
+    p_suffix = "p" if target_disk and target_disk[-1].isdigit() else ""
     efi_part = f"{full_disk}{p_suffix}1"
     root_part = f"{full_disk}{p_suffix}2"
 
@@ -221,10 +221,10 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
             run_cmd(f"{chroot_cmd} echo '{username}:{password}' | chpasswd", shell=True)
             run_cmd(f"{chroot_cmd} usermod -aG sudo {username}", shell=True)
 
-        # Limpieza de binds
-        run_cmd(f"umount {mount_point}/dev", shell=True)
-        run_cmd(f"umount {mount_point}/proc", shell=True)
-        run_cmd(f"umount {mount_point}/sys", shell=True)
+        # Limpieza de binds (con fallback de desmontaje perezoso 'lazy' en caso de bloqueo)
+        run_cmd(f"umount {mount_point}/dev || umount -l {mount_point}/dev", shell=True)
+        run_cmd(f"umount {mount_point}/proc || umount -l {mount_point}/proc", shell=True)
+        run_cmd(f"umount {mount_point}/sys || umount -l {mount_point}/sys", shell=True)
     else:
         print("[SANDBOX] Descargado kernel Linux vmlinuz-x86_64, initramfs y cargador GRUB portable en ESP.")
         if username != "root":
@@ -237,7 +237,7 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
     print("\n[7/7] Finalizando instalación...")
     update_progress(95)
     if not is_sandbox:
-        run_cmd(f"umount -R {mount_point}", shell=True)
+        run_cmd(f"umount -R {mount_point} || umount -l {mount_point}", shell=True)
     else:
         print("[SANDBOX] Desmontando volumen virtualizado de forma segura...")
         time.sleep(1)
