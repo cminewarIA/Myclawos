@@ -75,23 +75,26 @@ jobs:
           
           # Intentar regenerarlo con el comando de sistema o descargar el oficial
           if command -v gradle >/dev/null 2>&1; then
-            echo "[+] Usando gradle nativo del runner para regenerar el wrapper v8.14.3..."
-            gradle wrapper --gradle-version 8.14.3 || {
-              echo "[-] Falló gradle wrapper de sistema, procediendo a descarga directa..."
-              curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
-            }
-          else
-            echo "[+] Descargando binario limpio de gradle-wrapper.jar desde el repositorio de Gradle..."
-            mkdir -p gradle/wrapper
-            curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+            echo "[+] Usando gradle nativo del runner para regenerar el wrapper..."
+            gradle wrapper --gradle-version 8.14.3 || gradle wrapper || echo "[-] Falló gradle wrapper de sistema, procediendo a descarga directa..."
           fi
           
-          # Verificar integridad del jar descargado/generado
-          if [ -s "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "[✓] ¡gradle-wrapper.jar restaurado con éxito y listo para compilar!"
+          # Si no existe o mide menos de 10KB, descargar un binario verificado
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ] || [ $(wc -c < "gradle/wrapper/gradle-wrapper.jar") -lt 10000 ]; then
+            echo "[+] Descargando binario oficial limpio de gradle-wrapper.jar de versión estable v8.5.0..."
+            mkdir -p gradle/wrapper
+            rm -f gradle/wrapper/gradle-wrapper.jar
+            curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar || {
+              echo "[!] Falló descarga de v8.5.0, intentando v8.12.0..."
+              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.12.0/gradle/wrapper/gradle-wrapper.jar
+            }
+          fi
+          
+          # Verificar integridad final del jar
+          if [ -s "gradle/wrapper/gradle-wrapper.jar" ] && [ $(wc -c < "gradle/wrapper/gradle-wrapper.jar") -gt 10000 ]; then
+            echo "[✓] ¡gradle-wrapper.jar restaurado con éxito ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes) y listo para compilar!"
           else
-            echo "[!] Re-intentando descarga alternativa desde raw.githubusercontent.com..."
-            curl -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+            echo "[⚠️] Advertencia: No se pudo verificar gradle-wrapper.jar o está vacío. Se dependerá del Gradle de sistema."
           fi
 
       - name: Build Android APK (Debug)
@@ -99,7 +102,10 @@ jobs:
           cd android
           chmod +x gradlew
           echo "[+] Ejecutando compilación del binario APK mediante Gradle..."
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace || {
+            echo "[!] Falló la compilación mediante gradlew wrapper. Intentando compilar usando el comando Gradle de sistema directamente..."
+            gradle assembleDebug --no-daemon --stacktrace
+          }
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -113,7 +119,10 @@ jobs:
         run: |
           cd android
           echo "[+] Compilando versión Release (Sin firmar)..."
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace || {
+            echo "[!] Falló la compilación mediante gradlew wrapper. Intentando compilar usando el comando Gradle de sistema directamente..."
+            gradle assembleRelease --no-daemon --stacktrace
+          }
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
