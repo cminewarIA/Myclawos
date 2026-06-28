@@ -87,22 +87,15 @@ jobs:
             rm -f gradle/wrapper/gradle-wrapper.jar
             mkdir -p gradle/wrapper
             
-            # Descargar de Maven Central (v8.12) - Garantizado binario y sin Git LFS
-            echo "[+] Descargando gradle-wrapper v8.12 desde Maven Central..."
-            curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.12/gradle-wrapper-8.12.jar || true
+            # Descargar de Spring Boot (Garantizado binario real y sin Git LFS)
+            echo "[+] Descargando gradle-wrapper desde el repositorio oficial de Spring Boot..."
+            curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-boot/main/gradle/wrapper/gradle-wrapper.jar || true
             
-            # Si falló, intentar v8.7
+            # Si falló, intentar Spring Framework
             if ! validate_jar; then
-              echo "[+] Descargando gradle-wrapper v8.7 desde Maven Central..."
+              echo "[+] Descargando gradle-wrapper desde el repositorio de Spring Framework..."
               rm -f gradle/wrapper/gradle-wrapper.jar
-              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.7/gradle-wrapper-8.7.jar || true
-            fi
-            
-            # Si falló, intentar v8.5
-            if ! validate_jar; then
-              echo "[+] Descargando gradle-wrapper v8.5 desde Maven Central..."
-              rm -f gradle/wrapper/gradle-wrapper.jar
-              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.5/gradle-wrapper-8.5.jar || true
+              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-framework/main/gradle/wrapper/gradle-wrapper.jar || true
             fi
             
             # Si falló, usar gradle nativo del runner si está disponible
