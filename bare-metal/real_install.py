@@ -207,7 +207,7 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
         run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm xserver-xorg xinit chromium nodejs npm curl", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xinit dbus-x11 chromium nodejs npm curl", shell=True)
         
         # Instalar GRUB de forma removable/portable
         run_cmd(f"{chroot_cmd} grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CMineWarOS --removable {full_disk}", shell=True)
@@ -258,14 +258,15 @@ WantedBy=multi-user.target
         run_cmd(f"{chroot_cmd} groupadd -r autologin || true", shell=True)
         run_cmd(f"{chroot_cmd} gpasswd -a {username} autologin || true", shell=True)
 
-        run_cmd(f"mkdir -p {mount_point}/etc/lightdm", shell=True)
-        lightdm_config = f"""
-[Seat:*]
+        run_cmd(f"mkdir -p {mount_point}/etc/lightdm/lightdm.conf.d", shell=True)
+        lightdm_config = f"""[Seat:*]
 autologin-user={username}
 autologin-user-timeout=0
 autologin-session=xfce
 """
-        with open(f"{mount_point}/etc/lightdm/lightdm.conf", "a") as f:
+        with open(f"{mount_point}/etc/lightdm/lightdm.conf", "w") as f:
+            f.write(lightdm_config)
+        with open(f"{mount_point}/etc/lightdm/lightdm.conf.d/01_cminewar.conf", "w") as f:
             f.write(lightdm_config)
 
         # 6.6 Configurar inicio automático del navegador Chromium en modo Kiosko en XFCE
@@ -276,7 +277,7 @@ autologin-session=xfce
         kiosk_desktop = """[Desktop Entry]
 Type=Application
 Name=CMineWar OS Kiosk
-Exec=sh -c "xset s off -dpms || true; sleep 5; chromium --no-sandbox --test-type --kiosk --start-maximized --no-first-run --simulate-outdated-no-deprecation-warning --autoplay-policy=no-user-gesture-required http://localhost:3000"
+Exec=sh -c "xset s off -dpms || true; sleep 5; (chromium || chromium-browser) --no-sandbox --test-type --kiosk --start-maximized --no-first-run --simulate-outdated-no-deprecation-warning --autoplay-policy=no-user-gesture-required http://localhost:3000"
 Terminal=false
 Icon=chromium
 Comment=Launch CMineWar OS UI in fullscreen Kiosk mode

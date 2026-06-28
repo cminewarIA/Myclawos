@@ -97,8 +97,25 @@ app.post("/api/cminewar/install", (req, res) => {
 
     console.log(`[INSTALADOR] Lanzando instalador físico en Python para: /dev/${safeDisk}`);
     
-    // Lanzar el script en Python de fondo de forma desvinculada redirigiendo salida en tiempo real al archivo de log
-    const child = exec(`python3 -u "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}" > /tmp/cminewar_install_log.txt 2>&1`);
+    // Lanzar el script en Python de fondo de forma desvinculada
+    const child = exec(`python3 -u "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    
+    // Capturar y escribir en tiempo real la salida en el archivo de log para evitar conflictos de redirección de shell
+    child.stdout?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/cminewar_install_log.txt", data);
+      } catch (e) {
+        console.error("Error escribiendo en log:", e);
+      }
+    });
+
+    child.stderr?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/cminewar_install_log.txt", data);
+      } catch (e) {
+        console.error("Error escribiendo en log de error:", e);
+      }
+    });
     
     res.json({
       status: "started",
