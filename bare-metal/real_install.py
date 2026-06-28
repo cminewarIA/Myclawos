@@ -9,10 +9,27 @@ import os
 import sys
 import subprocess
 import time
+import builtins
 from pathlib import Path
 
 PROGRESS_FILE = "/tmp/cminewar_install_progress.txt"
 LOG_FILE = "/tmp/cminewar_install_log.txt"
+
+# Sobrescribir el print de builtins para un volcado inmediato y seguro en logs y stdout
+_original_print = builtins.print
+
+def print(*args, **kwargs):
+    kwargs['flush'] = True
+    _original_print(*args, **kwargs)
+    try:
+        msg = " ".join(str(arg) for arg in args)
+        if msg.strip():
+            with open(LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(msg + "\n")
+    except Exception:
+        pass
+
+builtins.print = print
 
 def update_progress(pct):
     try:
