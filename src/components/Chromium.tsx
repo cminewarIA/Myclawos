@@ -95,8 +95,27 @@ export default function Chromium() {
       );
     }
 
+    // Safely parse URL to prevent incomplete URL substring sanitization vulnerabilities
+    let hostname = "";
+    let pathname = "";
+    try {
+      const parsedUrl = new URL(url.startsWith("http") ? url : `https://${url}`);
+      hostname = parsedUrl.hostname.toLowerCase();
+      pathname = parsedUrl.pathname;
+    } catch (e) {
+      // Fallback
+    }
+
+    const isGithubMyRepo = (hostname === "github.com" || hostname.endsWith(".github.com")) && 
+      (pathname.toLowerCase().startsWith("/cminewaria/mycminewaros") || pathname.toLowerCase() === "/cminewaria/mycminewaros");
+
+    const isGoogle = hostname === "google.com" || hostname.endsWith(".google.com");
+
+    const isCminewar = hostname === "cminewar.ai" || hostname.endsWith(".cminewar.ai") || 
+      hostname === "openclaw.ai" || hostname.endsWith(".openclaw.ai");
+
     // 1. GITHUB SIMULATION (Extremely tailored to cminewarIA/MyCMineWarOS)
-    if (url.includes("github.com/cminewarIA/MyCMineWarOS") || url.includes("github.com/cminewaria/mycminewaros")) {
+    if (isGithubMyRepo) {
       return (
         <div className="bg-slate-950 text-slate-100 p-6 font-sans min-h-full">
           {/* Header */}
@@ -216,7 +235,7 @@ export default function Chromium() {
     }
 
     // 2. GOOGLE SIMULATION
-    if (url.includes("google.com")) {
+    if (isGoogle) {
       return (
         <div className="bg-white text-slate-800 p-8 font-sans min-h-full flex flex-col justify-between font-sans">
           <div className="my-auto space-y-6 text-center max-w-lg mx-auto">
@@ -307,7 +326,7 @@ export default function Chromium() {
     }
 
     // 3. CMINEWAR SIMULATION
-    if (url.includes("cminewar.ai") || url.includes("openclaw.ai")) {
+    if (isCminewar) {
       return (
         <div className="bg-slate-900 text-slate-100 p-8 font-sans min-h-full flex flex-col justify-between">
           <div className="max-w-xl mx-auto py-4 space-y-6">

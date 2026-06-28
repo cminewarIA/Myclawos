@@ -443,9 +443,11 @@ export function PkgNginx() {
 
         <div className="flex-1 relative overflow-auto select-text p-4">
           {nginxActive ? (
-            <div 
-              className="w-full h-full bg-[#0d1117] rounded-lg border border-slate-900 p-2 overflow-auto"
-              dangerouslySetInnerHTML={{ __html: indexHtml }}
+            <iframe
+              srcDoc={indexHtml}
+              sandbox="allow-scripts"
+              className="w-full h-full bg-[#0d1117] rounded-lg border border-slate-900 overflow-auto"
+              title="Virtual Browser Preview"
             />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 select-none">

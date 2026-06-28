@@ -2,14 +2,36 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { exec, execSync } from "child_process";
+import { exec, execSync, execFileSync, spawn } from "child_process";
 import fs from "fs";
 import os from "os";
+import { rateLimit } from "express-rate-limit";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Enable standard rate limiter to prevent DOS / abuse across all paths
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas peticiones desde esta IP. Inténtelo de nuevo más tarde." }
+});
+
+// Enable tighter rate limiter specifically for API endpoints
+const apiLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 100, // Limit each IP to 100 requests per 5 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas peticiones al API. Inténtelo más tarde." }
+});
+
+app.use(globalLimiter);
+app.use("/api/", apiLimiter);
 
 app.use(express.json());
 
@@ -93,8 +115,8 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
   let processes: any[] = [];
   if (isLinux || process.platform === "darwin") {
     try {
-      const output = execSync("ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 12").toString();
-      const lines = output.trim().split("\n");
+      const output = execFileSync("ps", ["-eo", "pid,comm,%cpu,%mem", "--sort=-%cpu"]).toString();
+      const lines = output.trim().split("\n").slice(0, 12);
       // Ignore header line
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].trim().split(/\s+/);
@@ -143,7 +165,14 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
     services = services.map(srv => {
       try {
         const sysSrvName = srv.id === "cminewar-service" ? "cminewar" : srv.id;
-        const state = execSync(`systemctl is-active ${sysSrvName} 2>/dev/null`).toString().trim();
+        let state = "inactive";
+        try {
+          state = execFileSync("systemctl", ["is-active", sysSrvName], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+        } catch (err: any) {
+          if (err && err.stdout) {
+            state = err.stdout.toString().trim();
+          }
+        }
         return {
           ...srv,
           status: state === "active" ? "active" : "inactive"
@@ -158,7 +187,7 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
   let isFirewallActive = false;
   if (isLinux) {
     try {
-      const output = execSync("iptables -S OUTPUT 2>/dev/null").toString();
+      const output = execFileSync("iptables", ["-S", "OUTPUT"], { stdio: ["ignore", "pipe", "ignore"] }).toString();
       isFirewallActive = output.includes("-P OUTPUT DROP");
     } catch (e) {
       // benign
