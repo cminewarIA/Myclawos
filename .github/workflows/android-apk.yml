@@ -209,6 +209,9 @@ jobs:
           # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
           dd if=/dev/zero of=bare-metal/efi.img bs=1024 count=1440
           mkfs.vfat -F 12 bare-metal/efi.img
+          
+          # Usar MTOOLS_SKIP_CHECK=1 para evitar advertencias de geometría o fallas en el entorno headless
+          export MTOOLS_SKIP_CHECK=1
           mmd -i bare-metal/efi.img ::/EFI
           mmd -i bare-metal/efi.img ::/EFI/BOOT
           mcopy -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
