@@ -21,13 +21,6 @@ _original_print = builtins.print
 def print(*args, **kwargs):
     kwargs['flush'] = True
     _original_print(*args, **kwargs)
-    try:
-        msg = " ".join(str(arg) for arg in args)
-        if msg.strip():
-            with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(msg + "\n")
-    except Exception:
-        pass
 
 builtins.print = print
 
