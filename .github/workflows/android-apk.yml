@@ -170,10 +170,10 @@ jobs:
         run: |
           npm run build
 
-      - name: Install Compilers (NASM & MinGW)
+      - name: Install Compilers & ISO Tools (NASM, MinGW, xorriso, mtools, dosfstools)
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm gcc-mingw-w64-x86-64
+          sudo apt-get install -y nasm gcc-mingw-w64-x86-64 xorriso mtools dosfstools
 
       - name: Compile BIOS MBR Bootsector (boot.asm)
         run: |
@@ -181,7 +181,7 @@ jobs:
 
       - name: Compile UEFI x86_64 System Loader (uefi_loader.c)
         run: |
-          x86_64-w64-mingw32-gcc -nostdlib -shared -Wl,-dll -Wl,--subsystem,10 -e efi_main -o bare-metal/BOOTX64.EFI bare-metal/uefi_loader.c
+          x86_64-w64-mingw32-gcc -fshort-wchar -nostdlib -shared -Wl,-dll -Wl,--subsystem,10 -e efi_main -o bare-metal/BOOTX64.EFI bare-metal/uefi_loader.c
 
       - name: Verify Compiled Binary Artifacts
         run: |
@@ -200,6 +200,46 @@ jobs:
             exit 1
           fi
 
+      - name: Build Dual-Boot (BIOS & UEFI) Bootable ISO Image
+        run: |
+          echo "[+] Preparando la estructura de la ISO arrancable..."
+          mkdir -p iso_root/bare-metal
+          
+          # 1. Preparar la imagen UEFI FAT12/FAT16/FAT32 (efi.img) conteniendo BOOTX64.EFI
+          # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
+          dd if=/dev/zero of=bare-metal/efi.img bs=1024 count=1440
+          mkfs.vfat -F 12 bare-metal/efi.img
+          mmd -i bare-metal/efi.img ::/EFI
+          mmd -i bare-metal/efi.img ::/EFI/BOOT
+          mcopy -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
+          
+          # 2. Rellenar boot.bin con ceros hasta completar 2048 bytes para El Torito (sin emulación)
+          dd if=/dev/zero of=bare-metal/boot2048.bin bs=1 count=2048
+          dd if=bare-metal/boot.bin of=bare-metal/boot2048.bin conv=notrunc
+          
+          # 3. Copiar archivos del sistema a la estructura de la ISO
+          cp -r dist iso_root/
+          cp package.json download-wrapper.cjs iso_root/
+          cp -r bare-metal/* iso_root/bare-metal/
+          
+          # Copiar los cargadores de arranque necesarios a la raíz para que El Torito los encuentre
+          cp bare-metal/boot2048.bin iso_root/boot.bin
+          cp bare-metal/efi.img iso_root/efi.img
+          
+          # 4. Compilar la ISO híbrida dual-boot usando xorriso
+          xorriso -as mkisofs \
+            -V "clawOS" \
+            -o clawOS-live.iso \
+            -b boot.bin \
+            -c boot.catalog \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            -eltorito-alt-boot \
+            -e efi.img \
+            -no-emul-boot \
+            iso_root/
+            
+          echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito."
+
       - name: Package clawOS Ubuntu/Debian Distribution Bundle
         run: |
           echo "[+] Preparando paquete de distribución de clawOS para Ubuntu/Debian..."
@@ -213,6 +253,14 @@ jobs:
           # Comprimir en un archivo tar.gz
           tar -czf clawOS-Ubuntu-amd64.tar.gz clawos-ubuntu-amd64/
           echo "[✓] Distribución clawOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
+
+      - name: Upload Bootable ISO Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawOS_Live_Bootable_ISO
+          path: clawOS-live.iso
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload Ubuntu/Debian Bundle Artifact
         uses: actions/upload-artifact@v4
