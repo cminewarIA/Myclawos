@@ -1935,6 +1935,16 @@ echo "========================================================================="
                 )}
               </div>
 
+              <div className="p-3 bg-gradient-to-br from-indigo-950/20 to-slate-950 border border-indigo-500/20 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
+                <span className="text-[10px] font-mono uppercase text-indigo-400 block font-bold flex items-center space-x-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+                  <span>Compilación Automática en GitHub Actions:</span>
+                </span>
+                <p className="text-[10px] text-slate-300">
+                  ¡Hemos añadido soporte para Integración Continua (CI)! Al subir este proyecto a tu repositorio de GitHub, el workflow <code className="text-yellow-400 font-mono bg-slate-900 px-1 py-0.5 rounded">android-apk.yml</code> compilará automáticamente tanto la APK Debug como la APK Release usando Java 17, el SDK de Android y Gradle. Podrás descargar tu APK directamente desde los artefactos de tu repositorio de GitHub sin configuraciones locales complejas.
+                </p>
+              </div>
+
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
                 <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico CMineWar OS Móvil:</span>
                 <p className="text-[10px]">

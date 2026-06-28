@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compile Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: |
+          npm install
+
+      - name: Build Web Application (React/Vite)
+        run: |
+          npm run build
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Initialize & Sync Capacitor Android
+        run: |
+          # If the android folder does not exist, initialize and add the android platform
+          if [ ! -d "android" ]; then
+            echo "[+] No se encontró la carpeta 'android'. Inicializando plataforma..."
+            npx cap add android
+          else
+            echo "[+] Carpeta 'android' ya existe."
+          fi
+          
+          echo "[+] Sincronizando recursos y código web con Capacitor..."
+          npx cap sync android
+
+      - name: Build Android APK (Debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          echo "[+] Ejecutando compilación del binario APK mediante Gradle..."
+          ./gradlew assembleDebug
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMineWar_OS_Mobile_Debug_APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      - name: Build Android APK (Release Unsigned)
+        run: |
+          cd android
+          echo "[+] Compilando versión Release (Sin firmar)..."
+          ./gradlew assembleRelease
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMineWar_OS_Mobile_Release_APK
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 7
