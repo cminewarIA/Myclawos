@@ -208,7 +208,39 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       "🚀 [PORTABILIDAD] Sintonizando kernel adaptativo para el hardware de este ordenador host...",
     ];
 
-    const finalBiosSequence = [...portableSsdLogs, ...biosBootSequence];
+    const currentHostId = localStorage.getItem("cminewar_current_host") || "host_1";
+    const hwLogs = [
+      `🔍 [HW-DETECT] Iniciando detección automática de hardware (Auto-Sensing)...`,
+    ];
+    if (currentHostId === "host_1") {
+      hwLogs.push(`   - [HW] Laptop Lenovo ThinkPad Carbon X1 Detectada.`);
+      hwLogs.push(`   - [HW] CPU: Intel Core i7-1370P vPro (14 núcleos)`);
+      hwLogs.push(`   - [HW] GPU: Intel Integrated Iris Xe Graphics`);
+      hwLogs.push(`   - [HW] Wi-Fi: Atheros AR9287 Wireless Network Adapter`);
+      hwLogs.push(`   - [HW] Audio: Realtek ALC285 High Definition Audio`);
+      hwLogs.push(`   - [RESULT] Todos los componentes usan controladores libres standard. No se requiere software propietario.`);
+    } else if (currentHostId === "host_2") {
+      hwLogs.push(`   - [HW] Estación Gaming ASUS ROG Strix Detectada.`);
+      hwLogs.push(`   - [HW] CPU: AMD Ryzen 9 7900X (12 núcleos, 5.4GHz)`);
+      hwLogs.push(`   - [HW] GPU: NVIDIA GeForce RTX 4090 Founders Edition`);
+      hwLogs.push(`   - [HW] Wi-Fi: Intel Killer Wi-Fi 6E AX1675i Tri-Band`);
+      hwLogs.push(`   - [HW] Audio: Creative SoundBlaster AE-9 Professional`);
+      hwLogs.push(`   - [RESULT] ¡Se detectó Hardware Propietario que requiere controladores propietarios privativos!`);
+      hwLogs.push(`   - [RESULT] Programando descarga en background de: nvidia-gforce-rtx`);
+      hwLogs.push(`   - [RESULT] Programando descarga en background de: killer-wifi-pro`);
+    } else {
+      hwLogs.push(`   - [HW] Workstation de Inteligencia Artificial Dell Precision Detectada.`);
+      hwLogs.push(`   - [HW] CPU: Dual Intel Xeon Platinum 8480+ (112 núcleos lógicos)`);
+      hwLogs.push(`   - [HW] GPU: NVIDIA RTX A6000 Ada Generation Enterprise`);
+      hwLogs.push(`   - [HW] Wi-Fi: Broadcom BCM4360 802.11ac dual-band`);
+      hwLogs.push(`   - [HW] Audio: Realtek ALC1220 High Definition Audio Pro`);
+      hwLogs.push(`   - [RESULT] ¡Se detectó Hardware Propietario que requiere controladores propietarios privativos!`);
+      hwLogs.push(`   - [RESULT] Programando descarga en background de: nvidia-rtx-enterprise`);
+      hwLogs.push(`   - [RESULT] Programando descarga en background de: broadcom-sta-extreme`);
+      hwLogs.push(`   - [RESULT] Programando descarga en background de: realtek-hd-asio-pro`);
+    }
+
+    const finalBiosSequence = [...portableSsdLogs, ...hwLogs, ...biosBootSequence];
 
     const sequence = selectedServerIp 
       ? [...serverHandshakeSequence, ...finalBiosSequence] 

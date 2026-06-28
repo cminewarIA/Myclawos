@@ -97,7 +97,7 @@ export default function DragonLogo({ size = 48, className = "", glow = true }: D
           strokeLinecap="round"
           strokeLinejoin="miter"
           opacity="0.15"
-          filter="url(#dragon-glow-heavy)"
+          filter={glow ? "url(#dragon-glow-heavy)" : undefined}
         />
         {/* Main sharp calligraphy paths of the C letter */}
         <path
@@ -137,7 +137,7 @@ export default function DragonLogo({ size = 48, className = "", glow = true }: D
           strokeWidth="14"
           strokeLinecap="round"
           opacity="0.25"
-          filter="url(#dragon-glow-heavy)"
+          filter={glow ? "url(#dragon-glow-heavy)" : undefined}
         />
 
         {/* Dragon Spine sharp ruby spikes */}

@@ -46,12 +46,53 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   const [simulatedHour, setSimulatedHour] = useState<string>(() => {
     return localStorage.getItem("cminewar_nano_sim_hour") || "real";
   });
+  const [dimOpacity, setDimOpacity] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_dim_opacity") || "0";
+  });
+  const [showGrid, setShowGrid] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_grid");
+    return saved === null ? "true" : saved;
+  });
+  const [showStars, setShowStars] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_stars");
+    return saved === null ? "true" : saved;
+  });
+  const [showCoreLogo, setShowCoreLogo] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_core_logo");
+    return saved === null ? "true" : saved;
+  });
+  const [wallpaperPattern, setWallpaperPattern] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_pattern") || "wireframe";
+  });
 
   const updateWallpaperSetting = (key: string, value: string) => {
     localStorage.setItem(key, value);
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new Event("cminewar_wallpaper_settings_changed"));
   };
+
+  useEffect(() => {
+    const syncWallpaperSettings = () => {
+      setNanoBananaSize((localStorage.getItem("cminewar_nano_banana_size") as any) || "estandar");
+      setLineStyle((localStorage.getItem("cminewar_nano_line_style") as any) || "curvo");
+      setGlowIntensity((localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio");
+      setSimulatedHour(localStorage.getItem("cminewar_nano_sim_hour") || "real");
+      setDimOpacity(localStorage.getItem("cminewar_nano_dim_opacity") || "0");
+      const savedGrid = localStorage.getItem("cminewar_nano_show_grid");
+      setShowGrid(savedGrid === null ? "true" : savedGrid);
+      const savedStars = localStorage.getItem("cminewar_nano_show_stars");
+      setShowStars(savedStars === null ? "true" : savedStars);
+      const savedLogo = localStorage.getItem("cminewar_nano_show_core_logo");
+      setShowCoreLogo(savedLogo === null ? "true" : savedLogo);
+      setWallpaperPattern(localStorage.getItem("cminewar_nano_pattern") || "wireframe");
+    };
+    window.addEventListener("storage", syncWallpaperSettings);
+    window.addEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    return () => {
+      window.removeEventListener("storage", syncWallpaperSettings);
+      window.removeEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
+    };
+  }, []);
   
   const [netSpeedDown, setNetSpeedDown] = useState(4.2); // MB/s
   const [netSpeedUp, setNetSpeedUp] = useState(0.8); // MB/s
@@ -898,6 +939,10 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                   <span>ESTADO EN VIVO</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Patrón y Diseño:</span>
+                  <span className="text-pink-400 font-bold uppercase">{wallpaperPattern}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Talla de Red:</span>
                   <span className="text-pink-400 font-bold uppercase">{nanoBananaSize}</span>
                 </div>
@@ -912,6 +957,20 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                 <div className="flex justify-between">
                   <span>Brillo CSS:</span>
                   <span className="text-pink-400 font-bold uppercase">{glowIntensity}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Atenuación Tint:</span>
+                  <span className="text-pink-400 font-bold uppercase">{(parseFloat(dimOpacity) * 100).toFixed(0)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Rejilla / Estrellas:</span>
+                  <span className="text-pink-400 font-bold uppercase">
+                    {showGrid === "true" ? "SI" : "NO"} / {showStars === "true" ? "SI" : "NO"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Núcleo Dragón:</span>
+                  <span className="text-pink-400 font-bold uppercase">{showCoreLogo === "true" ? "VISIBLE" : "OCULTO"}</span>
                 </div>
               </div>
 

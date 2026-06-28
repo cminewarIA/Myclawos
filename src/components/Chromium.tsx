@@ -11,7 +11,8 @@ import {
   Code, 
   Star, 
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Chrome
 } from "lucide-react";
 
 export default function Chromium() {
@@ -143,7 +144,7 @@ export default function Chromium() {
                   </div>
                   <div className="p-2.5 px-4 flex justify-between hover:bg-slate-800/40 select-none">
                     <span className="text-blue-400 font-bold">📂 public/</span>
-                    <span className="text-slate-500">Add Chromium default configuration profiles</span>
+                    <span className="text-slate-500">Add Chrome default configuration profiles</span>
                   </div>
                   <div className="p-2.5 px-4 flex justify-between hover:bg-slate-800/40 select-none">
                     <span className="text-slate-300">📄 package.json</span>
@@ -175,7 +176,7 @@ export default function Chromium() {
                       <li>Sincronización bidireccional continua con repositorios GitHub remotos.</li>
                       <li>Modo Autónomo de Superusuario (Direct Root Autologin).</li>
                       <li>Desactivación permanente ACPI para estabilidad de servicios continuos sin hibernación.</li>
-                      <li>Integración nativa del navegador Chromium como buscador por defecto.</li>
+                      <li>Integración nativa del navegador Chrome como buscador por defecto.</li>
                     </ul>
                   </div>
                 </div>
@@ -196,7 +197,7 @@ export default function Chromium() {
                   </div>
                   <div className="text-cyan-400 flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />
-                    <span>Chromium por Defecto</span>
+                    <span>Chrome por Defecto</span>
                   </div>
                 </div>
               </div>
@@ -217,10 +218,10 @@ export default function Chromium() {
     // 2. GOOGLE SIMULATION
     if (url.includes("google.com")) {
       return (
-        <div className="bg-white text-slate-800 p-8 font-sans min-h-full flex flex-col justify-between">
+        <div className="bg-white text-slate-800 p-8 font-sans min-h-full flex flex-col justify-between font-sans">
           <div className="my-auto space-y-6 text-center max-w-lg mx-auto">
             {/* Google Logo */}
-            <h1 className="text-4xl font-extrabold tracking-tight select-none">
+            <h1 className="text-4xl font-extrabold tracking-tight select-none font-sans">
               <span className="text-blue-500">G</span>
               <span className="text-red-500">o</span>
               <span className="text-amber-500">o</span>
@@ -241,11 +242,11 @@ export default function Chromium() {
                 placeholder="Buscar en Google o escribir URL..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm p-0 text-slate-900" 
+                className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm p-0 text-slate-900 font-sans" 
               />
             </form>
 
-            <div className="flex justify-center space-x-2 text-xs">
+            <div className="flex justify-center space-x-2 text-xs font-sans">
               <button 
                 type="button" 
                 onClick={() => setSearchResultActive(true)}
@@ -267,7 +268,7 @@ export default function Chromium() {
           </div>
 
           {searchResultActive && searchQuery.trim() && (
-            <div className="border-t border-slate-100 mt-6 pt-6 text-left max-w-xl mx-auto space-y-4">
+            <div className="border-t border-slate-100 mt-6 pt-6 text-left max-w-xl mx-auto space-y-4 font-sans">
               <h3 className="text-xs text-slate-500 font-mono">Buscar Resultados para: "{searchQuery}"</h3>
               
               {/* Simulated Search Item 1 */}
@@ -279,7 +280,7 @@ export default function Chromium() {
                   </button>
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Sistema operativo con autoactualización de GitHub remota e integral basada en Debian, Chromium como navegador por defecto y omitiendo contraseñas de seguridad.
+                  Sistema operativo con autoactualización de GitHub remota e integral basada en Debian, Chrome como navegador por defecto y omitiendo contraseñas de seguridad.
                 </p>
               </div>
 
@@ -298,7 +299,7 @@ export default function Chromium() {
             </div>
           )}
 
-          <div className="text-center text-[10px] text-slate-400 select-none pb-2">
+          <div className="text-center text-[10px] text-slate-400 select-none pb-2 font-sans">
             España © Google LLC - Privacidad - Términos
           </div>
         </div>
@@ -331,7 +332,7 @@ export default function Chromium() {
               <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
                 <h4 className="font-bold text-cyan-300">Default Sandbox Browser</h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  Chromium se integra nativamente en el sandbox gráfico de CMineWar OS, proporcionando acceso completo y limpio a las APIs de red del host de forma segura.
+                  Chrome se integra nativamente en el sandbox gráfico de CMineWar OS, proporcionando acceso completo y limpio a las APIs de red del host de forma segura.
                 </p>
               </div>
             </div>
@@ -354,7 +355,7 @@ export default function Chromium() {
       <div className="bg-slate-950 text-slate-300 p-12 text-center flex flex-col items-center justify-center min-h-full font-sans">
         <Home size={32} className="text-slate-500 mb-3" />
         <h3 className="font-bold text-slate-100 text-sm mb-1">Página Web Simulada</h3>
-        <p className="text-xs text-slate-500 max-w-sm leading-relaxed mb-4">
+        <p className="text-xs text-slate-500 max-w-sm leading-relaxed mb-4 font-sans">
           Estás navegando la dirección: <span className="text-slate-300 font-mono break-all">{url}</span>. Para una mejor experiencia web interactiva, utilice los marcadores sugeridos en la barra superior.
         </p>
         <button 
@@ -369,7 +370,7 @@ export default function Chromium() {
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full bg-slate-950 text-slate-200 overflow-hidden" id="chromium-container">
+    <div className="flex flex-col flex-1 h-full bg-slate-950 text-slate-200 overflow-hidden font-sans" id="chromium-container">
       
       {/* 1. Address bar & navigation deck */}
       <div className="bg-slate-900 p-2.5 border-b border-slate-800 flex items-center justify-between shrink-0 space-x-3 select-none">
@@ -429,10 +430,11 @@ export default function Chromium() {
           <button type="submit" className="hidden" />
         </form>
 
-        {/* Desktop Browser Badge */}
-        <span className="hidden md:inline-flex px-2 py-0.5 bg-cyan-950 border border-cyan-800 text-cyan-400 rounded-full text-[9px] font-mono whitespace-nowrap">
-          Simulación Chromium v122
-        </span>
+        {/* Chrome Dev Badge */}
+        <div className="hidden md:flex items-center space-x-1.5 px-2 py-0.5 bg-blue-950/80 border border-blue-800 text-blue-400 rounded-full text-[9px] font-mono whitespace-nowrap">
+          <Chrome size={10} className="text-blue-400 animate-spin" />
+          <span>Chrome Dev v125</span>
+        </div>
       </div>
 
       {/* 2. Bookmarks bar */}

@@ -35,6 +35,27 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     return (localStorage.getItem("cminewar_nano_glow_intensity") as any) || "medio";
   });
 
+  // Additional advanced readability customization states
+  const [dimOpacity, setDimOpacity] = useState<number>(() => {
+    const saved = localStorage.getItem("cminewar_nano_dim_opacity");
+    return saved ? parseFloat(saved) : 0;
+  });
+  const [showGrid, setShowGrid] = useState<boolean>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_grid");
+    return saved === null ? true : saved === "true";
+  });
+  const [showStars, setShowStars] = useState<boolean>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_stars");
+    return saved === null ? true : saved === "true";
+  });
+  const [showCoreLogo, setShowCoreLogo] = useState<boolean>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_core_logo");
+    return saved === null ? true : saved === "true";
+  });
+  const [wallpaperPattern, setWallpaperPattern] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_pattern") || "wireframe";
+  });
+
   // Track physical dimensions of the background container for dynamic canvas adjustment
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1100, height: 680 });
@@ -73,6 +94,15 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
       } else {
         setSimulatedHour(parseInt(savedHour, 10));
       }
+      const savedDim = localStorage.getItem("cminewar_nano_dim_opacity");
+      setDimOpacity(savedDim ? parseFloat(savedDim) : 0);
+      const savedGrid = localStorage.getItem("cminewar_nano_show_grid");
+      setShowGrid(savedGrid === null ? true : savedGrid === "true");
+      const savedStars = localStorage.getItem("cminewar_nano_show_stars");
+      setShowStars(savedStars === null ? true : savedStars === "true");
+      const savedLogo = localStorage.getItem("cminewar_nano_show_core_logo");
+      setShowCoreLogo(savedLogo === null ? true : savedLogo === "true");
+      setWallpaperPattern(localStorage.getItem("cminewar_nano_pattern") || "wireframe");
     };
     
     // Listen to standard storage updates (from same or other panels)
@@ -194,40 +224,46 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
       className={`absolute inset-0 z-0 bg-gradient-to-b ${bgGradient} transition-all duration-1000 overflow-hidden w-full h-full select-none pointer-events-none`}
       id="banana-wallpaper-container"
     >
-      {/* 1. Fine Desktop Grid Mesh */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="desktop-grid" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M 60 0 L 0 0 0 60" fill="none" stroke={gridColor} strokeWidth="1" />
-            <circle cx="0" cy="0" r="1.5" fill={primaryGlow} opacity="0.15" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#desktop-grid)" />
-      </svg>
+      {/* 1. Fine Desktop Grid Mesh (Only if showGrid is active) */}
+      {showGrid && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="desktop-grid" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke={gridColor} strokeWidth="1" />
+              <circle cx="0" cy="0" r="1.5" fill={primaryGlow} opacity="0.15" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#desktop-grid)" />
+        </svg>
+      )}
 
-      {/* 2. Abstract Ambient Back-glow circles */}
-      <div 
-        className="absolute rounded-full blur-[140px] opacity-[0.14] transition-all duration-1000 animate-pulse pointer-events-none"
-        style={{
-          width: "550px",
-          height: "550px",
-          backgroundColor: primaryGlow,
-          left: "50%",
-          top: "48.5%",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
-      <div 
-        className="absolute rounded-full blur-[200px] opacity-[0.08] transition-all duration-1000 pointer-events-none"
-        style={{
-          width: "800px",
-          height: "800px",
-          backgroundColor: secondaryGlow,
-          left: "50%",
-          top: "48.5%",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
+      {/* 2. Abstract Ambient Back-glow circles (Disabled in minimalist and cyber-grid patterns) */}
+      {wallpaperPattern !== "minimalist" && wallpaperPattern !== "cybergrid" && (
+        <>
+          <div 
+            className="absolute rounded-full blur-[140px] opacity-[0.14] transition-all duration-1000 animate-pulse pointer-events-none"
+            style={{
+              width: "550px",
+              height: "550px",
+              backgroundColor: primaryGlow,
+              left: "50%",
+              top: "48.5%",
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+          <div 
+            className="absolute rounded-full blur-[200px] opacity-[0.08] transition-all duration-1000 pointer-events-none"
+            style={{
+              width: "800px",
+              height: "800px",
+              backgroundColor: secondaryGlow,
+              left: "50%",
+              top: "48.5%",
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        </>
+      )}
 
       {/* 3. The Generative Wireframe & Sockets Map SVG layer */}
       <svg 
@@ -260,10 +296,8 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           </linearGradient>
         </defs>
 
-        {/* Dynamic Connected Bus Wires */}
-        {nodes.map((node, i) => {
-          if (lineStyle === "oculto") return null;
-
+        {/* Dynamic Connected Bus Wires (Only shown if wireframe pattern is selected and lines are not hidden) */}
+        {wallpaperPattern === "wireframe" && lineStyle !== "oculto" && nodes.map((node, i) => {
           const isServiceActive = node.status === "active";
           // Perfect curved Bezier cables going from center banana to the service endpoint
           // Curve pulls slightly towards the angle bisector for cosmic look
@@ -293,8 +327,8 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
                 className="transition-all duration-700"
               />
               
-              {/* Dynamic traveling data packets for ACTIVE services */}
-              {isServiceActive && (
+              {/* Dynamic traveling data packets for ACTIVE services - disabled when glow is subtle to save CPU/GPU */}
+              {isServiceActive && glowIntensity !== "sutil" && (
                 <circle r="4" fill={secondaryGlow} filter="url(#neon-glow)">
                   <animateMotion
                     path={pathD}
@@ -307,8 +341,8 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           );
         })}
 
-        {/* Drawing Outer Star Field Particles tailored to active simulate hour value */}
-        {Array.from({ length: 28 }).map((_, stIdx) => {
+        {/* Drawing Outer Star Field Particles tailored to active simulate hour value (Only if showStars is true) */}
+        {showStars && wallpaperPattern !== "minimalist" && Array.from({ length: 28 }).map((_, stIdx) => {
           // Semi-random seeded coordinate patterns proportional to screen size
           const maxDist = Math.max(100, Math.min(dimensions.width, dimensions.height) * 0.55);
           const sRad = (stIdx * 45) % 360;
@@ -329,40 +363,38 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
           );
         })}
 
-        {/* Central Core Circle Node (Banana Core Platform) */}
-        <g transform={`translate(${centerX}, ${centerY})`}>
-          {/* Pulsing Backplane Halo */}
-          <circle r={65 * coreScale} fill={primaryGlow} opacity="0.08" filter="url(#core-glow)">
-            <animate attributeName="r" values={`${55 * coreScale};${75 * coreScale};${55 * coreScale}`} dur="4s" repeatCount="indefinite" />
-          </circle>
-          
-          <circle r={48 * coreScale} fill="rgba(15, 23, 42, 0.9)" stroke={primaryGlow} strokeWidth="1.5" filter="url(#neon-glow)" />
-          <circle r={42 * coreScale} fill="rgba(2, 6, 23, 0.95)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+        {/* Central Core Circle Node (Banana Core Platform) (Only if showCoreLogo is true and pattern isn't minimalist/cybergrid) */}
+        {showCoreLogo && wallpaperPattern !== "minimalist" && wallpaperPattern !== "cybergrid" && (
+          <g transform={`translate(${centerX}, ${centerY})`}>
+            {/* Pulsing Backplane Halo - static if glow is subtle to prevent GPU draw calls */}
+            {glowIntensity !== "sutil" ? (
+              <circle r={65 * coreScale} fill={primaryGlow} opacity="0.08" filter="url(#core-glow)">
+                <animate attributeName="r" values={`${55 * coreScale};${75 * coreScale};${55 * coreScale}`} dur="4s" repeatCount="indefinite" />
+              </circle>
+            ) : (
+              <circle r={60 * coreScale} fill={primaryGlow} opacity="0.04" />
+            )}
+            
+            <circle r={48 * coreScale} fill="rgba(15, 23, 42, 0.9)" stroke={primaryGlow} strokeWidth="1.5" filter={glowIntensity !== "sutil" ? "url(#neon-glow)" : undefined} />
+            <circle r={42 * coreScale} fill="rgba(2, 6, 23, 0.95)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
 
-          {/* Custom Dragon Logo in the center of the kernel wallpaper */}
-          <foreignObject x={-42 * coreScale} y={-42 * coreScale} width={84 * coreScale} height={84 * coreScale}>
-            <div className="w-full h-full flex items-center justify-center">
-              <DragonLogo size={80 * coreScale} glow={true} />
-            </div>
-          </foreignObject>
+            {/* Custom Dragon Logo in the center of the kernel wallpaper */}
+            <foreignObject x={-42 * coreScale} y={-42 * coreScale} width={84 * coreScale} height={84 * coreScale}>
+              <div className="w-full h-full flex items-center justify-center">
+                <DragonLogo size={80 * coreScale} glow={glowIntensity !== "sutil"} />
+              </div>
+            </foreignObject>
+          </g>
+        )}
 
-          {/* Subtext around core */}
-          <path id="core-text-path" d={`M ${-42 * coreScale},0 A ${42 * coreScale},${42 * coreScale} 0 1,1 ${42 * coreScale},0`} fill="none" />
-          <text fontSize={6.5 * coreScale} fontWeight="bold" fill="rgba(255, 255, 255, 0.45)" letterSpacing="1.2" className="font-mono">
-            <textPath href="#core-text-path" startOffset="50%" textAnchor="middle">
-              CMINEWAR KERNEL DEBIAN FORCE
-            </textPath>
-          </text>
-        </g>
-
-        {/* Render Outer Service Nodes */}
-        {nodes.map((node, i) => {
+        {/* Render Outer Service Nodes (Only in full wireframe mode) */}
+        {wallpaperPattern === "wireframe" && nodes.map((node, i) => {
           const isActive = node.status === "active";
           
           return (
             <g key={`svc-node-${node.id || i}`} transform={`translate(${node.x}, ${node.y})`}>
-              {/* Outer orbit boundary */}
-              <circle r="18" fill="rgba(15, 23, 42, 0.95)" stroke={isActive ? primaryGlow : "rgba(71, 85, 105, 0.3)"} strokeWidth="1.2" filter={isActive ? "url(#neon-glow)" : undefined} className="transition-all duration-700" />
+              {/* Outer orbit boundary - filters disabled on subtle glow to conserve GPU */}
+              <circle r="18" fill="rgba(15, 23, 42, 0.95)" stroke={isActive ? primaryGlow : "rgba(71, 85, 105, 0.3)"} strokeWidth="1.2" filter={isActive && glowIntensity !== "sutil" ? "url(#neon-glow)" : undefined} className="transition-all duration-700" />
               <circle r="14" fill="rgba(2, 6, 23, 0.98)" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
 
               {/* Service custom mini layout symbol */}
@@ -416,6 +448,11 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
         })}
       </svg>
 
+      {/* 4. Advanced Darkening Readability Tint Layer overlay */}
+      <div 
+        className="absolute inset-0 bg-slate-950 transition-all duration-500 pointer-events-none"
+        style={{ opacity: dimOpacity }}
+      />
     </div>
   );
 }

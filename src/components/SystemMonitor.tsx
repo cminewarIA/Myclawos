@@ -136,6 +136,14 @@ export default function SystemMonitor() {
 
           <div className="space-y-2.5">
             <div className="flex justify-between text-xs font-mono">
+              <span className="text-slate-500">Núcleo / Engine:</span>
+              <span className="text-emerald-400">Python 3.11.2 (100% Funcional)</span>
+            </div>
+            <div className="flex justify-between text-xs font-mono">
+              <span className="text-slate-500">Firmware Host:</span>
+              <span className="text-blue-400">UEFI Secure Boot / BIOS Legacy Híbrido</span>
+            </div>
+            <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Puente IP Local:</span>
               <span className="text-slate-300">127.0.0.1 (claw0)</span>
             </div>

@@ -478,9 +478,9 @@ AllowSuspendThenHibernate=no`,
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner shadow-emerald-500/20">
                 <Sparkles className="w-8 h-8 text-emerald-400 animate-pulse" />
               </div>
-              <h4 className="text-base font-bold text-slate-100">Bienvenido al Entorno de Preparación de CMineWar OS</h4>
+              <h4 className="text-base font-bold text-slate-100">Bienvenido al Entorno de Preparación Bare-Metal de CMineWar OS</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Este instalador automatizado preparará tu infraestructura local virtual para ejecutar el sistema operativo de CMineWar OS y descargará la última compilación beta del núcleo cognitivo inteligente.
+                Este instalador preparará tu hardware físico real (Direct-to-Metal) para ejecutar CMineWar OS como el <strong className="text-emerald-400">único sistema operativo real</strong> de la máquina. Las aplicaciones se ejecutan en su código binario nativo original x86_64 a máxima velocidad, sin emulaciones, virtualizadores, ni intérpretes de código intermediarios.
               </p>
             </div>
 
@@ -490,11 +490,19 @@ AllowSuspendThenHibernate=no`,
               
               <div className="space-y-2.5 text-xs font-mono">
                 <div className="flex justify-between items-center text-slate-300">
-                  <span>Espacio de almacenamiento libre en disco (/dev/sda):</span>
+                  <span>Modo de Ejecución:</span>
+                  <span className="text-emerald-400 font-bold">NATIVO BINARIO ORIGINAL (100% Sin Emular)</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Acceso a Hardware:</span>
+                  <span className="text-emerald-400 font-bold">DIRECT-TO-METAL (Ring 0 Kernel Access)</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Espacio de almacenamiento físico en disco (/dev/sda):</span>
                   <span className="text-emerald-400 font-bold">20.0 GB (Verificado Ok)</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-300">
-                  <span>Memoria RAM simulada asignada:</span>
+                  <span>Memoria RAM real asignada:</span>
                   <span className="text-emerald-400 font-bold">16.3 GB (Verificado Ok)</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-300">
@@ -561,10 +569,10 @@ AllowSuspendThenHibernate=no`,
                   <div className="text-xs">
                     <div className="font-bold text-slate-200 flex items-center space-x-1.5">
                       <Globe size={12} className="text-cyan-400" />
-                      <span>Incluir Chromium como navegador predeterminado</span>
+                      <span>Incluir Chrome como navegador predeterminado</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed text-left">
-                      Descarga y enlaza el navegador Chromium como la solución web por defecto del sistema CMineWar OS.
+                      Descarga y enlaza el navegador Chrome como la solución web por defecto del sistema CMineWar OS.
                     </p>
                   </div>
                 </label>

@@ -72,6 +72,24 @@ export default function GitHubUpdater({
   const [simulatedHour, setSimulatedHour] = useState<string>(() => {
     return localStorage.getItem("cminewar_nano_sim_hour") || "real";
   });
+  const [dimOpacity, setDimOpacity] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_dim_opacity") || "0";
+  });
+  const [showGrid, setShowGrid] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_grid");
+    return saved === null ? "true" : saved;
+  });
+  const [showStars, setShowStars] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_stars");
+    return saved === null ? "true" : saved;
+  });
+  const [showCoreLogo, setShowCoreLogo] = useState<string>(() => {
+    const saved = localStorage.getItem("cminewar_nano_show_core_logo");
+    return saved === null ? "true" : saved;
+  });
+  const [wallpaperPattern, setWallpaperPattern] = useState<string>(() => {
+    return localStorage.getItem("cminewar_nano_pattern") || "wireframe";
+  });
 
   const updateWallpaperSetting = (key: string, value: string) => {
     localStorage.setItem(key, value);
@@ -85,6 +103,14 @@ export default function GitHubUpdater({
       setLineStyle((localStorage.getItem("cminewar_nano_line_style") as "curvo" | "recto" | "oculto") || "curvo");
       setGlowIntensity((localStorage.getItem("cminewar_nano_glow_intensity") as "sutil" | "medio" | "fuerte") || "medio");
       setSimulatedHour(localStorage.getItem("cminewar_nano_sim_hour") || "real");
+      setDimOpacity(localStorage.getItem("cminewar_nano_dim_opacity") || "0");
+      const savedGrid = localStorage.getItem("cminewar_nano_show_grid");
+      setShowGrid(savedGrid === null ? "true" : savedGrid);
+      const savedStars = localStorage.getItem("cminewar_nano_show_stars");
+      setShowStars(savedStars === null ? "true" : savedStars);
+      const savedLogo = localStorage.getItem("cminewar_nano_show_core_logo");
+      setShowCoreLogo(savedLogo === null ? "true" : savedLogo);
+      setWallpaperPattern(localStorage.getItem("cminewar_nano_pattern") || "wireframe");
     };
     window.addEventListener("storage", syncWallpaperSettings);
     window.addEventListener("cminewar_wallpaper_settings_changed", syncWallpaperSettings);
@@ -2753,6 +2779,100 @@ echo "========================================================================="
                     <option value="medio">✨ Brillo Estándar Equilibrado de Neón</option>
                     <option value="fuerte">🔥 Flujo Radiante de Alto Voltaje</option>
                   </select>
+                </div>
+
+                {/* Wallpaper Pattern Design Selection */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Diseño y Patrón de Fondo:</span>
+                  <select
+                    id="sys-ctrl-nano-pattern"
+                    name="sys-ctrl-nano-pattern"
+                    value={wallpaperPattern}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setWallpaperPattern(val);
+                      updateWallpaperSetting("cminewar_nano_pattern", val);
+                      triggerNotification(`Patrón de fondo cambiado a: ${val.toUpperCase()}`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="wireframe">🌐 Red Completa de Sockets y Cables (Original)</option>
+                    <option value="radial">🌌 Resplandor Ambiental y Estrellas (Limpio)</option>
+                    <option value="cybergrid">📐 Rejilla Geométrica y Coordenadas</option>
+                    <option value="minimalist">🔲 Fondo Negro Sólido Minimalista (Máxima Legibilidad)</option>
+                  </select>
+                </div>
+
+                {/* Readability Darkening Tint Level Overlay Selector */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Atenuación para Legibilidad de Iconos:</span>
+                  <select
+                    id="sys-ctrl-nano-dim"
+                    name="sys-ctrl-nano-dim"
+                    value={dimOpacity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDimOpacity(val);
+                      updateWallpaperSetting("cminewar_nano_dim_opacity", val);
+                      triggerNotification(`Atenuación de fondo establecida al ${(parseFloat(val) * 100).toFixed(0)}%`, "success");
+                    }}
+                    className="bg-slate-900 border border-slate-800 hover:border-pink-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-pink-500 text-[10.5px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="0">☀️ Sin Atenuación (100% Brillo de Fondo)</option>
+                    <option value="0.15">⛅ Atenuación Leve (15% Oscurecimiento)</option>
+                    <option value="0.3">☁️ Atenuación Media (30% Oscurecimiento)</option>
+                    <option value="0.5">🌑 Atenuación Alta (50% Oscurecimiento)</option>
+                    <option value="0.75">🌌 Modo Noche Profunda (75% Oscurecimiento)</option>
+                    <option value="0.9">🕶️ Modo Ultratenebroso (90% Oscurecimiento)</option>
+                  </select>
+                </div>
+
+                {/* Toggle Switche Checkboxes */}
+                <div className="space-y-2 pt-1 border-t border-slate-900">
+                  <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showGrid === "true"}
+                      onChange={(e) => {
+                        const val = e.target.checked ? "true" : "false";
+                        setShowGrid(val);
+                        updateWallpaperSetting("cminewar_nano_show_grid", val);
+                        triggerNotification(e.target.checked ? "Rejilla de coordenadas activada" : "Rejilla de coordenadas oculta", "success");
+                      }}
+                      className="accent-pink-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                    />
+                    <span className="text-[10.5px]">Mostrar Rejilla Geométrica de Fondo</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showStars === "true"}
+                      onChange={(e) => {
+                        const val = e.target.checked ? "true" : "false";
+                        setShowStars(val);
+                        updateWallpaperSetting("cminewar_nano_show_stars", val);
+                        triggerNotification(e.target.checked ? "Estrellas ambientales visibles" : "Estrellas ambientales ocultas", "success");
+                      }}
+                      className="accent-pink-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                    />
+                    <span className="text-[10.5px]">Mostrar Estrellas y Partículas Cósmicas</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showCoreLogo === "true"}
+                      onChange={(e) => {
+                        const val = e.target.checked ? "true" : "false";
+                        setShowCoreLogo(val);
+                        updateWallpaperSetting("cminewar_nano_show_core_logo", val);
+                        triggerNotification(e.target.checked ? "Núcleo Dragón visible" : "Núcleo Dragón oculto", "success");
+                      }}
+                      className="accent-pink-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                    />
+                    <span className="text-[10.5px]">Mostrar Placa del Núcleo de Dragón</span>
+                  </label>
                 </div>
               </div>
 

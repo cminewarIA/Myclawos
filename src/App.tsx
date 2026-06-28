@@ -11,13 +11,14 @@ import ControlPanel from "./components/ControlPanel";
 import CMineWarInstaller from "./components/CMineWarInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
 import Chromium from "./components/Chromium";
+import Beini from "./components/Beini";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
-import AndroidGateway from "./components/AndroidGateway";
-import UbuntuGateway from "./components/UbuntuGateway";
 import Bootloader from "./components/Bootloader";
 import OmarchyTui from "./components/OmarchyTui";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
+import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
+import HardwareControl from "./components/HardwareControl";
 import {
   Terminal as TerminalIcon,
   FolderOpen,
@@ -46,26 +47,25 @@ import {
   Laptop,
   Network,
   Tv,
-  Smartphone
+  Smartphone,
+  FileSpreadsheet,
+  Presentation,
+  Chrome,
+  FileCode
 } from "lucide-react";
 
 export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
-  // "gateway" (Cyberpunk Android prompt - ALWAYS MANDATORY) -> "bootloader" (GRUB/vmlinuz BIOS loading) -> "ready" (Desktop environment loaded!)
-  const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">("gateway");
-
-  const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
-
-  // Gateway Platform selection: "android" (Mobile Shell Launcher) or "ubuntu" (Ubuntu Desktop Client)
-  const [gatewayPlatform, setGatewayPlatform] = useState<"android" | "ubuntu">(() => {
-    if (typeof window !== "undefined") {
-      const isCoarse = window.matchMedia("(pointer: coarse)").matches;
-      const isTouchPoints = navigator.maxTouchPoints > 0;
-      const isSmallScreen = window.innerWidth < 1024;
-      return (isCoarse || isTouchPoints || isSmallScreen) ? "android" : "ubuntu";
+  // Direct to ready for instant startup, conserving CPU, GPU, and RAM.
+  const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("cminewar_force_reboot") === "true") {
+      localStorage.removeItem("cminewar_force_reboot");
+      return "bootloader";
     }
-    return "ubuntu";
+    return "ready";
   });
+
+  const [connectedServerIp, setConnectedServerIp] = useState<string | null>("10.0.2.15");
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -267,18 +267,471 @@ export default function App() {
   const [appDrawerOpen, setAppDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [installedPackages, setInstalledPackages] = useState<string[]>(() => {
-    const saved = localStorage.getItem("claw_installed_packages");
-    return saved ? JSON.parse(saved) : [];
+    const savedClaw = localStorage.getItem("claw_installed_packages");
+    const savedCmine = localStorage.getItem("cminewar_installed_packages");
+    const union = new Set([
+      ...(savedClaw ? JSON.parse(savedClaw) : []),
+      ...(savedCmine ? JSON.parse(savedCmine) : [])
+    ]);
+    return Array.from(union);
   });
 
   useEffect(() => {
     const syncPackages = () => {
-      const saved = localStorage.getItem("claw_installed_packages");
-      setInstalledPackages(saved ? JSON.parse(saved) : []);
+      const savedClaw = localStorage.getItem("claw_installed_packages");
+      const savedCmine = localStorage.getItem("cminewar_installed_packages");
+      const union = new Set([
+        ...(savedClaw ? JSON.parse(savedClaw) : []),
+        ...(savedCmine ? JSON.parse(savedCmine) : [])
+      ]);
+      setInstalledPackages(Array.from(union));
     };
     window.addEventListener("claw_packages_changed", syncPackages);
-    return () => window.removeEventListener("claw_packages_changed", syncPackages);
+    window.addEventListener("cminewar_packages_changed", syncPackages);
+    window.addEventListener("storage", syncPackages);
+    return () => {
+      window.removeEventListener("claw_packages_changed", syncPackages);
+      window.removeEventListener("cminewar_packages_changed", syncPackages);
+      window.removeEventListener("storage", syncPackages);
+    };
   }, []);
+
+  // Custom helper to retrieve launcher visuals (icon and border) dynamically
+  const getLauncherData = (id: string) => {
+    switch (id) {
+      case "openclaw_core":
+        return { icon: <DragonLogo size={touchMode ? 22 : 28} />, border: "group-hover:border-rose-500/60" };
+      case "terminal":
+        return { icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" };
+      case "file_manager":
+        return { icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" };
+      case "text_editor":
+        return { icon: <FileCode className={`text-lime-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-lime-500/70" };
+      case "system_monitor":
+        return { icon: <Cpu className={`text-violet-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-violet-500/60" };
+      case "control_panel":
+        return { icon: <Sliders className={`text-emerald-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" };
+      case "installer":
+        return { icon: <Download className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" };
+      case "updater_github":
+        return { icon: <Settings className={`text-pink-400 animate-pulse ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500" };
+      case "chromium":
+        return { icon: <Chrome className={`text-blue-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-blue-500/60" };
+      case "beini":
+        return { icon: <Wifi className={`text-pink-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500/60" };
+      case "euro_word":
+        return { icon: <FileText className={`text-blue-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-blue-500/60" };
+      case "euro_calc":
+        return { icon: <FileSpreadsheet className={`text-emerald-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" };
+      case "euro_slide":
+        return { icon: <Presentation className={`text-amber-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" };
+      case "hardware_control":
+        return { icon: <Cpu className={`text-rose-400 animate-pulse ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-rose-400/80" };
+      case "pkg_htop":
+        return { icon: <Cpu className={`text-emerald-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" };
+      case "pkg_neofetch":
+        return { icon: <Laptop className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" };
+      case "pkg_cmatrix":
+        return { icon: <TerminalIcon className={`text-green-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-green-500/60" };
+      case "pkg_nginx":
+        return { icon: <Network className={`text-sky-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-sky-450/60" };
+      case "pkg_retroarch":
+        return { icon: <Tv className={`text-rose-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-rose-450/60" };
+      default:
+        return null;
+    }
+  };
+
+  // === DESKTOP ICONS REORDERING & DELETION STATE ===
+  const [desktopIcons, setDesktopIcons] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("cminewar_desktop_icons_layout_v2");
+      if (saved) return JSON.parse(saved);
+    }
+
+    const defaultIcons = [
+      { id: "openclaw_core", name: "Antigravity CLI", col: 0, row: 0, isDeletable: true, isDeleted: false },
+      { id: "terminal", name: "Terminal", col: 0, row: 1, isDeletable: true, isDeleted: false },
+      { id: "file_manager", name: "Archivos VFS", col: 0, row: 2, isDeletable: true, isDeleted: false },
+      { id: "text_editor", name: "Notepad++", col: 0, row: 3, isDeletable: true, isDeleted: false },
+      { id: "system_monitor", name: "Monitor", col: 0, row: 4, isDeletable: true, isDeleted: false },
+      { id: "control_panel", name: "Panel Control", col: 1, row: 0, isDeletable: true, isDeleted: false },
+      { id: "installer", name: "Instalar Kern", col: 1, row: 1, isDeletable: true, isDeleted: false },
+      { id: "updater_github", name: "Ajustes SO", col: 1, row: 2, isDeletable: true, isDeleted: false },
+      { id: "chromium", name: "Chrome", col: 1, row: 3, isDeletable: true, isDeleted: false },
+      { id: "beini", name: "Beini Suite", col: 1, row: 4, isDeletable: true, isDeleted: false },
+      { id: "euro_word", name: "Euro Word", col: 2, row: 0, isDeletable: true, isDeleted: false },
+      { id: "euro_calc", name: "Euro Calc", col: 2, row: 1, isDeletable: true, isDeleted: false },
+      { id: "euro_slide", name: "Euro Slide", col: 2, row: 2, isDeletable: true, isDeleted: false },
+      // Permanent Hardware Control (not deletable!)
+      { id: "hardware_control", name: "Drivers Hardware", col: 2, row: 3, isDeletable: false, isDeleted: false }
+    ];
+    return defaultIcons;
+  });
+
+  const [draggedIcon, setDraggedIcon] = useState<any | null>(null);
+  const [desktopContextMenu, setDesktopContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Sync dynamically installed packages into desktopIcons
+  useEffect(() => {
+    setDesktopIcons(prev => {
+      let updated = [...prev];
+      let changed = false;
+      
+      const packagesToIcons = {
+        pkg_htop: { name: "htop v3.2", id: "pkg_htop" },
+        pkg_neofetch: { name: "neofetch info", id: "pkg_neofetch" },
+        pkg_cmatrix: { name: "cmatrix rain", id: "pkg_cmatrix" },
+        pkg_nginx: { name: "nginx server", id: "pkg_nginx" },
+        pkg_retroarch: { name: "RetroArch", id: "pkg_retroarch" },
+      };
+
+      installedPackages.forEach(pkgId => {
+        if (!updated.some(item => item.id === pkgId)) {
+          // Find first available slot starting from col 3
+          let foundSlot = false;
+          let col = 3;
+          let row = 0;
+          while (!foundSlot && col < 15) {
+            if (!updated.some(item => item.col === col && item.row === row && !item.isDeleted)) {
+              foundSlot = true;
+            } else {
+              row++;
+              if (row > 5) {
+                row = 0;
+                col++;
+              }
+            }
+          }
+          const pkgInfo = packagesToIcons[pkgId as keyof typeof packagesToIcons];
+          if (pkgInfo) {
+            updated.push({
+              id: pkgId,
+              name: pkgInfo.name,
+              col,
+              row,
+              isDeletable: true,
+              isDeleted: false
+            });
+            changed = true;
+          }
+        }
+      });
+
+      // Clean up uninstalled packages
+      const originalPackages = ["pkg_htop", "pkg_neofetch", "pkg_cmatrix", "pkg_nginx", "pkg_retroarch"];
+      originalPackages.forEach(pkgId => {
+        if (!installedPackages.includes(pkgId) && updated.some(item => item.id === pkgId)) {
+          updated = updated.filter(item => item.id !== pkgId);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
+    });
+  }, [installedPackages]);
+
+  // Drag and drop mouse logic
+  const handleIconMouseDown = (e: React.MouseEvent, icon: any) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    
+    setDraggedIcon({
+      id: icon.id,
+      startX,
+      startY,
+      currentX: startX,
+      currentY: startY,
+      origCol: icon.col,
+      origRow: icon.row
+    });
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      setDraggedIcon(prev => {
+        if (!prev || prev.id !== icon.id) return prev;
+        return {
+          ...prev,
+          currentX: moveEvent.clientX,
+          currentY: moveEvent.clientY
+        };
+      });
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+
+      const deltaX = upEvent.clientX - startX;
+      const deltaY = upEvent.clientY - startY;
+
+      // Col / Row shifting calculation (grid cell spacing is ~92px)
+      const colShift = Math.round(deltaX / 92);
+      const rowShift = Math.round(deltaY / 92);
+
+      let newCol = Math.max(0, icon.col + colShift);
+      let newRow = Math.max(0, icon.row + rowShift);
+
+      setDesktopIcons(prev => {
+        // Avoid grid overlap
+        const isOccupied = prev.some(item => item.col === newCol && item.row === newRow && !item.isDeleted && item.id !== icon.id);
+        
+        if (isOccupied) {
+          let resolved = false;
+          let radius = 1;
+          while (!resolved && radius < 12) {
+            for (let dc = -radius; dc <= radius; dc++) {
+              for (let dr = -radius; dr <= radius; dr++) {
+                const c = Math.max(0, newCol + dc);
+                const r = Math.max(0, newRow + dr);
+                if (!prev.some(item => item.col === c && item.row === r && !item.isDeleted && item.id !== icon.id)) {
+                  newCol = c;
+                  newRow = r;
+                  resolved = true;
+                  break;
+                }
+              }
+              if (resolved) break;
+            }
+            radius++;
+          }
+        }
+
+        const updated = prev.map(item => {
+          if (item.id === icon.id) {
+            return { ...item, col: newCol, row: newRow };
+          }
+          return item;
+        });
+        localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+        return updated;
+      });
+
+      setDraggedIcon(null);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  // Drag and drop touch logic
+  const handleIconTouchStart = (e: React.TouchEvent, icon: any) => {
+    if (e.touches.length === 0) return;
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+
+    setDraggedIcon({
+      id: icon.id,
+      startX,
+      startY,
+      currentX: startX,
+      currentY: startY,
+      origCol: icon.col,
+      origRow: icon.row
+    });
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 0) return;
+      const t = moveEvent.touches[0];
+      setDraggedIcon(prev => {
+        if (!prev || prev.id !== icon.id) return prev;
+        return {
+          ...prev,
+          currentX: t.clientX,
+          currentY: t.clientY
+        };
+      });
+    };
+
+    const handleTouchEnd = () => {
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+
+      setDraggedIcon(prev => {
+        if (!prev || prev.id !== icon.id) return null;
+
+        const deltaX = prev.currentX - prev.startX;
+        const deltaY = prev.currentY - prev.startY;
+
+        const colShift = Math.round(deltaX / 92);
+        const rowShift = Math.round(deltaY / 92);
+
+        let newCol = Math.max(0, icon.col + colShift);
+        let newRow = Math.max(0, icon.row + rowShift);
+
+        setDesktopIcons(prevIcons => {
+          const isOccupied = prevIcons.some(item => item.col === newCol && item.row === newRow && !item.isDeleted && item.id !== icon.id);
+          if (isOccupied) {
+            let resolved = false;
+            let radius = 1;
+            while (!resolved && radius < 12) {
+              for (let dc = -radius; dc <= radius; dc++) {
+                for (let dr = -radius; dr <= radius; dr++) {
+                  const c = Math.max(0, newCol + dc);
+                  const r = Math.max(0, newRow + dr);
+                  if (!prevIcons.some(item => item.col === c && item.row === r && !item.isDeleted && item.id !== icon.id)) {
+                    newCol = c;
+                    newRow = r;
+                    resolved = true;
+                    break;
+                  }
+                }
+                if (resolved) break;
+              }
+              radius++;
+            }
+          }
+
+          const updated = prevIcons.map(item => {
+            if (item.id === icon.id) {
+              return { ...item, col: newCol, row: newRow };
+            }
+            return item;
+          });
+          localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+          return updated;
+        });
+
+        return null;
+      });
+    };
+
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+  };
+
+  // Delete desktop icon helper
+  const handleDeleteIcon = (id: string) => {
+    setDesktopIcons(prev => {
+      const target = prev.find(item => item.id === id);
+      if (target && !target.isDeletable) {
+        triggerNotification("⚠️ Acceso denegado: El Panel de Control del Hardware Propietario no puede eliminarse del escritorio al ser un módulo crítico del kernel.", "info");
+        return prev;
+      }
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          return { ...item, isDeleted: true };
+        }
+        return item;
+      });
+      localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+      triggerNotification("🗑️ Acceso directo eliminado del escritorio.", "info");
+      return updated;
+    });
+  };
+
+  // Align to grid helper
+  const handleAlignIconsToGrid = () => {
+    setDesktopIcons(prev => {
+      let col = 0;
+      let row = 0;
+      const updated = prev.map(item => {
+        const newItem = { ...item, col, row };
+        row++;
+        if (row > 5) {
+          row = 0;
+          col++;
+        }
+        return newItem;
+      });
+      localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+      triggerNotification("🧹 Iconos del escritorio alineados a la cuadrícula con éxito.", "success");
+      return updated;
+    });
+    setDesktopContextMenu(null);
+  };
+
+  // Restore deleted icons helper
+  const handleRestoreAllIcons = () => {
+    setDesktopIcons(prev => {
+      const updated = prev.map(item => ({ ...item, isDeleted: false }));
+      localStorage.setItem("cminewar_desktop_icons_layout_v2", JSON.stringify(updated));
+      triggerNotification("♻️ Todos los accesos directos han sido restaurados en el escritorio.", "success");
+      return updated;
+    });
+    setDesktopContextMenu(null);
+  };
+
+  // === BACKGROUND PROPRIETARY HARDWARE DAEMON SERVICE ===
+  useEffect(() => {
+    if (bootLifecycle !== "ready") return;
+
+    const timer = setTimeout(() => {
+      const currentHostId = localStorage.getItem("cminewar_current_host") || "host_1";
+      
+      const HOSTS_DRIVERS = {
+        host_1: [],
+        host_2: [
+          { id: "nvidia-gforce-rtx", name: "NVIDIA ForceWare v555", version: "555.12" },
+          { id: "killer-wifi-pro", name: "Intel Killer Performance Suite", version: "3.4.152" }
+        ],
+        host_3: [
+          { id: "nvidia-rtx-enterprise", name: "NVIDIA RTX Enterprise v550", version: "550.40" },
+          { id: "broadcom-sta-extreme", name: "Broadcom WL Proprietary Stack", version: "6.30.223" },
+          { id: "realtek-hd-asio-pro", name: "Realtek High Definition ASIO Pro", version: "2.9.12" }
+        ]
+      };
+
+      const required = HOSTS_DRIVERS[currentHostId as keyof typeof HOSTS_DRIVERS] || [];
+      if (required.length === 0) {
+        triggerNotification("🔌 [Sensing] Todo el hardware de este host utiliza controladores libres pre-instalados.", "info");
+        return;
+      }
+
+      const savedDriversStr = localStorage.getItem("cminewar_installed_drivers");
+      const installed = savedDriversStr ? JSON.parse(savedDriversStr) : [];
+
+      // Find required but uninstalled drivers
+      const toInstall = required.filter(dr => !installed.includes(dr.id));
+      if (toInstall.length === 0) {
+        triggerNotification("ℹ️ [Sensing] Todos los drivers propietarios para este Host ya están activos y optimizados.", "success");
+        return;
+      }
+
+      // Start background downloading logic
+      let currentIdx = 0;
+      const processNext = () => {
+        if (currentIdx >= toInstall.length) return;
+        const dr = toInstall[currentIdx];
+
+        // Phase 1: Download in background
+        triggerNotification(`⬇️ [Hardware Daemon] Descargando controlador propietario: ${dr.name}...`, "info");
+        
+        // Phase 2: Compile dkms (after 5s)
+        setTimeout(() => {
+          triggerNotification(`⚙️ [Hardware Daemon] Compilando dkms para ${dr.name} en segundo plano...`, "info");
+          
+          // Phase 3: Successful Activation (after 5s)
+          setTimeout(() => {
+            const freshSavedStr = localStorage.getItem("cminewar_installed_drivers");
+            const freshInstalled = freshSavedStr ? JSON.parse(freshSavedStr) : [];
+            const updated = Array.from(new Set([...freshInstalled, dr.id]));
+            
+            localStorage.setItem("cminewar_installed_drivers", JSON.stringify(updated));
+            // Dispatch storage event to alert UI
+            window.dispatchEvent(new Event("storage"));
+            
+            triggerNotification(`✅ [Hardware Daemon] ¡Controlador propietario ${dr.name} activado con éxito!`, "success");
+
+            currentIdx++;
+            processNext();
+          }, 5000);
+        }, 5000);
+      };
+
+      processNext();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [bootLifecycle]);
 
   // Window list states
   const [windows, setWindows] = useState<WindowState[]>(() => {
@@ -315,7 +768,7 @@ export default function App() {
       },
       {
         id: "text_editor",
-        title: "CMineWarEdit - Editor de Notas del Kernel",
+        title: "Notepad++ v8.6.2",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -365,7 +818,7 @@ export default function App() {
       },
       {
         id: "chromium",
-        title: "Chromium Web Browser - Navegador Predeterminado",
+        title: "Chrome Dev - Navegador de Internet",
         isOpen: false,
         isMinimized: false,
         isMaximized: false,
@@ -422,6 +875,56 @@ export default function App() {
         zIndex: 10,
         position: { x: 180, y: 190 },
         size: { width: 440, height: 480 },
+      },
+      {
+        id: "beini",
+        title: "Beini v3.0 - Modern Wi-Fi Pentesting Suite",
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 25,
+        position: { x: 220, y: 140 },
+        size: { width: 780, height: 530 },
+      },
+      {
+        id: "euro_word",
+        title: "Euro Word - Procesador de Textos",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 5,
+        position: { x: 130, y: 120 },
+        size: { width: 680, height: 500 },
+      },
+      {
+        id: "euro_calc",
+        title: "Euro Calc - Hoja de Cálculo Inteligente",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 5,
+        position: { x: 150, y: 140 },
+        size: { width: 780, height: 520 },
+      },
+      {
+        id: "euro_slide",
+        title: "Euro Slide - Presentador de Diapositivas Profesional",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 5,
+        position: { x: 170, y: 160 },
+        size: { width: 720, height: 480 },
+      },
+      {
+        id: "hardware_control",
+        title: "Centro de Control de Hardware Propietario - dkms-sensing",
+        isOpen: false,
+        isMinimized: false,
+        isMaximized: false,
+        zIndex: 25,
+        position: { x: 190, y: 150 },
+        size: { width: 740, height: 520 },
       },
     ];
 
@@ -571,7 +1074,7 @@ export default function App() {
       if (!targetWindow) return prev;
       
       const maxZ = Math.max(...prev.map((w) => w.zIndex), 0);
-      if (targetWindow.zIndex === maxZ) return prev; // already focused
+      if (targetWindow.zIndex === maxZ && !targetWindow.isMinimized) return prev; // already focused & visible
 
       return prev.map((w) => {
         if (w.id === id) {
@@ -586,6 +1089,7 @@ export default function App() {
     setWindows((prev) =>
       prev.map((w) => {
         if (w.id === id) {
+          if (w.isMaximized) return w;
           return { ...w, position: pos };
         }
         return w;
@@ -597,6 +1101,7 @@ export default function App() {
     setWindows((prev) =>
       prev.map((w) => {
         if (w.id === id) {
+          if (w.isMaximized) return w;
           return { ...w, size };
         }
         return w;
@@ -691,6 +1196,14 @@ export default function App() {
             triggerNotification={triggerNotification}
           />
         );
+      case "hardware_control":
+        return (
+          <HardwareControl
+            vfs={vfs}
+            setVfs={setVfs}
+            triggerNotification={triggerNotification}
+          />
+        );
       case "chromium":
         return <Chromium />;
       case "pkg_htop":
@@ -703,6 +1216,14 @@ export default function App() {
         return <PkgNginx />;
       case "pkg_retroarch":
         return <PkgRetroarch />;
+      case "beini":
+        return <Beini />;
+      case "euro_word":
+        return <EuroWord vfs={vfs} setVfs={setVfs} triggerNotification={triggerNotification} />;
+      case "euro_calc":
+        return <EuroCalc vfs={vfs} setVfs={setVfs} triggerNotification={triggerNotification} />;
+      case "euro_slide":
+        return <EuroSlide vfs={vfs} setVfs={setVfs} triggerNotification={triggerNotification} />;
       default:
         return null;
     }
@@ -718,7 +1239,7 @@ export default function App() {
       case "file_manager":
         return "Explorador de Archivos (CMineWarFM)";
       case "text_editor":
-        return "Editor de Textos (CMineWarEdit)";
+        return "Notepad++";
       case "system_monitor":
         return "Monitor del Sistema (CMineWarMonitor)";
       case "control_panel":
@@ -727,8 +1248,10 @@ export default function App() {
         return "Instalador Kernel Sencillo Beta";
       case "updater_github":
         return "Ajustes y Hardware Debian";
+      case "hardware_control":
+        return "Drivers de Hardware Propietario";
       case "chromium":
-        return "Navegador Chromium";
+        return "Chrome";
       case "pkg_htop":
         return "htop v3.2.0";
       case "pkg_neofetch":
@@ -739,6 +1262,14 @@ export default function App() {
         return "nginx server workspace";
       case "pkg_retroarch":
         return "RetroArch Snake";
+      case "beini":
+        return "Beini Suite Pentesting";
+      case "euro_word":
+        return "Euro Word";
+      case "euro_calc":
+        return "Euro Calc";
+      case "euro_slide":
+        return "Euro Slide";
       default:
         return "Aplicación CMineWar OS";
     }
@@ -757,58 +1288,23 @@ export default function App() {
     }, 0);
   };
 
+  useEffect(() => {
+    const handleTriggerNotificationEvent = (e: any) => {
+      if (e.detail && typeof e.detail.text === "string") {
+        triggerNotification(e.detail.text, e.detail.type || "info");
+      }
+    };
+    window.addEventListener("trigger_notification", handleTriggerNotificationEvent);
+    return () => {
+      window.removeEventListener("trigger_notification", handleTriggerNotificationEvent);
+    };
+  }, []);
+
   const removeNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  if (bootLifecycle === "gateway") {
-    return (
-      <div className="relative w-full h-screen">
-        {gatewayPlatform === "ubuntu" ? (
-          <UbuntuGateway
-            onSelectServer={(ip) => {
-              setConnectedServerIp(ip);
-              setBootLifecycle("bootloader");
-              triggerNotification(`Enlazando con nodo local Ubuntu [${ip}]...`, "success");
-            }}
-          />
-        ) : (
-          <AndroidGateway
-            onSelectServer={(ip) => {
-              setConnectedServerIp(ip);
-              setBootLifecycle("bootloader");
-              triggerNotification(`Cargando instalación nativa desde servidor remoto [${ip}]...`, "info");
-            }}
-          />
-        )}
-
-        {/* Elegant Platform Switcher Top Badge */}
-        <div className="fixed top-1.5 sm:top-12 right-1.5 sm:right-6 z-[999999] flex items-center space-x-1 bg-slate-950/90 border border-slate-800/80 px-2 py-0.5 rounded-full shadow-lg backdrop-blur text-[10px] sm:text-[11px] font-sans text-slate-300 select-none">
-          <span className="text-slate-500 mr-1 font-bold pl-1 uppercase tracking-wide text-[9px]">Cliente:</span>
-          <button
-            onClick={() => setGatewayPlatform("android")}
-            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer font-bold uppercase tracking-wider text-[9px] ${
-              gatewayPlatform === "android" 
-                ? "bg-pink-600 text-slate-950 font-black shadow" 
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Android
-          </button>
-          <button
-            onClick={() => setGatewayPlatform("ubuntu")}
-            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer font-bold uppercase tracking-wider text-[9px] ${
-              gatewayPlatform === "ubuntu" 
-                ? "bg-orange-500 text-slate-950 font-black shadow" 
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Ubuntu
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Gateway phase has been removed for optimization and instant desktop load.
 
   if (bootLifecycle === "bootloader") {
     return (
@@ -897,7 +1393,7 @@ export default function App() {
 
       {/* CMineWar OS Style Translucent Top Bar */}
       <div 
-        className="w-full h-11 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0 select-none z-[99]"
+        className="w-full h-11 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0 select-none z-[999]"
         id="dsm-desktop-top-bar"
       >
         <div className="flex items-center space-x-3 flex-row min-w-0 flex-1 mr-4">
@@ -969,17 +1465,21 @@ export default function App() {
                   {win.id === "terminal" && <TerminalIcon size={11} />}
                   {win.id === "openclaw_core" && <DragonLogo size={12} />}
                   {win.id === "file_manager" && <FolderOpen size={11} />}
-                  {win.id === "text_editor" && <FileText size={11} />}
+                  {win.id === "text_editor" && <FileCode size={11} className="text-lime-500" />}
                   {win.id === "system_monitor" && <Cpu size={11} />}
                   {win.id === "control_panel" && <Sliders size={11} />}
                   {win.id === "installer" && <Download size={11} />}
                   {win.id === "updater_github" && <Settings size={11} className="text-pink-400" />}
-                  {win.id === "chromium" && <Globe size={11} />}
+                  {win.id === "chromium" && <Chrome size={11} className="text-blue-400" />}
                   {win.id === "pkg_htop" && <Cpu size={11} className="text-emerald-400" />}
                   {win.id === "pkg_neofetch" && <Laptop size={11} className="text-emerald-400" />}
                   {win.id === "pkg_cmatrix" && <TerminalIcon size={11} className="text-emerald-400" />}
                   {win.id === "pkg_nginx" && <Network size={11} className="text-emerald-400" />}
                   {win.id === "pkg_retroarch" && <Tv size={11} className="text-emerald-400" />}
+                  {win.id === "beini" && <Wifi size={11} className="text-pink-400" />}
+                  {win.id === "euro_word" && <FileText size={11} className="text-blue-500" />}
+                  {win.id === "euro_calc" && <FileSpreadsheet size={11} className="text-emerald-500" />}
+                  {win.id === "euro_slide" && <Presentation size={11} className="text-amber-500" />}
                   <span className="truncate max-w-[85px]">{getFriendlyAppName(win.id).replace(" (CMineWarFM)", "").replace(" (CMineWarEdit)", "").replace(" (CMineWarMonitor)", "")}</span>
                 </button>
               );
@@ -997,6 +1497,16 @@ export default function App() {
         <div className="flex items-center space-x-2 shrink-0">
           {/* Volume, Network, Battery status tray icons */}
           <div className="hidden sm:flex items-center space-x-2 text-slate-400 border-r border-slate-800 pr-2">
+            {/* Dynamic Debian Service Tray Status Icons */}
+            {installedPackages.includes("pkg_nginx") && (
+              <Network size={12} className="text-cyan-400 animate-pulse cursor-pointer" title="Servicio Nginx Web Server: ACTIVO en puerto 80" />
+            )}
+            {installedPackages.includes("pkg_htop") && (
+              <Cpu size={12} className="text-emerald-400 cursor-pointer" title="Monitoreo htop cargado en background" />
+            )}
+            {installedPackages.includes("pkg_retroarch") && (
+              <Tv size={12} className="text-amber-400 cursor-pointer" title="Controlador de juego RetroArch activo" />
+            )}
             <Volume2 size={13} className="hover:text-slate-200 cursor-pointer" title="Volumen: 80%" />
             <Battery size={13} className="hover:text-slate-200 cursor-pointer text-emerald-400" title="Batería: 100% cargada" />
             <Wifi size={13} className="text-emerald-400 cursor-pointer" title="Red: Gigabit Ethernet virtual conectada" />
@@ -1032,71 +1542,158 @@ export default function App() {
       </div>
 
       {/* Main Desktop workspace */}
-      <div className="flex-1 relative p-4 pointer-events-auto overflow-hidden">
-        {/* Desktop grid launchers */}
-        <div className={`select-none transition-all z-10 ${
-          touchMode 
-            ? "absolute inset-x-3.5 top-3.5 bottom-24 grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-2 gap-y-5.5 p-2 auto-rows-max justify-center items-start overflow-y-auto" 
-            : "grid grid-flow-row absolute left-6 top-6 gap-6 w-24"
-        }`}>
-          {[
-            { id: "openclaw_core", name: "Antigravity CLI", icon: <DragonLogo size={touchMode ? 25 : 32} />, border: "group-hover:border-rose-500/60" },
-            { id: "terminal", name: "Terminal", icon: <TerminalIcon className={`text-emerald-500 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-500/60" },
-            { id: "file_manager", name: "Archivos VFS", icon: <FolderOpen className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-500/60" },
-            { id: "text_editor", name: "Editor Notas", icon: <FileText className={`text-amber-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-amber-500/60" },
-            { id: "system_monitor", name: "Monitor", icon: <Cpu className={`text-violet-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-violet-500/60" },
-            { id: "control_panel", name: "Panel Control", icon: <Sliders className={`text-emerald-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-emerald-400/60" },
-            { id: "installer", name: "Instalar Kern", icon: <Download className={`text-cyan-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-cyan-400/60" },
-            { id: "updater_github", name: "Ajustes SO", icon: <Settings className={`text-pink-400 animate-pulse ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-pink-500" },
-            { id: "chromium", name: "Chromium", icon: <Globe className={`text-blue-400 ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />, border: "group-hover:border-blue-400/60" },
-          ].map((launcher) => (
-            <div
-              key={launcher.id}
-              onDoubleClick={() => handleOpenWindow(launcher.id)}
-              onClick={() => {
-                // Instantly open window on click/tap if in touch screen mode to bypass double-click frustration on tablets/phones
-                if (touchMode) {
-                  handleOpenWindow(launcher.id);
-                }
-              }}
-              onTouchEnd={() => handleOpenWindow(launcher.id)}
-              className="flex flex-col items-center cursor-pointer group text-center"
-              title={`Inicia ${launcher.name}`}
-              id={`launcher-${launcher.id}`}
-            >
-              <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 ${launcher.border} flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
-                touchMode ? "w-11 h-11 rounded-xl shadow-md border-emerald-500/15" : "w-12 h-12 rounded-xl"
-              }`}>
-                {launcher.icon}
-              </div>
-              <span className={`font-semibold text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
-                touchMode ? "text-[10px] mt-1.5" : "text-[11px] mt-1.5"
-              }`}>
-                {launcher.name}
-              </span>
-            </div>
-          ))}
+      <div 
+        className="flex-1 relative p-4 pointer-events-auto overflow-hidden z-[10]"
+        onContextMenu={(e) => {
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            setDesktopContextMenu({ x: e.clientX, y: e.clientY });
+          }
+        }}
+        onClick={() => {
+          if (desktopContextMenu) setDesktopContextMenu(null);
+        }}
+      >
+        {/* Desktop icons layer */}
+        <div className="absolute inset-0 p-6 pointer-events-none select-none z-10">
+          {desktopIcons
+            .filter(icon => !icon.isDeleted)
+            .map(icon => {
+              const matchingLauncher = getLauncherData(icon.id);
+              if (!matchingLauncher) return null;
 
-          {/* Launcher 10: Cajón de Aplicaciones (Main Menu Synology-style Launcher) */}
+              const isDraggingThis = draggedIcon && draggedIcon.id === icon.id;
+              
+              const colWidth = 92;
+              const rowHeight = 92;
+              
+              let left = icon.col * colWidth + 24;
+              let top = icon.row * rowHeight + 24;
+
+              if (isDraggingThis && draggedIcon) {
+                left += (draggedIcon.currentX - draggedIcon.startX);
+                top += (draggedIcon.currentY - draggedIcon.startY);
+              }
+
+              return (
+                <div
+                  key={icon.id}
+                  style={{
+                    position: "absolute",
+                    left: `${left}px`,
+                    top: `${top}px`,
+                    zIndex: isDraggingThis ? 1000 : 10,
+                  }}
+                  className={`pointer-events-auto flex flex-col items-center justify-center w-20 h-20 text-center cursor-pointer group rounded-xl border border-transparent hover:border-slate-800/40 hover:bg-slate-900/20 transition-all ${
+                    isDraggingThis ? "scale-105 opacity-90 cursor-grabbing duration-0" : "duration-200"
+                  }`}
+                  onMouseDown={(e) => handleIconMouseDown(e, icon)}
+                  onTouchStart={(e) => handleIconTouchStart(e, icon)}
+                  onDoubleClick={() => handleOpenWindow(icon.id)}
+                  onClick={() => {
+                    if (touchMode) handleOpenWindow(icon.id);
+                  }}
+                  title={`Inicia ${icon.name}`}
+                >
+                  {/* Delete shortcut button on hover (if deletable) */}
+                  {icon.isDeletable ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteIcon(icon.id);
+                      }}
+                      className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-4.5 h-4.5 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[10px] shadow border border-rose-400/30 font-bold leading-none"
+                      title="Eliminar acceso directo"
+                    >
+                      ×
+                    </button>
+                  ) : (
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerNotification("⚠️ El Panel de Control del Hardware Propietario es permanente y no puede eliminarse del escritorio.", "info");
+                      }}
+                      className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-4.5 h-4.5 rounded-full bg-slate-800 text-slate-400 text-[8px] border border-slate-700 font-bold leading-none cursor-help"
+                      title="Permanente"
+                    >
+                      !
+                    </span>
+                  )}
+                  
+                  {/* Icon container */}
+                  <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 ${matchingLauncher.border} flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
+                    touchMode ? "w-10 h-10 rounded-xl shadow-md" : "w-11 h-11 rounded-xl"
+                  }`}>
+                    {matchingLauncher.icon}
+                  </div>
+                  
+                  {/* Icon Name text */}
+                  <span className={`font-semibold text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full text-[10.5px] mt-1`}>
+                    {icon.name}
+                  </span>
+                </div>
+              );
+            })}
+
+          {/* Statically positioned Cajón Apps at bottom left */}
           <div
+            style={{
+              position: "absolute",
+              left: "24px",
+              bottom: "24px",
+            }}
             onDoubleClick={() => setAppDrawerOpen(true)}
             onClick={() => setAppDrawerOpen(true)}
-            className="flex flex-col items-center cursor-pointer group text-center"
+            className="pointer-events-auto flex flex-col items-center justify-center w-20 h-20 text-center cursor-pointer group rounded-xl border border-transparent hover:border-slate-800/40 hover:bg-slate-900/20 transition-all duration-200"
             title="Abrir el Cajón de Aplicaciones"
             id="launcher-app-drawer"
           >
             <div className={`border bg-slate-950/80 hover:bg-slate-950 border-slate-800 group-hover:border-emerald-400 flex items-center justify-center shadow-lg transition-all duration-200 aspect-square ${
-              touchMode ? "w-11 h-11 rounded-xl shadow-md border-emerald-500/15" : "w-12 h-12 rounded-xl"
+              touchMode ? "w-10 h-10 rounded-xl shadow-md border-emerald-500/15" : "w-11 h-11 rounded-xl"
             }`}>
               <LayoutGrid className={`text-emerald-400 group-hover:scale-105 transition-all ${touchMode ? "w-5 h-5" : "w-6 h-6"}`} />
             </div>
-            <span className={`font-black text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full ${
-              touchMode ? "text-[10px] mt-1.5" : "text-[11px] mt-1.5"
-            }`}>
+            <span className={`font-black text-slate-100 px-1 py-0.5 bg-slate-950/65 rounded border border-slate-900/10 shadow shadow-slate-950/50 group-hover:bg-slate-950/90 truncate max-w-full text-[10px] mt-1`}>
               Cajón Apps
             </span>
           </div>
         </div>
+
+        {/* Desktop Context Menu */}
+        {desktopContextMenu && (
+          <div
+            style={{
+              position: "fixed",
+              left: `${desktopContextMenu.x}px`,
+              top: `${desktopContextMenu.y}px`,
+              zIndex: 100000,
+            }}
+            className="w-56 bg-slate-950/95 border border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.5)] backdrop-blur-md rounded-lg p-1.5 text-xs font-sans text-slate-200 flex flex-col pointer-events-auto"
+          >
+            <button
+              onClick={handleAlignIconsToGrid}
+              className="text-left w-full px-2.5 py-1.5 hover:bg-slate-900 rounded-md hover:text-emerald-400 font-medium transition-colors"
+            >
+              Alinear iconos a la cuadrícula
+            </button>
+            <button
+              onClick={handleRestoreAllIcons}
+              className="text-left w-full px-2.5 py-1.5 hover:bg-slate-900 rounded-md hover:text-emerald-400 font-medium transition-colors border-b border-slate-900 pb-2 mb-1"
+            >
+              Restaurar todos los iconos
+            </button>
+            <button
+              onClick={() => {
+                handleOpenWindow("hardware_control");
+                setDesktopContextMenu(null);
+              }}
+              className="text-left w-full px-2.5 py-1.5 hover:bg-slate-900 rounded-md hover:text-emerald-400 font-medium transition-colors flex items-center justify-between"
+            >
+              <span>Controlador de Hardware</span>
+              <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded uppercase font-bold">Kernel</span>
+            </button>
+          </div>
+        )}
 
         {/* Custom CMineWar OS style Desktop Widget Panel */}
         {widgetsOpen && (
@@ -1240,21 +1837,32 @@ export default function App() {
         )}
 
         {/* Windows Rendering Layer */}
-        {windows.map((win) => (
-          <WindowFrame
-            key={win.id}
-            win={win}
-            touchMode={touchMode}
-            onClose={() => handleCloseWindow(win.id)}
-            onMinimize={() => handleMinimizeWindow(win.id)}
-            onMaximize={() => handleMaximizeWindow(win.id)}
-            onFocus={() => handleFocusWindow(win.id)}
-            onMove={(pos) => handleMoveWindow(win.id, pos)}
-            onResize={(size) => handleResizeWindow(win.id, size)}
-          >
-            {renderWindowContent(win.id)}
-          </WindowFrame>
-        ))}
+        {windows.map((win) => {
+          const openNonMinimized = windows.filter((w) => w.isOpen && !w.isMinimized);
+          const maxZ = openNonMinimized.length > 0 ? Math.max(...openNonMinimized.map((w) => w.zIndex)) : 0;
+          const isFocused = win.zIndex === maxZ;
+          const isHiddenOnMobile = touchMode && !isFocused && win.isOpen && !win.isMinimized;
+
+          return (
+            <div
+              key={win.id}
+              className={isHiddenOnMobile ? "hidden" : "contents"}
+            >
+              <WindowFrame
+                win={win}
+                touchMode={touchMode}
+                onClose={() => handleCloseWindow(win.id)}
+                onMinimize={() => handleMinimizeWindow(win.id)}
+                onMaximize={() => handleMaximizeWindow(win.id)}
+                onFocus={() => handleFocusWindow(win.id)}
+                onMove={(pos) => handleMoveWindow(win.id, pos)}
+                onResize={(size) => handleResizeWindow(win.id, size)}
+              >
+                {renderWindowContent(win.id)}
+              </WindowFrame>
+            </div>
+          );
+        })}
       </div>
 
       {/* Start / Menu Drawer */}
@@ -1319,10 +1927,10 @@ export default function App() {
               className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
               id="menu-app-editor"
             >
-              <FileText size={16} className="text-amber-400" />
+              <FileCode size={16} className="text-lime-500" />
               <div>
-                <p className="font-medium text-slate-300">Editor Notas</p>
-                <p className="text-[9px] text-slate-500">Edición rápida de archivos</p>
+                <p className="font-medium text-slate-300">Notepad++</p>
+                <p className="text-[9px] text-slate-500">Editor de textos y código avanzado</p>
               </div>
             </button>
 
@@ -1379,10 +1987,10 @@ export default function App() {
               className="flex items-center space-x-3 p-2 rounded hover:bg-slate-900 text-left transition"
               id="menu-app-chromium"
             >
-              <Globe size={16} className="text-blue-400" />
+              <Chrome size={16} className="text-blue-400" />
               <div>
-                <p className="font-medium text-slate-300">Navegador Chromium</p>
-                <p className="text-[9px] text-slate-500">Navega por la red simulated sandbox</p>
+                <p className="font-medium text-slate-300">Chrome</p>
+                <p className="text-[9px] text-slate-500">Navega por la red simulated Chrome Dev</p>
               </div>
             </button>
           </div>
@@ -1449,12 +2057,17 @@ export default function App() {
                 { id: "openclaw_core", name: "Antigravity CLI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
                 { id: "terminal", name: "Terminal", desc: "Consola CMineWarBash", icon: TerminalIcon, system: true },
                 { id: "file_manager", name: "Archivos VFS", desc: "Explorador de ficheros", icon: FolderOpen, system: true, iconCol: "text-cyan-400" },
-                { id: "text_editor", name: "Editor Notas", desc: "Editor de textos rápido", icon: FileText, system: true, iconCol: "text-amber-400" },
+                { id: "text_editor", name: "Notepad++", desc: "Editor de textos y código avanzado", icon: FileCode, system: true, iconCol: "text-lime-500" },
                 { id: "system_monitor", name: "Monitor", desc: "Hardware en vivo", icon: Cpu, system: true, iconCol: "text-violet-400" },
                 { id: "control_panel", name: "Panel Control", desc: "Ancho de red y servicios", icon: Sliders, system: true, iconCol: "text-emerald-400" },
                 { id: "installer", name: "Instalar Kern", desc: "Instalador de drivers de hardware", icon: Download, system: true, iconCol: "text-cyan-400" },
                 { id: "updater_github", name: "Ajustes Globales", desc: "Comunicaciones y resolución", icon: Settings, system: true, iconCol: "text-pink-400" },
-                { id: "chromium", name: "Chromium", desc: "Navegador de internet", icon: Globe, system: true, iconCol: "text-blue-400" },
+                { id: "chromium", name: "Chrome", desc: "Navegador de internet Chrome Dev", icon: Chrome, system: true, iconCol: "text-blue-400" },
+                { id: "beini", name: "Beini Suite", desc: "Wi-Fi pentesting y auditorías", icon: Wifi, system: true, iconCol: "text-pink-400" },
+                // Euro Office Preinstalled Webapps
+                { id: "euro_word", name: "Euro Word", desc: "Procesador de textos", icon: FileText, system: true, iconCol: "text-blue-500" },
+                { id: "euro_calc", name: "Euro Calc", desc: "Hoja de cálculo inteligente", icon: FileSpreadsheet, system: true, iconCol: "text-emerald-500" },
+                { id: "euro_slide", name: "Euro Slide", desc: "Presentador de diapositivas", icon: Presentation, system: true, iconCol: "text-amber-500" },
                 // Linux Packages
                 { id: "pkg_htop", name: "htop monitor", desc: "Monitor interactivo linux", icon: Cpu, packageId: "pkg_htop", iconCol: "text-emerald-400" },
                 { id: "pkg_neofetch", name: "neofetch info", desc: "Diagnóstico del host", icon: Laptop, packageId: "pkg_neofetch", iconCol: "text-emerald-400" },
