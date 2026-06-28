@@ -201,14 +201,21 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
     if not is_sandbox:
         chroot_cmd = f"chroot {mount_point}"
         
-        # Preparar binds para el entorno chroot
+        # Preparar binds para el entorno chroot con red/resolv.conf y pts para emular terminales
+        run_cmd(f"cp /etc/resolv.conf {mount_point}/etc/resolv.conf", shell=True)
         run_cmd(f"mount --bind /dev {mount_point}/dev", shell=True)
+        run_cmd(f"mount --bind /dev/pts {mount_point}/dev/pts", shell=True)
         run_cmd(f"mount --bind /proc {mount_point}/proc", shell=True)
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
         run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xinit dbus-x11 chromium nodejs npm curl", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 chromium nodejs npm curl", shell=True)
         
+        # Asegurar lightdm como gestor por defecto de X11
+        run_cmd(f"mkdir -p {mount_point}/etc/X11", shell=True)
+        with open(f"{mount_point}/etc/X11/default-display-manager", "w") as f:
+            f.write("/usr/sbin/lightdm\n")
+
         # Instalar GRUB de forma removable/portable
         run_cmd(f"{chroot_cmd} grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CMineWarOS --removable {full_disk}", shell=True)
         run_cmd(f"{chroot_cmd} update-grub", shell=True)
@@ -257,6 +264,8 @@ WantedBy=multi-user.target
         print(f"[+] Configurando inicio de sesión gráfico automático para el usuario '{username}'...")
         run_cmd(f"{chroot_cmd} groupadd -r autologin || true", shell=True)
         run_cmd(f"{chroot_cmd} gpasswd -a {username} autologin || true", shell=True)
+        run_cmd(f"{chroot_cmd} groupadd -r nopasswdlogin || true", shell=True)
+        run_cmd(f"{chroot_cmd} gpasswd -a {username} nopasswdlogin || true", shell=True)
 
         run_cmd(f"mkdir -p {mount_point}/etc/lightdm/lightdm.conf.d", shell=True)
         lightdm_config = f"""[Seat:*]
@@ -290,6 +299,7 @@ Comment=Launch CMineWar OS UI in fullscreen Kiosk mode
         run_cmd(f"{chroot_cmd} systemctl enable lightdm.service", shell=True)
 
         # Limpieza de binds (con fallback de desmontaje perezoso 'lazy' en caso de bloqueo)
+        run_cmd(f"umount {mount_point}/dev/pts || umount -l {mount_point}/dev/pts", shell=True)
         run_cmd(f"umount {mount_point}/dev || umount -l {mount_point}/dev", shell=True)
         run_cmd(f"umount {mount_point}/proc || umount -l {mount_point}/proc", shell=True)
         run_cmd(f"umount {mount_point}/sys || umount -l {mount_point}/sys", shell=True)

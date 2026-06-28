@@ -26,11 +26,8 @@ start:
     int 0x10
 
     ; Cambiar color de fondo/fuente (opcional, por defecto negro con gris)
-    ; Llamamos a la macro para imprimir la pantalla de bienvenida de clawOS
+    ; Llamamos a la macro para imprimir la pantalla de bienvenida
     mov si, logo_header
-    call print_string
-
-    mov si, logo_dragon
     call print_string
 
     mov si, text_welcome
@@ -107,29 +104,14 @@ reboot_machine:
 ; STRINGS & DATOS DE TEXTOS
 ; =========================================================================
 
-logo_header db "================================================================================", 13, 10
-            db "               [ CMineWar OS v1.1.2 - NUCLEO DIRECTO BARE-METAL ]", 13, 10
-            db "================================================================================", 13, 10, 0
+logo_header db " [ CMineWar OS v1.1.2 - Legacy MBR Bootloader ]", 13, 10, 13, 10, 0
 
-logo_dragon db "          ,      ,", 13, 10
-            db "         /(    /(", 13, 10
-            db "        // \ _/ \\          *   BIENVENIDO AL DESVELE DEL DRAGON    *", 13, 10
-            db "       / ( /_` \\ ) \", 13, 10
-            db "      /  _//   \\_  \", 13, 10
-            db "     ()_ (     ) _()        Kernel 16-bits Real Mode cargado en DS/ES", 13, 10
-            db "    /   __\\___/__   \", 13, 10
-            db "   / _/ \\_  _ /  \\_ \", 13, 10
-            db "  (_/     \\/     \\_)", 13, 10, 13, 10, 0
+text_welcome db " [+] Cargado en 0x7C00. Modo Real 16-bit activo.", 13, 10, 0
 
-text_welcome db " [+] El cargador de arranque Legacy MBR ha inicializado las pilas lógicas.", 13, 10
-             db " [+] Direccionamiento físico alineado perfectamente en 0x7C00.", 13, 10
-             db " [+] Microcontroladores del ordenador activos y bajo supervisión del emulador.", 13, 10, 13, 10, 0
+text_instructions db " [+] Presione 'R' para reiniciar por hardware.", 13, 10, 13, 10
+                  db " cminewar_kernel_sh> ", 0
 
-text_instructions db " Escribe cualquier texto directamente en tu teclado bare-metal.", 13, 10
-                  db " > PRESIONA 'R' EN TU TECLADO PARA REINICIAR LA COMPUTADORA FISICA.", 13, 10, 13, 10
-                  db " Consola abierta (cminewar_kernel_sh)> ", 0
-
-text_reboot db 13, 10, " [/] Solicitud de reinicio por hardware aceptada. Reiniciando ordenador...", 13, 10, 0
+text_reboot db 13, 10, " Reiniciando...", 13, 10, 0
 
 ; =========================================================================
 ; RELLENO Y FIRMA MBR
