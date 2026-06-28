@@ -1,5 +1,5 @@
 ; =========================================================================
-;                CLAWOS MASTER BOOT RECORD (MBR) BOOTLOADER
+;                CMINEWAR OS MASTER BOOT RECORD (MBR) BOOTLOADER
 ;               Compatible con BIOS Legacy x86 (Real Mode 16-bit)
 ; =========================================================================
 ; Para compilar: nasm -f bin boot.asm -o boot.bin
@@ -108,7 +108,7 @@ reboot_machine:
 ; =========================================================================
 
 logo_header db "================================================================================", 13, 10
-            db "                 [ clawOS v1.1.2 - NUCLEO DIRECTO BARE-METAL ]", 13, 10
+            db "               [ CMineWar OS v1.1.2 - NUCLEO DIRECTO BARE-METAL ]", 13, 10
             db "================================================================================", 13, 10, 0
 
 logo_dragon db "          ,      ,", 13, 10
@@ -127,7 +127,7 @@ text_welcome db " [+] El cargador de arranque Legacy MBR ha inicializado las pil
 
 text_instructions db " Escribe cualquier texto directamente en tu teclado bare-metal.", 13, 10
                   db " > PRESIONA 'R' EN TU TECLADO PARA REINICIAR LA COMPUTADORA FISICA.", 13, 10, 13, 10
-                  db " Consola abierta (claw_kernel_sh)> ", 0
+                  db " Consola abierta (cminewar_kernel_sh)> ", 0
 
 text_reboot db 13, 10, " [/] Solicitud de reinicio por hardware aceptada. Reiniciando ordenador...", 13, 10, 0
 

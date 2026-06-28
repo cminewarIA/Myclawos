@@ -51,7 +51,7 @@ amixer sset Master 90% unmute || true
 ifconfig lo up || ip link set lo up || true
 
 # 3. Cambiar al directorio del proyecto y arrancar el servidor Express local
-cd /opt/cminewaros || cd /opt/clawos || true
+cd /opt/cminewaros || cd /opt/cminewar || true
 node dist/server.cjs >/tmp/cminewaros_node.log 2>&1 &
 
 # 4. Esperar de forma activa a que el servidor Express local en el puerto 3000 esté escuchando y respondiendo

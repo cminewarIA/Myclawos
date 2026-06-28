@@ -255,8 +255,8 @@ jobs:
           # Intentamos primero la configuración dual-boot recomendada con -e efi.img
           echo "[+] Intentando compilar ISO híbrida Dual-Boot (BIOS + UEFI) - Método A..."
           if xorriso -as mkisofs \
-            -V "clawOS" \
-            -o clawOS-live.iso \
+            -V "cminewarOS" \
+            -o cminewarOS-live.iso \
             -b boot.bin \
             -c boot.catalog \
             -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -264,12 +264,12 @@ jobs:
             -e efi.img \
             -no-emul-boot \
             iso_root/; then
-            echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito usando Método A (estándar -e)."
+            echo "[✓] ISO arrancable dual-boot 'cminewarOS-live.iso' generada con éxito usando Método A (estándar -e)."
           else
             echo "[⚠️] Método A de xorriso falló. Intentando Método B (con plataforma EFI explícita)..."
             if xorriso -as mkisofs \
-              -V "clawOS" \
-              -o clawOS-live.iso \
+              -V "cminewarOS" \
+              -o cminewarOS-live.iso \
               -b boot.bin \
               -c boot.catalog \
               -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -278,12 +278,12 @@ jobs:
               -eltorito-boot efi.img \
               -no-emul-boot \
               iso_root/; then
-              echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito usando Método B (plataforma EFI)."
+              echo "[✓] ISO arrancable dual-boot 'cminewarOS-live.iso' generada con éxito usando Método B (plataforma EFI)."
             else
               echo "[⚠️] Ambos métodos híbridos fallaron. Intentando generar ISO de compatibilidad básica (Solo BIOS) como último recurso..."
               xorriso -as mkisofs \
-                -V "clawOS" \
-                -o clawOS-live.iso \
+                -V "cminewarOS" \
+                -o cminewarOS-live.iso \
                 -b boot.bin \
                 -c boot.catalog \
                 -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -292,44 +292,44 @@ jobs:
             fi
           fi
 
-      - name: Package clawOS Ubuntu/Debian Distribution Bundle
+      - name: Package CMineWar OS Ubuntu/Debian Distribution Bundle
         run: |
-          echo "[+] Preparando paquete de distribución de clawOS para Ubuntu/Debian..."
-          mkdir -p clawos-ubuntu-amd64/bare-metal
+          echo "[+] Preparando paquete de distribución de CMineWar OS para Ubuntu/Debian..."
+          mkdir -p cminewar-ubuntu-amd64/bare-metal
           
           # Copiar archivos compilados y fuentes necesarios
-          cp -r dist clawos-ubuntu-amd64/
-          cp package.json package-lock.json download-wrapper.cjs clawos-ubuntu-amd64/
-          cp -r bare-metal/* clawos-ubuntu-amd64/bare-metal/
+          cp -r dist cminewar-ubuntu-amd64/
+          cp package.json package-lock.json download-wrapper.cjs cminewar-ubuntu-amd64/
+          cp -r bare-metal/* cminewar-ubuntu-amd64/bare-metal/
           
           # Asegurar permisos de ejecución correctos en los scripts de instalación física y servicios
-          chmod +x clawos-ubuntu-amd64/bare-metal/*.sh || true
-          chmod +x clawos-ubuntu-amd64/bare-metal/*.py || true
+          chmod +x cminewar-ubuntu-amd64/bare-metal/*.sh || true
+          chmod +x cminewar-ubuntu-amd64/bare-metal/*.py || true
           
           # Comprimir en un archivo tar.gz
-          tar -czf clawOS-Ubuntu-amd64.tar.gz clawos-ubuntu-amd64/
-          echo "[✓] Distribución clawOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
+          tar -czf cminewarOS-Ubuntu-amd64.tar.gz cminewar-ubuntu-amd64/
+          echo "[✓] Distribución cminewarOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
 
       - name: Upload Bootable ISO Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clawOS_Live_Bootable_ISO
-          path: clawOS-live.iso
+          name: cminewarOS_Live_Bootable_ISO
+          path: cminewarOS-live.iso
           retention-days: 7
           if-no-files-found: error
 
       - name: Upload Ubuntu/Debian Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clawOS_Ubuntu_amd64_Bundle
-          path: clawOS-Ubuntu-amd64.tar.gz
+          name: cminewarOS_Ubuntu_amd64_Bundle
+          path: cminewarOS-Ubuntu-amd64.tar.gz
           retention-days: 7
           if-no-files-found: error
 
       - name: Upload Legacy BIOS boot.bin Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clawOS_Legacy_BIOS_bootsector
+          name: cminewarOS_Legacy_BIOS_bootsector
           path: bare-metal/boot.bin
           retention-days: 7
           if-no-files-found: error
@@ -337,7 +337,7 @@ jobs:
       - name: Upload UEFI BOOTX64.EFI Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clawOS_UEFI_BOOTX64_loader
+          name: cminewarOS_UEFI_BOOTX64_loader
           path: bare-metal/BOOTX64.EFI
           retention-days: 7
           if-no-files-found: error

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CMineWar OS / ClawOS Portable Installer
+CMineWar OS Portable Installer
 Instala un sistema operativo Linux real en un disco portátil (estilo Windows To Go)
 Soporta ejecución interactiva por terminal y ejecución no-interactiva automatizada por API.
 """
@@ -59,7 +59,7 @@ def main():
         is_sandbox = True
 
     print("=" * 60)
-    print("     CMineWar OS / ClawOS Portable Installer v1.0")
+    print("     CMineWar OS Portable Installer v1.0")
     print("     Instala un Linux real en disco portátil (x86_64 nativo)")
     print("=" * 60)
 

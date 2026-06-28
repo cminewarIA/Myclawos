@@ -1,5 +1,5 @@
 /* =========================================================================
- *                  CLAWOS UEFI MAIN GRAPHICS SYSTEM LOADER
+ *                CMINEWAR OS UEFI MAIN GRAPHICS SYSTEM LOADER
  *                Compatible con Arquitectura x86_64 UEFI firmware
  * =========================================================================
  * Para compilar necesitas el compilador x86_64-w64-mingw32-gcc o GNU-EFI:
@@ -69,9 +69,9 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     // 1. Limpiar la pantalla de UEFI
     SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
-    // 2. Imprimir líneas de carga del núcleo de clawOS en formato Unicode de 16-bits de UEFI L"..."
+    // 2. Imprimir líneas de carga del núcleo de CMineWar OS en formato Unicode de 16-bits de UEFI L"..."
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L"================================================================\r\n");
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L"             CLAWOS SYSTEM COGNITIVE UEFI LOADER v1.1.2         \r\n");
+    SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L"           CMINEWAR OS SYSTEM COGNITIVE UEFI LOADER v1.1.2       \r\n");
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L"================================================================\r\n");
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [+] Firmware de UEFI Verificado Correctamente.\r\n");
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [+] Procesador x86_64 inicializado en Modo Largo de 64 bits.\r\n");
@@ -79,7 +79,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [!] Buscando la particion del sistema que aloja la GUI de React...\r\n");
     SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [!] Sincronizando nucleo del emulador con dispositivos de E/S...\r\n\r\n");
     
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [*] clawOS kernel cargado. Presione cualquier teclado para reiniciar el ordenador...\r\n");
+    SystemTable->ConOut->OutputString(SystemTable->ConOut, (uint16_t*)L" [*] CMineWar OS kernel cargado. Presione cualquier teclado para reiniciar el ordenador...\r\n");
 
     // Esperar una pulsación de tecla antes de salir o reiniciar el CPU
     EFI_INPUT_KEY Key;

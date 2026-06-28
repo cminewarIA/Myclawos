@@ -1,21 +1,21 @@
-# Guía de Construcción Bare-Metal de clawOS (BIOS UEFI / Legacy)
+# Guía de Construcción Bare-Metal de CMineWar OS (BIOS UEFI / Legacy)
 
-Esta carpeta contiene los archivos fuentes reales de bajo nivel y las recetas de empaquetado del sistema operativo para poder **arrancar y ejecutar clawOS de forma nativa directamente en el hardware físico de tu ordenador (bare-metal)**.
+Esta carpeta contiene los archivos fuentes reales de bajo nivel y las recetas de empaquetado del sistema operativo para poder **arrancar y ejecutar CMineWar OS de forma nativa directamente en el hardware físico de tu ordenador (bare-metal)**.
 
 ---
 
-## 💡 Clarificación Crucial: ¿Es clawOS una Simulación o es Real?
+## 💡 Clarificación Crucial: ¿Es CMineWar OS una Simulación o es Real?
 
 Este proyecto consta de **dos partes organizadas con absoluta honestidad de ingeniería**:
 
-1. **La Interfaz de Desarrollo que ves en tu Pantalla:** Es una aplicación interactiva en tiempo real (SPA con React + Node.js) diseñada para emular y programar la UX/UI de clawOS. Corre en un contenedor en la nube y sirve para "sandboxear" la apariencia de la interfaz.
+1. **La Interfaz de Desarrollo que ves en tu Pantalla:** Es una aplicación interactiva en tiempo real (SPA con React + Node.js) diseñada para emular y programar la UX/UI de CMineWar OS. Corre en un contenedor en la nube y sirve para "sandboxear" la apariencia de la interfaz.
 2. **Los archivos nativos de esta carpeta (`/bare-metal`):** Son **totalmente reales e instalables sobre el hardware**. Aquí tienes el binario de carga MBR (`boot.asm`), el cargador de arranque nativo UEFI en C (`uefi_loader.c`), y la receta de empaquetado ISO (`build_iso.sh`) que utiliza un kernel Linux real optimizado para empaquetar toda esta interfaz web de la aplicación y ejecutarla de forma auto-arrancable directamente sobre el ordenador en pantalla completa, sin Windows o macOS por debajo.
 
 ---
 
 ## 📶 Compatibilidad con Componentes Físicos: WiFi, Bluetooth y LTE / Móvil (LLT)
 
-Para que el sistema sea un **sistema "Claw-To-Go" 100% funcional** capaz de arrancar en cualquier placa madre y detectar inalámbricos de inmediato, la ISO Linux se construye empaquetando los siguientes controladores y sub-sistemas libres de firmware oficiales del kernel upstream:
+Para que el sistema sea un **sistema "CMineWar-To-Go" 100% funcional** capaz de arrancar en cualquier placa madre y detectar inalámbricos de inmediato, la ISO Linux se construye empaquetando los siguientes controladores y sub-sistemas libres de firmware oficiales del kernel upstream:
 
 ### 1. Controladores de Bluetooth (`Bluetooth`)
 *   **Pila de Protocolo:** `bluez` y `bluez-utils`.
@@ -52,7 +52,7 @@ Para que el sistema sea un **sistema "Claw-To-Go" 100% funcional** capaz de arra
 ---
 
 ## Método 1: Ejecutar el cargador de arranque Legacy de 16-bits (boot.asm)
-Este es el cargador de arranque en hardware real que emite por pantalla la estructura del dragón de clawOS impreso en código máquina nativo.
+Este es el cargador de arranque en hardware real que emite por pantalla la estructura del dragón de CMineWar OS impreso en código máquina nativo.
 
 ### 1. Requisitos para compilar en Linux / macOS:
 Instala un compilador de ensamblador de la familia x86 como `nasm` y un emulador veloz como `qemu`:
@@ -84,7 +84,7 @@ Una vez flasheado, apaga tu ordenador, conéctalo a un puerto USB, enciende el o
 
 ---
 
-## Método 2: Crear una ISO real Kiosk de clawOS que arranque directamente en UEFI
+## Método 2: Crear una ISO real Kiosk de CMineWar OS que arranque directamente en UEFI
 La forma estándar y profesional en la que sistemas operativos web (como ChromeOS) corren en bare-metal es utilizando un micro-kernel Linux configurado en modo **Kiosco de pantalla completa**, el cual arranca el servidor ligero local de Node.js y un navegador en pantalla completa optimizado al máximo por hardware para el renderizado acelerado de la interfaz.
 
 ### Pasos para ensamblar tu propia ISO Kiosk con Alpine Linux:
@@ -94,7 +94,7 @@ La forma estándar y profesional en la que sistemas operativos web (como ChromeO
    sudo apt-get install xorriso squashfs-tools mtools syslinux-utils -y
    ```
 
-2. **Compilar la interfaz de clawOS**:
+2. **Compilar la interfaz de CMineWar OS**:
    ```bash
    npm run build
    ```
@@ -109,16 +109,16 @@ La forma estándar y profesional en la que sistemas operativos web (como ChromeO
 4. **Quemar la ISO resultante a tu USB**:
    Puedes utilizar herramientas visuales seguras como **BalenaEtcher**, **Rufus**, o el comando tradicional `dd`:
    ```bash
-   sudo dd if=clawos-live.iso of=/dev/sdX bs=4M status=progress && sync
+   sudo dd if=cminewarOS-live.iso of=/dev/sdX bs=4M status=progress && sync
    ```
 
-Configura la UEFI de tu ordenador para deshabilitar el "Secure Boot" y arranca de inmediato en la majestuosidad acelerada de clawOS bare-metal.
+Configura la UEFI de tu ordenador para deshabilitar el "Secure Boot" y arranca de inmediato en la majestuosidad acelerada de CMineWar OS bare-metal.
 
 ---
 
 ## Método 3: Ejecución Dinámica y Servidora en Debian GNU/Linux
 
-Si en lugar de un Live CD de Alpine deseas ejecutar clawOS de forma continua sobre tu distribución familiar **Debian** (actuando como servidor central en tu hogar u oficina), hemos incorporado un motor de automatización y cortafuego específico para Debian.
+Si en lugar de un Live CD de Alpine deseas ejecutar CMineWar OS de forma continua sobre tu distribución familiar **Debian** (actuando como servidor central en tu hogar u oficina), hemos incorporado un motor de automatización y cortafuego específico para Debian.
 
 Cualquier dispositivo en tu red local (LAN) —incluyendo el móvil, emulador o tablet— podrá acceder a la interfaz web tecleando la dirección IP de tu servidor Debian en el puerto `3000`.
 
@@ -144,7 +144,7 @@ sudo systemctl start cminewar.service
 ### 2. Aislamiento Total de Internet (Anti-WAN Firewall) en Debian:
 El instalador despliega una regla de aislamiento local en `/usr/local/bin/cminewar-firewall`. Al invocar este comando se utiliza `iptables` para rechazar la salida WAN (Internet), pero manteniendo intactas las redes privadas locales (LAN 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8):
 
-*   **Bloquear el acceso de clawOS a Internet (pero mantener LAN de casa):**
+*   **Bloquear el acceso de CMineWar OS to Internet (pero mantener LAN de casa):**
     ```bash
     sudo cminewar-firewall block
     ```
@@ -158,5 +158,5 @@ El instalador despliega una regla de aislamiento local en `/usr/local/bin/cminew
     ```
 
 ### 3. Persistencia de Ventanas y Estado del Escritorio:
-Con el fin de evitar la pérdida del estado de tu espacio de trabajo al recargar o conectar desde un dispositivo móvil de la red LAN, clawOS almacena en los metadatos del perfil del cliente (a través del `localStorage` persistente del navegador) las posiciones relativas de cada ventana, los layouts activos, las coordenadas x-y y el foco activo. Esto asegura que tu escritorio se mantenga intacto tras suspender o reiniciar tu plataforma Debian.
+Con el fin de evitar la pérdida del estado de tu espacio de trabajo al recargar o conectar desde un dispositivo móvil de la red LAN, CMineWar OS almacena en los metadatos del perfil del cliente (a través del `localStorage` persistentente del navegador) las posiciones relativas de cada ventana, los layouts activos, las coordenadas x-y y el foco activo. Esto asegura que tu escritorio se mantenga intacto tras suspender o reiniciar tu plataforma Debian.
 
