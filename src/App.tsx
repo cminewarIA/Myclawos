@@ -15,7 +15,6 @@ import Beini from "./components/Beini";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
 import Bootloader from "./components/Bootloader";
-import OmarchyTui from "./components/OmarchyTui";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
 import HardwareControl from "./components/HardwareControl";
@@ -56,16 +55,16 @@ import {
 
 export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
-  // Direct to ready for instant startup, conserving CPU, GPU, and RAM.
+  // Starts with Gateway requesting Node IP.
   const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">(() => {
     if (typeof window !== "undefined" && localStorage.getItem("cminewar_force_reboot") === "true") {
       localStorage.removeItem("cminewar_force_reboot");
       return "bootloader";
     }
-    return "ready";
+    return "gateway";
   });
 
-  const [connectedServerIp, setConnectedServerIp] = useState<string | null>("10.0.2.15");
+  const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -1304,7 +1303,75 @@ export default function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // Gateway phase has been removed for optimization and instant desktop load.
+  // Gateway phase requesting IP node with custom dragon logo
+  if (bootLifecycle === "gateway") {
+    return (
+      <div className="w-full h-screen bg-[#070913] text-slate-100 font-mono flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
+        {/* Ambient grids/glows */}
+        <div className="absolute 0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-950/10 rounded-full blur-[120px]" />
+        
+        <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-xl p-8 relative z-10 shadow-2xl flex flex-col items-center space-y-6">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-orange-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000" />
+            <div className="relative bg-[#0f172a] p-4 rounded-full border border-slate-800">
+              <DragonLogo size={80} glow={true} />
+            </div>
+          </div>
+          
+          <div className="text-center space-y-2">
+            <h1 className="text-xl font-bold tracking-wider text-red-500 font-mono uppercase">
+              CMINEWAR OS
+            </h1>
+            <p className="text-xs text-slate-400">
+              PANEL DE ENLACE NUCLEO DIRECTO
+            </p>
+          </div>
+
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const ipInput = form.elements.namedItem("node_ip") as HTMLInputElement;
+              const ipVal = ipInput.value.trim();
+              if (!ipVal) return;
+              setConnectedServerIp(ipVal);
+              setBootLifecycle("bootloader");
+            }}
+            className="w-full space-y-4"
+          >
+            <div className="space-y-2">
+              <label htmlFor="node_ip" className="text-xs font-semibold text-slate-400 block uppercase tracking-widest">
+                Dirección IP del Nodo
+              </label>
+              <input
+                id="node_ip"
+                name="node_ip"
+                type="text"
+                required
+                placeholder="Ej. 10.0.2.15"
+                defaultValue="10.0.2.15"
+                className="w-full px-4 py-3 bg-[#020617] border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-red-500 transition font-mono text-center"
+              />
+            </div>
+
+            <button
+              id="connect_node_btn"
+              type="submit"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-red-900/20 active:translate-y-[1px]"
+            >
+              Establecer Conexión
+            </button>
+          </form>
+
+          <div className="w-full flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-800 pt-4 font-mono">
+            <span>BARE-METAL DRIVER</span>
+            <span>SECURE LINK v1.1.2</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (bootLifecycle === "bootloader") {
     return (
@@ -1314,19 +1381,6 @@ export default function App() {
         onComplete={() => {
           setBootLifecycle("ready");
           triggerNotification("Colección de dependencias y Kernel listos. ¡Bienvenido a CMineWar OS!", "success");
-        }}
-      />
-    );
-  }
-
-  const currentBootMode = typeof window !== "undefined" ? localStorage.getItem("cminewar_boot_mode") || "omarchy" : "omarchy";
-  if (bootLifecycle === "ready" && currentBootMode === "omarchy") {
-    return (
-      <OmarchyTui
-        connectedServerIp={connectedServerIp}
-        onReboot={() => {
-          localStorage.removeItem("cminewar_boot_mode");
-          setBootLifecycle("bootloader");
         }}
       />
     );

@@ -113,6 +113,12 @@ jobs:
             echo "[⚠️] Advertencia: No se pudo verificar gradle-wrapper.jar. Se dependerá del Gradle del sistema si está disponible."
           fi
 
+      - name: Repair Corrupted mipmap-mdpi PNGs (Fix AAPT2 dimensions 0x0 error)
+        run: |
+          echo "[+] Reparando recursos mipmap..."
+          cp android/app/src/main/res/mipmap-hdpi/*.png android/app/src/main/res/mipmap-mdpi/ || true
+          echo "[✓] Mipmaps corregidos con éxito."
+
       - name: Build Android APK (Debug)
         run: |
           cd android

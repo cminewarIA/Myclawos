@@ -44,16 +44,11 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   const handleBootEntry = (index: number) => {
     playPulseSound(880, "sine", 0.08);
     if (index === 0) {
-      // Omarchy Mode
-      localStorage.setItem("cminewar_boot_mode", "omarchy");
-      localStorage.removeItem("cminewar_safe_mode");
-      setBootPhase("bios");
-    } else if (index === 1) {
       // Kiosk Mode
       localStorage.setItem("cminewar_boot_mode", "kiosk");
       localStorage.removeItem("cminewar_safe_mode");
       setBootPhase("bios");
-    } else if (index === 2) {
+    } else if (index === 1) {
       // Recovery Mode
       localStorage.setItem("cminewar_safe_mode", "true");
       setBootPhase("safemode");
@@ -94,12 +89,12 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       if (e.key === "ArrowUp") {
         e.preventDefault();
         playPulseSound(440, "sine", 0.03);
-        setGrubSelection((prev) => (prev === 0 ? 2 : prev - 1));
+        setGrubSelection((prev) => (prev === 0 ? 1 : prev - 1));
         setCountdown(8); // Reset timer on user activity so they have time to read
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         playPulseSound(440, "sine", 0.03);
-        setGrubSelection((prev) => (prev === 2 ? 0 : prev + 1));
+        setGrubSelection((prev) => (prev === 1 ? 0 : prev + 1));
         setCountdown(8); // Reset timer on user activity so they have time to read
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -365,18 +360,12 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
               {[
                 {
                   id: 0,
-                  label: "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI)",
-                  desc: "Entorno nativo de terminal con utilidades unificadas y daemon udev activo (Recomendado).",
-                  badge: "Primera Opción"
-                },
-                {
-                  id: 1,
                   label: "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI)",
                   desc: "Arranque estándar directo a la interfaz completa de CMineWar OS y escritorio de componentes.",
                   badge: "Kiosco GUI"
                 },
                 {
-                  id: 2,
+                  id: 1,
                   label: "CMineWar OS - Modo de Recuperación (System Safe Mode)",
                   desc: "Consola de rescate de emergencia para reparar el kernel, inodos de disco y flashear MBR.",
                   badge: "Recuperación"

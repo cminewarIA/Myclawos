@@ -83,12 +83,6 @@ CARACTERÍSTICAS:
 set default="0"
 set timeout=5
 
-menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI Nativas x86)" {
-    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-omarchy-init
-    initrd /boot/initramfs-cminewar-x86_64-direct.img
-}
-
 menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI x86 Nativas)" {
     search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
     linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-kiosk-init

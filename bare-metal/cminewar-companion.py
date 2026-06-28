@@ -195,20 +195,6 @@ class CMineWarCompanionApp:
         )
         btn_web.pack(side="left", fill="x", expand=True, padx=5, pady=5)
         
-        btn_tui = tk.Button(
-            extra_frame, 
-            text="🐉 INICIAR CONSOLA OMARCHY (TUI)", 
-            font=self.font_body, 
-            bg="#111625", 
-            fg=self.purple_color, 
-            activebackground=self.purple_color,
-            activeforeground="#000",
-            bd=1, 
-            relief="solid", 
-            command=self.open_tui
-        )
-        btn_tui.pack(side="left", fill="x", expand=True, padx=5, pady=5)
-        
         btn_refresh = tk.Button(
             extra_frame, 
             text="🔄 REPRODUCIR LOGS", 
@@ -364,24 +350,6 @@ class CMineWarCompanionApp:
         import webbrowser
         self.write_log("[*] Lanzando interfaz en el navegador del host...")
         webbrowser.open("http://localhost:3000")
-
-    def open_tui(self):
-        """ Abre la TUI de Omarchy en una terminal nativa de Ubuntu """
-        def task():
-            self.write_log("[*] Buscando emulador de terminal compatible para lanzar la TUI Omarchy...")
-            terminal_launched = False
-            for term in ["gnome-terminal", "konsole", "xfce4-terminal", "xterm"]:
-                try:
-                    subprocess.Popen([term, "--", "sudo", "cminewar-omarchy-dashboard"])
-                    self.write_log(f"[✓] Lanzado orquestador Omarchy en terminal '{term}'")
-                    terminal_launched = True
-                    break
-                except Exception:
-                    continue
-            if not terminal_launched:
-                self.write_log("[❌] No se encontró un emulador de terminal compatible de entorno gráfico.")
-                
-        threading.Thread(target=task, daemon=True).start()
 
     def refresh_logs(self):
         """ Lee las últimas líneas del archivo de instalación de logs y las muestra en pantalla """
