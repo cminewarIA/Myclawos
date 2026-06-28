@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Multiplatform (Android & Ubuntu)
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_android:
     name: Compile Android APK
     runs-on: ubuntu-latest
 
@@ -147,4 +147,95 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 7
           if-no-files-found: warn
+
+  build_ubuntu:
+    name: Compile and Package Ubuntu App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: Build Web Application (React/Vite & Server)
+        run: |
+          npm run build
+
+      - name: Install Compilers (NASM & MinGW)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm gcc-mingw-w64-x86-64
+
+      - name: Compile BIOS MBR Bootsector (boot.asm)
+        run: |
+          nasm -f bin bare-metal/boot.asm -o bare-metal/boot.bin
+
+      - name: Compile UEFI x86_64 System Loader (uefi_loader.c)
+        run: |
+          x86_64-w64-mingw32-gcc -nostdlib -shared -Wl,-dll -Wl,--subsystem,10 -e efi_main -o bare-metal/BOOTX64.EFI bare-metal/uefi_loader.c
+
+      - name: Verify Compiled Binary Artifacts
+        run: |
+          echo "[+] Verificando existencia de binarios generados..."
+          if [ -s "bare-metal/boot.bin" ]; then
+            echo "[✓] boot.bin generado con éxito ($(wc -c < bare-metal/boot.bin) bytes)"
+          else
+            echo "[❌] Error: boot.bin no existe o está vacío"
+            exit 1
+          fi
+
+          if [ -s "bare-metal/BOOTX64.EFI" ]; then
+            echo "[✓] BOOTX64.EFI generado con éxito ($(wc -c < bare-metal/BOOTX64.EFI) bytes)"
+          else
+            echo "[❌] Error: BOOTX64.EFI no existe o está vacío"
+            exit 1
+          fi
+
+      - name: Package clawOS Ubuntu/Debian Distribution Bundle
+        run: |
+          echo "[+] Preparando paquete de distribución de clawOS para Ubuntu/Debian..."
+          mkdir -p clawos-ubuntu-amd64/bare-metal
+          
+          # Copiar archivos compilados y fuentes necesarios
+          cp -r dist clawos-ubuntu-amd64/
+          cp package.json package-lock.json download-wrapper.cjs clawos-ubuntu-amd64/
+          cp -r bare-metal/* clawos-ubuntu-amd64/bare-metal/
+          
+          # Comprimir en un archivo tar.gz
+          tar -czf clawOS-Ubuntu-amd64.tar.gz clawos-ubuntu-amd64/
+          echo "[✓] Distribución clawOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
+
+      - name: Upload Ubuntu/Debian Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawOS_Ubuntu_amd64_Bundle
+          path: clawOS-Ubuntu-amd64.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Legacy BIOS boot.bin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawOS_Legacy_BIOS_bootsector
+          path: bare-metal/boot.bin
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload UEFI BOOTX64.EFI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawOS_UEFI_BOOTX64_loader
+          path: bare-metal/BOOTX64.EFI
+          retention-days: 7
+          if-no-files-found: error
+
 
