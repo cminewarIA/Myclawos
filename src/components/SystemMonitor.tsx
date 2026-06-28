@@ -7,11 +7,52 @@ export default function SystemMonitor() {
   const [memUsage, setMemUsage] = useState(34);
   const [temp, setTemp] = useState(41);
   const [networkSpeed, setNetworkSpeed] = useState({ up: 0.8, down: 4.2 });
+  const [isRealHost, setIsRealHost] = useState(false);
+  const [hostDetails, setHostDetails] = useState<{ hostname?: string; arch?: string; platform?: string } | null>(null);
 
-  // Simulate updating specs
+  // Simulate updating specs & real host telemetry fetch
   useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch("/api/cminewar/system-metrics");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isRealHost) {
+            setIsRealHost(true);
+            setCpuUsage(data.cpu);
+            setCpuHistory((history) => [...history.slice(1), data.cpu]);
+            setMemUsage(data.memory.percent);
+            setTemp(data.temperature);
+            setHostDetails({
+              hostname: data.hostname,
+              arch: data.arch,
+              platform: data.platform
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        // benign fallback in sandbox
+      }
+      setIsRealHost(false);
+    };
+
+    fetchMetrics();
+    const metricsPoll = setInterval(fetchMetrics, 2000);
+
     const interval = setInterval(() => {
-      // Natural fluctuation logic
+      // Always fluctuate network values for visual consistency
+      setNetworkSpeed({
+        up: parseFloat((Math.random() * 1.5 + 0.2).toFixed(1)),
+        down: parseFloat((Math.random() * 8.0 + 1.5).toFixed(1)),
+      });
+
+      // Skip calculations if real host metrics are active
+      if (isRealHost) {
+        return;
+      }
+
+      // Natural fluctuation logic for sandbox mode
       setCpuUsage((prev) => {
         const delta = Math.floor(Math.random() * 15) - 7;
         const next = Math.min(Math.max(prev + delta, 5), 95);
@@ -33,15 +74,13 @@ export default function SystemMonitor() {
         const delta = Math.floor(Math.random() * 3) - 1;
         return Math.min(Math.max(prev + delta, 38), 58);
       });
-
-      setNetworkSpeed({
-        up: parseFloat((Math.random() * 1.5 + 0.2).toFixed(1)),
-        down: parseFloat((Math.random() * 8.0 + 1.5).toFixed(1)),
-      });
     }, 1500);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearInterval(metricsPoll);
+      clearInterval(interval);
+    };
+  }, [isRealHost]);
 
   return (
     <div className="flex-1 flex flex-col bg-slate-900 overflow-y-auto p-4 space-y-4 text-slate-300 border-t border-slate-800">

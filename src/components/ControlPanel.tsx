@@ -94,6 +94,19 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     };
   }, []);
   
+  // Real Host Integration States (Debian Bare-Metal)
+  const [isRealHost, setIsRealHost] = useState(false);
+  const [isRemoteDisconnected, setIsRemoteDisconnected] = useState(() => {
+    return localStorage.getItem("cminewar_remote_disconnected") === "true";
+  });
+  const [firewallActive, setFirewallActive] = useState(false);
+  const [isTogglingFirewall, setIsTogglingFirewall] = useState(false);
+  const [uptime, setUptime] = useState(0);
+  const [temperature, setTemperature] = useState(41);
+  const [hostPlatform, setHostPlatform] = useState("");
+  const [hostArch, setHostArch] = useState("");
+  const [hostname, setHostname] = useState("");
+
   const [netSpeedDown, setNetSpeedDown] = useState(4.2); // MB/s
   const [netSpeedUp, setNetSpeedUp] = useState(0.8); // MB/s
   const [netHistoryDown, setNetHistoryDown] = useState<number[]>(Array(24).fill(4.2));
@@ -152,9 +165,115 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
   // Keep services persisted and dispatch event on update
   useEffect(() => {
-    localStorage.setItem("claw_system_services", JSON.stringify(services));
-    window.dispatchEvent(new Event("storage"));
-  }, [services]);
+    if (!isRealHost) {
+      localStorage.setItem("claw_system_services", JSON.stringify(services));
+      window.dispatchEvent(new Event("storage"));
+    }
+  }, [services, isRealHost]);
+
+  // Fetch real-world metrics from Express system telemetry API (real Debian integration)
+  const fetchMetrics = async () => {
+    if (isRemoteDisconnected) {
+      setIsRealHost(false);
+      return false;
+    }
+    try {
+      const res = await fetch("/api/cminewar/system-metrics");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isRealHost) {
+          setIsRealHost(true);
+          setRamPercent(data.memory.percent);
+          setRamUsed(data.memory.used);
+          setRamFree(data.memory.free);
+          setRamCached(data.memory.cached);
+          setProcesses(data.processes);
+          setServices(data.services);
+          setFirewallActive(data.firewallActive);
+          setUptime(data.uptime);
+          setTemperature(data.temperature);
+          setHostPlatform(data.platform);
+          setHostArch(data.arch);
+          setHostname(data.hostname);
+          return true;
+        }
+      }
+    } catch (e) {
+      // benign network fail in sandbox mode
+    }
+    setIsRealHost(false);
+    return false;
+  };
+
+  // Disconnect manually from host system (force mock simulator)
+  const handleDisconnectRemote = () => {
+    setIsRemoteDisconnected(true);
+    setIsRealHost(false);
+    localStorage.setItem("cminewar_remote_disconnected", "true");
+  };
+
+  // Re-enable real system polling
+  const handleConnectRemote = () => {
+    setIsRemoteDisconnected(false);
+    localStorage.setItem("cminewar_remote_disconnected", "false");
+    // Trigger immediate refetch
+    setTimeout(() => {
+      fetchMetrics();
+    }, 100);
+  };
+
+  // Trigger real or simulated power state transitions (shutdown/reboot)
+  const handlePowerAction = async (action: "reboot" | "shutdown") => {
+    const confirmation = window.confirm(`¿Estás completamente seguro de que deseas enviar la orden de ${action.toUpperCase()} al equipo host?`);
+    if (!confirmation) return;
+
+    try {
+      const res = await fetch("/api/cminewar/system/power", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      alert(data.message || `Orden de ${action.toUpperCase()} enviada.`);
+    } catch (e) {
+      alert("Error al enviar la comando de alimentación.");
+    }
+  };
+
+  // Toggle real or simulated firewall rules (iptables WAN block)
+  const handleToggleFirewall = async () => {
+    const nextAction = firewallActive ? "allow" : "block";
+    setIsTogglingFirewall(true);
+    
+    if (isRealHost) {
+      try {
+        const res = await fetch("/api/cminewar/firewall/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: nextAction })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(`Error controlando cortafuegos real: ${data.error}`);
+        } else {
+          setFirewallActive(nextAction === "block");
+          alert(data.message || "Cambio de cortafuegos aplicado.");
+        }
+      } catch (e) {
+        console.error("Fallo de red al interactuar con el cortafuegos real", e);
+      } finally {
+        setIsTogglingFirewall(false);
+        fetchMetrics();
+      }
+    } else {
+      // Simulated toggling
+      setTimeout(() => {
+        setFirewallActive(nextAction === "block");
+        setIsTogglingFirewall(false);
+        alert(`[SALA DE CONTROL] Tránsito WAN ${nextAction === "block" ? "BLOQUEADO" : "CONCEDIDO"} correctamente (Modo Simulador).`);
+      }, 800);
+    }
+  };
 
   // Handle killing virtual processes
   const handleKillProcess = (pid: number) => {
@@ -163,6 +282,10 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
   // Reset processes to default
   const handleResetProcesses = () => {
+    if (isRealHost) {
+      fetchMetrics();
+      return;
+    }
     setProcesses([
       { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
       { pid: 42, name: "antigravity-kernel-core", cpu: 3.5, ram: 420, status: "running" },
@@ -175,7 +298,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   };
 
   // Service toggle trigger
-  const handleToggleService = (id: string) => {
+  const handleToggleService = async (id: string) => {
     if (id === "acpi-sleep") {
       const isSleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
       if (isSleepDisabled) {
@@ -183,18 +306,48 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         return;
       }
     }
-    setServices((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          return { ...s, status: s.status === "active" ? "inactive" : "active" };
+
+    if (isRealHost) {
+      const srv = services.find(s => s.id === id);
+      if (!srv) return;
+      const action = srv.status === "active" ? "stop" : "start";
+      try {
+        const res = await fetch("/api/cminewar/services/control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serviceId: id, action })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(`Error controlando el servicio de systemd: ${data.error}`);
+        } else {
+          fetchMetrics();
         }
-        return s;
-      })
-    );
+      } catch (e) {
+        console.error("Error al controlar el servicio:", e);
+      }
+    } else {
+      setServices((prev) =>
+        prev.map((s) => {
+          if (s.id === id) {
+            return { ...s, status: s.status === "active" ? "inactive" : "active" };
+          }
+          return s;
+        })
+      );
+    }
   };
 
-  // Dynamic simulation simulation ticks
+  // Dynamic simulation simulation ticks & real-world telemetry fetching
   useEffect(() => {
+    // Initial fetch
+    fetchMetrics();
+
+    // Secondary poll for real metrics
+    const metricsPoll = setInterval(() => {
+      fetchMetrics();
+    }, 2000);
+
     const timer = setInterval(() => {
       // Sync running windows dynamically matching real desktop activity
       const savedWins = localStorage.getItem("clawos_windows_state");
@@ -211,7 +364,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         } catch (e) {}
       }
 
-      // 1. Network simulation updates
+      // 1. Network simulation updates (always run for active charts consistency)
       setNetSpeedDown((prev) => {
         const delta = (Math.random() * 4 - 2);
         const next = Math.max(0.2, parseFloat((prev + delta).toFixed(1)));
@@ -229,6 +382,11 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         setTotalDataUp((acc) => parseFloat((acc + (next / 10)).toFixed(1)));
         return next;
       });
+
+      // Skip simulation calculations of RAM & CPU if we are receiving real physical data from the host
+      if (isRealHost) {
+        return;
+      }
 
       // 2. RAM calculations updates
       setRamPercent((prev) => {
@@ -259,8 +417,21 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [services, ramCached]);
+    return () => {
+      clearInterval(metricsPoll);
+      clearInterval(timer);
+    };
+  }, [services, ramCached, isRealHost]);
+
+  // Format uptime into readable days, hours, and minutes
+  const formatUptime = (seconds: number) => {
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   // Helper to format history path for a compact elegant SVG Sparkline
   const generateSvgPath = (history: number[], minVal = 0, maxVal = 100, width = 280, height = 75) => {
@@ -420,6 +591,84 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
       {/* Main Stats Panel Content */}
       <div className="flex-1 min-h-0 flex flex-col p-4 overflow-y-auto">
+        
+        {/* Real Host Connection Status Banner */}
+        {isRealHost ? (
+          <div className="mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <div>
+                <div className="font-bold text-emerald-400 font-mono flex items-center gap-1.5">
+                  <span>SISTEMA OPERATIVO REAL DETECTADO</span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded text-[9px] uppercase font-bold tracking-wider">Host Activo</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  Servidor: <span className="font-semibold text-slate-300 font-mono">{hostname}</span> | Platform: <span className="font-semibold text-slate-300 font-mono">{hostPlatform} ({hostArch})</span> | Uptime: <span className="font-semibold text-slate-300 font-mono">{formatUptime(uptime)}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Real Host Power Controllers & Disconnect Option */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleDisconnectRemote}
+                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-[10px] font-mono rounded text-slate-300 font-bold transition flex items-center gap-1"
+                title="Desconectarse voluntariamente del host real y volver a modo simulación local"
+              >
+                <span>🔌 Desconectar</span>
+              </button>
+              <button
+                onClick={() => handlePowerAction("reboot")}
+                className="px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900 border border-amber-900/40 text-[10px] font-mono rounded text-amber-300 font-bold transition"
+              >
+                Reinicio Host
+              </button>
+              <button
+                onClick={() => handlePowerAction("shutdown")}
+                className="px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-900/40 text-[10px] font-mono rounded text-rose-300 font-bold transition"
+              >
+                Apagar Host
+              </button>
+            </div>
+          </div>
+        ) : isRemoteDisconnected ? (
+          <div className="mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5">
+              <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <div>
+                <div className="font-bold text-amber-400 font-mono">
+                  🔌 DESCONECTADO VOLUNTARIAMENTE DEL SERVIDOR REMOTO
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  Operando en Modo Simulado Local. No se enviarán comandos físicos ni se monitorizará el host de Debian.
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleConnectRemote}
+              className="px-2.5 py-1.5 bg-emerald-950/40 hover:bg-emerald-900 border border-emerald-900/40 text-[10px] font-mono rounded text-emerald-300 font-bold transition flex items-center gap-1"
+            >
+              <span>🔌 Reconectar al Servidor</span>
+            </button>
+          </div>
+        ) : (
+          <div className="mb-4 bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 text-xs flex items-center justify-between gap-2 text-slate-500">
+            <div className="flex items-center space-x-2">
+              <span className="w-1.5 h-1.5 bg-slate-600 rounded-full"></span>
+              <span>Modo Sandbox de Demostración (Simulador del Sistema Activo)</span>
+            </div>
+            <button
+              onClick={() => fetchMetrics()}
+              className="text-[10px] font-mono text-slate-400 hover:text-slate-200 underline decoration-dotted"
+            >
+              Buscar host físico...
+            </button>
+          </div>
+        )}
         
         {/* TAB 1: Network Monitors with Graphic Sparklines */}
         {activeTab === "network" && (
@@ -638,6 +887,58 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Cortafuegos Físico Card */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800" id="firewall-control-card">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5 font-sans">
+                    <ShieldCheck size={14} className="text-emerald-400" />
+                    <span>Control de Cortafuegos Físico de Red (iptables)</span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500 leading-relaxed max-w-xl">
+                    Bloquea instantáneamente todo el tráfico entrante/saliente de Internet (WAN) para aislar el host físicamente, manteniendo la red local (LAN) libre para la administración.
+                  </p>
+                </div>
+                
+                <div className="flex items-center space-x-3 self-end sm:self-auto">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold font-mono ${
+                    firewallActive 
+                      ? "bg-rose-500/10 border border-rose-500/20 text-rose-400" 
+                      : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                  }`}>
+                    {firewallActive ? "BLOQUEADO (LAN ONLY)" : "WAN LIBRE (INTERNET)"}
+                  </span>
+                  
+                  <button
+                    onClick={handleToggleFirewall}
+                    disabled={isTogglingFirewall}
+                    className={`px-3 py-1.5 rounded text-xs font-bold font-sans border transition flex items-center space-x-1.5 ${
+                      firewallActive
+                        ? "bg-emerald-950 hover:bg-emerald-900 border-emerald-900/50 text-emerald-300"
+                        : "bg-rose-950 hover:bg-rose-900 border-rose-900/50 text-rose-300"
+                    }`}
+                  >
+                    {isTogglingFirewall ? (
+                      <>
+                        <RefreshCw size={12} className="animate-spin" />
+                        <span>Aplicando...</span>
+                      </>
+                    ) : firewallActive ? (
+                      <>
+                        <Play size={10} fill="currentColor" />
+                        <span>Desbloquear WAN</span>
+                      </>
+                    ) : (
+                      <>
+                        <Square size={10} fill="currentColor" />
+                        <span>Bloquear WAN (Internet)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

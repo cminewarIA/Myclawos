@@ -50,7 +50,8 @@ import {
   FileSpreadsheet,
   Presentation,
   Chrome,
-  FileCode
+  FileCode,
+  LogOut
 } from "lucide-react";
 
 export default function App() {
@@ -1488,8 +1489,26 @@ export default function App() {
           <div className="h-4 w-[1px] bg-slate-800 shrink-0"></div>
           
           <span className="font-sans font-bold text-xs tracking-wider text-slate-200 shrink-0 hidden md:inline-block">
-            {connectedServerIp ? `CMineWar-NAS [${connectedServerIp}]` : "CMineWar-NAS (Demo)"}
+            {connectedServerIp ? `CMineWar-NAS [${connectedServerIp}]` : "CMineWar-NAS [Localhost]"}
           </span>
+
+          {connectedServerIp && (
+            <>
+              <div className="h-4 w-[1px] bg-slate-800 shrink-0"></div>
+              <button
+                onClick={() => {
+                  setConnectedServerIp(null);
+                  setBootLifecycle("gateway");
+                }}
+                className="flex items-center space-x-1 px-2.5 py-1 bg-red-950/40 border border-red-800/40 hover:border-red-500 hover:bg-red-900/50 rounded-md text-red-400 hover:text-red-200 transition cursor-pointer text-[10px] font-mono uppercase tracking-wider"
+                title="Desconectar del servidor remoto"
+                id="disconnect-node-btn"
+              >
+                <LogOut size={10} />
+                <span>Desconectar</span>
+              </button>
+            </>
+          )}
 
           <div className="h-4 w-[1px] bg-slate-800 shrink-0 hidden md:inline-block"></div>
 

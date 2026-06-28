@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { exec, execSync } from "child_process";
 import fs from "fs";
+import os from "os";
 
 dotenv.config();
 
@@ -21,6 +22,256 @@ app.get("/api/cminewar/system-status", (req, res) => {
     instanceId: SERVER_INSTANCE_ID,
     timestamp: Date.now()
   });
+});
+
+// GET /api/cminewar/system-metrics - Real host telemetry (real Debian desktop integration)
+app.get("/api/cminewar/system-metrics", (req, res) => {
+  const isLinux = process.platform === "linux";
+  let isRealHost = false;
+  
+  // 1. Get real memory metrics
+  let totalMem = os.totalmem();
+  let freeMem = os.freemem();
+  let cachedMem = 0;
+  
+  if (isLinux) {
+    try {
+      if (fs.existsSync("/proc/meminfo")) {
+        const meminfo = fs.readFileSync("/proc/meminfo", "utf8");
+        const matchCached = meminfo.match(/^Cached:\s+(\d+)\s+kB/m);
+        const matchBuffers = meminfo.match(/^Buffers:\s+(\d+)\s+kB/m);
+        
+        const cachedKb = matchCached ? parseInt(matchCached[1], 10) : 0;
+        const buffersKb = matchBuffers ? parseInt(matchBuffers[1], 10) : 0;
+        
+        cachedMem = (cachedKb + buffersKb) * 1024; // convert to bytes
+        isRealHost = true;
+      }
+    } catch (e) {
+      console.error("Error leyendo /proc/meminfo:", e);
+    }
+  }
+  
+  const usedMem = totalMem - freeMem - cachedMem;
+  const memPercent = Math.round((usedMem / totalMem) * 100);
+
+  // 2. Get CPU Load
+  let cpuPercent = 10; // Default fallback
+  const loadAvg = os.loadavg();
+  if (loadAvg && loadAvg.length > 0) {
+    // scale load average to CPU core count
+    const cores = os.cpus().length || 1;
+    cpuPercent = Math.min(Math.round((loadAvg[0] / cores) * 100), 100);
+    if (cpuPercent <= 0) cpuPercent = 5; // minimum representation
+  }
+
+  // 3. Get CPU temperature (Real on Linux Raspberry Pi, PC thermal zone, etc)
+  let temperature = 41; // Default fallback
+  if (isLinux) {
+    try {
+      const thermalPaths = [
+        "/sys/class/thermal/thermal_zone0/temp",
+        "/sys/class/thermal/thermal_zone1/temp",
+        "/sys/devices/virtual/thermal/thermal_zone0/temp"
+      ];
+      for (const p of thermalPaths) {
+        if (fs.existsSync(p)) {
+          const raw = fs.readFileSync(p, "utf8").trim();
+          const parsed = parseInt(raw, 10);
+          if (!isNaN(parsed)) {
+            temperature = Math.round(parsed / 1000);
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      // benign
+    }
+  }
+
+  // 4. Get active processes from actual Linux/Unix host using ps
+  let processes: any[] = [];
+  if (isLinux || process.platform === "darwin") {
+    try {
+      const output = execSync("ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 12").toString();
+      const lines = output.trim().split("\n");
+      // Ignore header line
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].trim().split(/\s+/);
+        if (parts.length >= 4) {
+          const pid = parseInt(parts[0], 10);
+          const name = parts[1];
+          const cpu = parseFloat(parts[2]);
+          const mem = parseFloat(parts[3]);
+          const ramMB = Math.round((mem / 100) * (totalMem / 1024 / 1024));
+          
+          processes.push({
+            pid,
+            name,
+            cpu: isNaN(cpu) ? 0.1 : cpu,
+            ram: isNaN(ramMB) ? 15 : ramMB,
+            status: "running"
+          });
+        }
+      }
+    } catch (e) {
+      // fallback handled below
+    }
+  }
+
+  // If we couldn't fetch real processes or are on non-unix, supply clean live metrics
+  if (processes.length === 0) {
+    processes = [
+      { pid: 1, name: "systemd", cpu: 0, ram: 15, status: "sleeping" },
+      { pid: 42, name: "antigravity-kernel-core", cpu: 3.2, ram: 420, status: "running" },
+      { pid: 50, name: "antigravitybash-shell", cpu: 0.1, ram: 22, status: "running" },
+      { pid: 210, name: "network-analyzer-daemon", cpu: 1.8, ram: 85, status: "running" },
+      { pid: 301, name: "tmux-server", cpu: 1.2, ram: 45, status: "running" },
+      { pid: 405, name: "google-gemini-channel", cpu: 0.1, ram: 310, status: "running" }
+    ];
+  }
+
+  // 5. Check real systemd services status
+  let services = [
+    { id: "cminewar-service", name: "CMineWar OS Cognitive Daemon", description: "Enlace inteligente con el LLM y servidor Express", status: "active" },
+    { id: "nginx", name: "Servidor Web Nginx (Proxy Inverso)", description: "Servidor de puertos HTTP públicos", status: "inactive" },
+    { id: "ssh", name: "Servidor SSH (Secure Shell Daemon)", description: "Acceso remoto seguro de terminal", status: "inactive" },
+    { id: "network-manager", name: "Network Manager", description: "Gestor principal de interfaces y WiFi", status: "inactive" }
+  ];
+
+  if (isLinux) {
+    services = services.map(srv => {
+      try {
+        const sysSrvName = srv.id === "cminewar-service" ? "cminewar" : srv.id;
+        const state = execSync(`systemctl is-active ${sysSrvName} 2>/dev/null`).toString().trim();
+        return {
+          ...srv,
+          status: state === "active" ? "active" : "inactive"
+        };
+      } catch (e) {
+        return srv;
+      }
+    });
+  }
+
+  // 6. Check real Firewall (iptables status)
+  let isFirewallActive = false;
+  if (isLinux) {
+    try {
+      const output = execSync("iptables -S OUTPUT 2>/dev/null").toString();
+      isFirewallActive = output.includes("-P OUTPUT DROP");
+    } catch (e) {
+      // benign
+    }
+  }
+
+  res.json({
+    cpu: cpuPercent,
+    memory: {
+      total: Math.round(totalMem / 1024 / 1024), // MB
+      used: Math.round(usedMem / 1024 / 1024), // MB
+      free: Math.round(freeMem / 1024 / 1024), // MB
+      cached: Math.round(cachedMem / 1024 / 1024), // MB
+      percent: memPercent
+    },
+    uptime: Math.round(os.uptime()),
+    temperature,
+    processes,
+    services,
+    firewallActive: isFirewallActive,
+    isRealHost,
+    platform: process.platform,
+    hostname: os.hostname(),
+    arch: os.arch()
+  });
+});
+
+// POST /api/cminewar/firewall/toggle - Real iptables block/allow trigger
+app.post("/api/cminewar/firewall/toggle", (req, res) => {
+  const { action } = req.body; // "block" or "allow"
+  if (action !== "block" && action !== "allow") {
+    return res.status(400).json({ error: "Acción requerida: block o allow" });
+  }
+
+  if (process.platform !== "linux") {
+    return res.json({
+      success: true,
+      simulated: true,
+      message: `Simulado: Cortafuegos cambiado a modo ${action.toUpperCase()}`
+    });
+  }
+
+  try {
+    const cmd = action === "block" ? "cminewar-firewall block" : "cminewar-firewall allow";
+    console.log(`[CORTAFUEGOS] Ejecutando: ${cmd}`);
+    execSync(`sudo ${cmd}`);
+    res.json({
+      success: true,
+      message: `Cortafuegos físico ${action === "block" ? "ACTIVADO" : "DESACTIVADO"} con éxito en el host.`
+    });
+  } catch (error: any) {
+    console.error("Error controlando cortafuegos con iptables:", error);
+    res.status(500).json({ error: `Fallo al ejecutar cortafuegos: ${error.message}. ¿Tiene permisos de sudo sin contraseña?` });
+  }
+});
+
+// POST /api/cminewar/services/control - Control real systemd services
+app.post("/api/cminewar/services/control", (req, res) => {
+  const { serviceId, action } = req.body; // action: "start" or "stop" or "restart"
+  if (!serviceId || !action) {
+    return res.status(400).json({ error: "Faltan parámetros: serviceId y action" });
+  }
+
+  if (process.platform !== "linux") {
+    return res.json({
+      success: true,
+      simulated: true,
+      message: `Simulado: Servicio ${serviceId} cambiado con acción ${action.toUpperCase()}`
+    });
+  }
+
+  try {
+    const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : serviceId;
+    const cmd = `sudo systemctl ${action} ${sysSrvName}`;
+    console.log(`[SISTEMA] Ejecutando control de servicio: ${cmd}`);
+    execSync(cmd);
+    res.json({
+      success: true,
+      message: `Acción ${action.toUpperCase()} aplicada al servicio ${serviceId} con éxito.`
+    });
+  } catch (error: any) {
+    console.error(`Error controlando servicio ${serviceId}:`, error);
+    res.status(500).json({ error: `Fallo de systemd: ${error.message}` });
+  }
+});
+
+// POST /api/cminewar/system/power - Real power control for hosts (Reboot / Shutdown)
+app.post("/api/cminewar/system/power", (req, res) => {
+  const { action } = req.body; // "reboot" or "shutdown"
+  if (action !== "reboot" && action !== "shutdown") {
+    return res.status(400).json({ error: "Acción requerida: reboot o shutdown" });
+  }
+
+  if (process.platform !== "linux") {
+    return res.json({
+      success: true,
+      simulated: true,
+      message: `Simulado: Orden de ${action.toUpperCase()} enviada al sistema.`
+    });
+  }
+
+  try {
+    const cmd = action === "reboot" ? "sudo reboot" : "sudo shutdown -h now";
+    console.log(`[ALIMENTACION] Lanzando comando físico: ${cmd}`);
+    // Lanzar de forma asíncrona para que de tiempo a responder la API
+    exec(cmd);
+    res.json({
+      success: true,
+      message: `Orden de ${action.toUpperCase()} transmitida con éxito al kernel.`
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: `Fallo de alimentación: ${error.message}` });
+  }
 });
 
 // CMineWar - Real disk scanner endpoint for bare-metal host compatibility
