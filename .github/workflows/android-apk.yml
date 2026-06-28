@@ -232,7 +232,7 @@ jobs:
           cp bare-metal/boot2048.bin iso_root/boot.bin
           cp bare-metal/efi.img iso_root/efi.img
           
-          # 4. Compilar la ISO híbrida dual-boot usando xorriso
+          # 4. Compilar la ISO híbrida dual-boot usando xorriso con soporte completo UEFI y BIOS El Torito
           xorriso -as mkisofs \
             -V "clawOS" \
             -o clawOS-live.iso \
@@ -240,7 +240,8 @@ jobs:
             -c boot.catalog \
             -no-emul-boot -boot-load-size 4 -boot-info-table \
             -eltorito-alt-boot \
-            -e efi.img \
+            -eltorito-platform efi \
+            -eltorito-boot efi.img \
             -no-emul-boot \
             iso_root/
             
@@ -255,6 +256,10 @@ jobs:
           cp -r dist clawos-ubuntu-amd64/
           cp package.json package-lock.json download-wrapper.cjs clawos-ubuntu-amd64/
           cp -r bare-metal/* clawos-ubuntu-amd64/bare-metal/
+          
+          # Asegurar permisos de ejecución correctos en los scripts de instalación física y servicios
+          chmod +x clawos-ubuntu-amd64/bare-metal/*.sh || true
+          chmod +x clawos-ubuntu-amd64/bare-metal/*.py || true
           
           # Comprimir en un archivo tar.gz
           tar -czf clawOS-Ubuntu-amd64.tar.gz clawos-ubuntu-amd64/

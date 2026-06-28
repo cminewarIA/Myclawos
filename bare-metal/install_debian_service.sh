@@ -60,6 +60,14 @@ fi
 
 # 3. Detectar ruta del proyecto CMineWar OS
 INSTALL_DIR=$(pwd)
+
+# Robustez: Si el usuario ejecuta el script desde la carpeta bare-metal/ o subcarpetas, subir un nivel
+if [ ! -f "$INSTALL_DIR/package.json" ] && [ -f "$INSTALL_DIR/../package.json" ]; then
+    echo "[+] Detectado que se ejecuta desde subcarpeta. Subiendo un nivel para ubicar la raíz del proyecto..."
+    cd ..
+    INSTALL_DIR=$(pwd)
+fi
+
 echo "[+] Directorio de instalación detectado: $INSTALL_DIR"
 
 if [ ! -f "$INSTALL_DIR/package.json" ]; then
