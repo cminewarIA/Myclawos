@@ -1,0 +1,6 @@
+{
+	"appId": "ai.cminewar.mobile",
+	"appName": "CMineWar OS Mobile Viewer",
+	"webDir": "dist",
+	"bundledWebRuntime": false
+}

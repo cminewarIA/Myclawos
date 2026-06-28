@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CMineWar OS Mobile Viewer</string>
+    <string name="title_activity_main">CMineWar OS Mobile Viewer</string>
+    <string name="package_name">ai.cminewar.mobile</string>
+    <string name="custom_url_scheme">ai.cminewar.mobile</string>
+</resources>
