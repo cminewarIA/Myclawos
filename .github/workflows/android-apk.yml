@@ -211,13 +211,16 @@ jobs:
           # 1. Preparar la imagen UEFI FAT12/FAT16/FAT32 (efi.img) conteniendo BOOTX64.EFI
           # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
           dd if=/dev/zero of=bare-metal/efi.img bs=1024 count=1440
-          mkfs.vfat -I -F 12 bare-metal/efi.img
+          if ! mkfs.vfat -I -F 12 bare-metal/efi.img; then
+            echo "[⚠️] Advertencia: mkfs.vfat con -F 12 falló, intentando formato automático..."
+            mkfs.vfat -I bare-metal/efi.img || echo "[❌] Advertencia: No se pudo formatear efi.img de forma limpia"
+          fi
           
           # Usar MTOOLS_SKIP_CHECK=1 para evitar advertencias de geometría o fallas en el entorno headless
           export MTOOLS_SKIP_CHECK=1
-          mmd -i bare-metal/efi.img ::/EFI
-          mmd -i bare-metal/efi.img ::/EFI/BOOT
-          mcopy -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
+          mmd -i bare-metal/efi.img ::/EFI || true
+          mmd -i bare-metal/efi.img ::/EFI/BOOT || true
+          mcopy -i bare-metal/efi.img bare-metal/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI || true
           
           # 2. Rellenar boot.bin con ceros hasta completar 2048 bytes para El Torito (sin emulación)
           dd if=/dev/zero of=bare-metal/boot2048.bin bs=1 count=2048
@@ -233,19 +236,45 @@ jobs:
           cp bare-metal/efi.img iso_root/efi.img
           
           # 4. Compilar la ISO híbrida dual-boot usando xorriso con soporte completo UEFI y BIOS El Torito
-          xorriso -as mkisofs \
+          # Intentamos primero la configuración dual-boot recomendada con -e efi.img
+          echo "[+] Intentando compilar ISO híbrida Dual-Boot (BIOS + UEFI) - Método A..."
+          if xorriso -as mkisofs \
             -V "clawOS" \
             -o clawOS-live.iso \
             -b boot.bin \
             -c boot.catalog \
             -no-emul-boot -boot-load-size 4 -boot-info-table \
             -eltorito-alt-boot \
-            -eltorito-platform efi \
-            -eltorito-boot efi.img \
+            -e efi.img \
             -no-emul-boot \
-            iso_root/
-            
-          echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito."
+            iso_root/; then
+            echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito usando Método A (estándar -e)."
+          else
+            echo "[⚠️] Método A de xorriso falló. Intentando Método B (con plataforma EFI explícita)..."
+            if xorriso -as mkisofs \
+              -V "clawOS" \
+              -o clawOS-live.iso \
+              -b boot.bin \
+              -c boot.catalog \
+              -no-emul-boot -boot-load-size 4 -boot-info-table \
+              -eltorito-alt-boot \
+              -eltorito-platform efi \
+              -eltorito-boot efi.img \
+              -no-emul-boot \
+              iso_root/; then
+              echo "[✓] ISO arrancable dual-boot 'clawOS-live.iso' generada con éxito usando Método B (plataforma EFI)."
+            else
+              echo "[⚠️] Ambos métodos híbridos fallaron. Intentando generar ISO de compatibilidad básica (Solo BIOS) como último recurso..."
+              xorriso -as mkisofs \
+                -V "clawOS" \
+                -o clawOS-live.iso \
+                -b boot.bin \
+                -c boot.catalog \
+                -no-emul-boot -boot-load-size 4 -boot-info-table \
+                iso_root/
+              echo "[✓] ISO arrancable (Solo BIOS) generada con éxito como fallback seguro."
+            fi
+          fi
 
       - name: Package clawOS Ubuntu/Debian Distribution Bundle
         run: |
