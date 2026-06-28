@@ -211,7 +211,7 @@ jobs:
           # 1. Preparar la imagen UEFI FAT12/FAT16/FAT32 (efi.img) conteniendo BOOTX64.EFI
           # Creamos un archivo de 1.44MB (disquete estándar para compatibilidad universal)
           dd if=/dev/zero of=bare-metal/efi.img bs=1024 count=1440
-          mkfs.vfat -F 12 bare-metal/efi.img
+          mkfs.vfat -I -F 12 bare-metal/efi.img
           
           # Usar MTOOLS_SKIP_CHECK=1 para evitar advertencias de geometría o fallas en el entorno headless
           export MTOOLS_SKIP_CHECK=1
