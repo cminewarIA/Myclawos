@@ -375,38 +375,4 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - name: Upload Ubuntu/Debian Bundle Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cminewarOS_Ubuntu_amd64_Bundle
-          path: cminewarOS-Ubuntu-amd64.tar.gz
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload Ubuntu Companion App Files
-        uses: actions/upload-artifact@v4
-        with:
-          name: cminewarOS_Ubuntu_Companion_App
-          path: |
-            bare-metal/cminewar-companion.py
-            bare-metal/cminewar-companion.sh
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload Legacy BIOS boot.bin Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cminewarOS_Legacy_BIOS_bootsector
-          path: bare-metal/boot.bin
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload UEFI BOOTX64.EFI Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cminewarOS_UEFI_BOOTX64_loader
-          path: bare-metal/BOOTX64.EFI
-          retention-days: 7
-          if-no-files-found: error
-
 

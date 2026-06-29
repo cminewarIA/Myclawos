@@ -129,6 +129,10 @@ export default function Terminal({
     const trimmed = fullCommand.trim();
     if (!trimmed) return;
 
+    let activeVfs = vfs;
+    let wasSuccess = true;
+    let failureReason = "";
+
     // Save history
     setCommandHistory((prev) => [...prev, trimmed]);
     setHistoryIndex(-1);
@@ -327,6 +331,8 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             addLine("    feat: Añadir módulo de sincronización GitHub auto-actualizable", "info");
           } else {
             addLine("Uso: git [pull | status | log]", "error");
+            wasSuccess = false;
+            failureReason = `Subcomando git no soportado o inválido: ${args[0] || "ninguno"}`;
           }
         }
         break;
@@ -346,6 +352,8 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           addLine(`Tema del terminal configurado a: ${col}`, "success");
         } else {
           addLine("Uso: theme [green | amber | white]", "error");
+          wasSuccess = false;
+          failureReason = `Tema de color inválido: ${args[0] || "no especificado"}`;
         }
         break;
 
@@ -383,6 +391,8 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         if (!args[0] || !args[1]) {
           addLine("Uso: install-service [nombre-del-servicio] [descripción breve...]", "error");
           addLine("Ejemplo: install-service BananaSync 'Sincronizador automático de ramilletes'", "info");
+          wasSuccess = false;
+          failureReason = "Faltan argumentos para registrar el servicio";
         } else {
           const sName = args[0].replace(/-/g, " ");
           const sDesc = args.slice(1).join(" ");
@@ -427,10 +437,12 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
 
       case "ls":
         const targetLsPath = args[0] ? parsePath(currentPath, args[0]) : currentPath;
-        const lsNode = getNodeByPath(vfs, targetLsPath);
+        const lsNode = getNodeByPath(activeVfs, targetLsPath);
         
         if (!lsNode) {
           addLine(`ls: no se puede acceder a '${args[0]}': No existe el archivo o el directorio`, "error");
+          wasSuccess = false;
+          failureReason = `No existe el archivo o el directorio: ${args[0]}`;
         } else if (lsNode.type === "file") {
           // just display file name
           addLine(lsNode.name, "output");
@@ -456,12 +468,16 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           break;
         }
         const targetCdPath = parsePath(currentPath, args[0]);
-        const cdNode = getNodeByPath(vfs, targetCdPath);
+        const cdNode = getNodeByPath(activeVfs, targetCdPath);
 
         if (!cdNode) {
           addLine(`cd: '${args[0]}': No existe el directorio`, "error");
+          wasSuccess = false;
+          failureReason = `No existe el directorio: ${args[0]}`;
         } else if (cdNode.type !== "dir") {
           addLine(`cd: '${args[0]}': No es un directorio`, "error");
+          wasSuccess = false;
+          failureReason = `No es un directorio: ${args[0]}`;
         } else {
           setCurrentPath(targetCdPath);
         }
@@ -470,18 +486,24 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "cat":
         if (!args[0]) {
           addLine("Uso: cat [nombre_archivo]", "error");
+          wasSuccess = false;
+          failureReason = "Falta especificar el archivo";
           break;
         }
         const targetCatPath = parsePath(currentPath, args[0]);
         const fileName = targetCatPath.pop() || "";
-        const parentNodeDir = getNodeByPath(vfs, targetCatPath);
+        const parentNodeDir = getNodeByPath(activeVfs, targetCatPath);
 
         if (!parentNodeDir || !parentNodeDir.children || !parentNodeDir.children[fileName]) {
           addLine(`cat: ${args[0]}: El archivo no existe`, "error");
+          wasSuccess = false;
+          failureReason = `El archivo no existe: ${args[0]}`;
         } else {
           const fileToRead = parentNodeDir.children[fileName];
           if (fileToRead.type === "dir") {
             addLine(`cat: ${args[0]}: Es un directorio`, "error");
+            wasSuccess = false;
+            failureReason = `No se puede leer un directorio con cat: ${args[0]}`;
           } else {
             addLine(fileToRead.content || "(archivo sin contenido)", "output");
           }
@@ -491,14 +513,18 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "touch":
         if (!args[0]) {
           addLine("Uso: touch [nombre_archivo]", "error");
+          wasSuccess = false;
+          failureReason = "Falta especificar el nombre de archivo";
           break;
         }
         const targetTouchPath = parsePath(currentPath, args[0]);
         const touchFileName = targetTouchPath.pop() || "";
-        const touchParentNode = getNodeByPath(vfs, targetTouchPath);
+        const touchParentNode = getNodeByPath(activeVfs, targetTouchPath);
 
         if (!touchParentNode || touchParentNode.type !== "dir") {
           addLine(`touch: no se puede crear '${args[0]}': Ruta inválida`, "error");
+          wasSuccess = false;
+          failureReason = `Ruta contenedora inválida para: ${args[0]}`;
         } else {
           // Node structure modification
           const newFile: VFSNode = {
@@ -506,8 +532,8 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             type: "file",
             content: `Creado el ${new Date().toLocaleDateString()} vía terminal bash.`,
           };
-          const updatedVfs = setNodeAtPath(vfs, targetTouchPath, touchFileName, newFile);
-          setVfs(updatedVfs);
+          const updatedVfs = setNodeAtPath(activeVfs, targetTouchPath, touchFileName, newFile);
+          activeVfs = updatedVfs;
           addLine(`Archivo de texto '${touchFileName}' creado con éxito.`, "success");
         }
         break;
@@ -515,22 +541,26 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "mkdir":
         if (!args[0]) {
           addLine("Uso: mkdir [nombre_carpeta]", "error");
+          wasSuccess = false;
+          failureReason = "Falta especificar el nombre de carpeta";
           break;
         }
         const targetMkdirPath = parsePath(currentPath, args[0]);
         const mkdirName = targetMkdirPath.pop() || "";
-        const mkdirParentNode = getNodeByPath(vfs, targetMkdirPath);
+        const mkdirParentNode = getNodeByPath(activeVfs, targetMkdirPath);
 
         if (!mkdirParentNode || mkdirParentNode.type !== "dir") {
           addLine(`mkdir: no se puede crear '${args[0]}': Carpeta contenedora inválida`, "error");
+          wasSuccess = false;
+          failureReason = `Ruta contenedora inválida para: ${args[0]}`;
         } else {
           const newDir: VFSNode = {
             name: mkdirName,
             type: "dir",
             children: {},
           };
-          const updatedVfs = setNodeAtPath(vfs, targetMkdirPath, mkdirName, newDir);
-          setVfs(updatedVfs);
+          const updatedVfs = setNodeAtPath(activeVfs, targetMkdirPath, mkdirName, newDir);
+          activeVfs = updatedVfs;
           addLine(`Carpeta de usuario '${mkdirName}' creada con éxito.`, "success");
         }
         break;
@@ -538,17 +568,21 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "rm":
         if (!args[0]) {
           addLine("Uso: rm [nombre_archivo_o_carpeta]", "error");
+          wasSuccess = false;
+          failureReason = "Falta especificar el elemento a eliminar";
           break;
         }
         const targetRmPath = parsePath(currentPath, args[0]);
         const rmName = targetRmPath.pop() || "";
-        const rmParentNode = getNodeByPath(vfs, targetRmPath);
+        const rmParentNode = getNodeByPath(activeVfs, targetRmPath);
 
         if (!rmParentNode || !rmParentNode.children || !rmParentNode.children[rmName]) {
           addLine(`rm: no se puede eliminar '${args[0]}': No existe`, "error");
+          wasSuccess = false;
+          failureReason = `Elemento no encontrado: ${args[0]}`;
         } else {
-          const updatedVfs = deleteNodeAtPath(vfs, targetRmPath, rmName);
-          setVfs(updatedVfs);
+          const updatedVfs = deleteNodeAtPath(activeVfs, targetRmPath, rmName);
+          activeVfs = updatedVfs;
           addLine(`Elemento '${rmName}' eliminado de forma permanente.`, "info");
         }
         break;
@@ -562,7 +596,8 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         const chatPrompt = args.join(" ");
         if (!chatPrompt.trim()) {
           addLine("Uso: agy [un mensaje para Antigravity CLI]", "error");
-          addLine("Ejemplo: agy ¿cómo puedo ordenar carpetas en linux?", "info");
+          wasSuccess = false;
+          failureReason = "El mensaje para la IA no puede estar vacío";
           break;
         }
         
@@ -584,12 +619,14 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           onPostChatMessageFromShell(chatPrompt);
         } catch (e: any) {
           addLine(`Error de enlace Antigravity CLI: ${e.message}`, "error");
+          wasSuccess = false;
+          failureReason = `Error de red de la IA: ${e.message}`;
         }
         break;
 
       default:
         // Try to check if target is a file in the working directory that can be ran
-        const parentW = getNodeByPath(vfs, currentPath);
+        const parentW = getNodeByPath(activeVfs, currentPath);
         if (parentW && parentW.children && parentW.children[cmd] && parentW.children[cmd].type === "file") {
           const selfFile = parentW.children[cmd];
           addLine(`Ejecutando script local '${cmd}':`, "info");
@@ -597,9 +634,33 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         } else {
           addLine(`clawbash: comando no encontrado: '${cmd}'.`, "error");
           addLine("Tip: Escribe 'help' para descubrir utilidades.", "info");
+          wasSuccess = false;
+          failureReason = `Comando no encontrado: ${cmd}`;
         }
         break;
     }
+
+    // Guardar registro de auditoría persistente en /var/log/cmd.log
+    const logUser = isRoot ? "root" : "user_claw_developer";
+    const logTime = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const logStatus = wasSuccess ? "SUCCESS" : `FAILED [${failureReason}]`;
+    const logEntry = `[${logTime}] User: ${logUser} | Cwd: ${getPathString(currentPath)} | Cmd: "${trimmed}" | Status: ${logStatus}\n`;
+
+    const logPath = ["var", "log"];
+    const existingLogNode = getNodeByPath(activeVfs, [...logPath, "cmd.log"]);
+    let oldLogs = "";
+    if (existingLogNode && existingLogNode.type === "file") {
+      oldLogs = existingLogNode.content || "";
+    }
+
+    const updatedLogNode: VFSNode = {
+      name: "cmd.log",
+      type: "file",
+      content: oldLogs + logEntry,
+    };
+
+    const finalVfs = setNodeAtPath(activeVfs, logPath, "cmd.log", updatedLogNode);
+    setVfs(finalVfs);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

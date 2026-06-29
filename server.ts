@@ -234,9 +234,9 @@ app.post("/api/cminewar/firewall/toggle", (req, res) => {
   }
 
   try {
-    const cmd = action === "block" ? "cminewar-firewall block" : "cminewar-firewall allow";
-    console.log(`[CORTAFUEGOS] Ejecutando: ${cmd}`);
-    execSync(`sudo ${cmd}`);
+    const args = action === "block" ? ["cminewar-firewall", "block"] : ["cminewar-firewall", "allow"];
+    console.log(`[CORTAFUEGOS] Ejecutando: sudo ${args.join(" ")}`);
+    execFileSync("sudo", args);
     res.json({
       success: true,
       message: `Cortafuegos físico ${action === "block" ? "ACTIVADO" : "DESACTIVADO"} con éxito en el host.`
@@ -254,6 +254,15 @@ app.post("/api/cminewar/services/control", (req, res) => {
     return res.status(400).json({ error: "Faltan parámetros: serviceId y action" });
   }
 
+  const allowedActions = ["start", "stop", "restart"];
+  if (!allowedActions.includes(action)) {
+    return res.status(400).json({ error: "Acción de servicio no permitida" });
+  }
+
+  if (typeof serviceId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(serviceId)) {
+    return res.status(400).json({ error: "ID de servicio inválido o malformado" });
+  }
+
   if (process.platform !== "linux") {
     return res.json({
       success: true,
@@ -264,15 +273,14 @@ app.post("/api/cminewar/services/control", (req, res) => {
 
   try {
     const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : serviceId;
-    const cmd = `sudo systemctl ${action} ${sysSrvName}`;
-    console.log(`[SISTEMA] Ejecutando control de servicio: ${cmd}`);
-    execSync(cmd);
+    console.log(`[SISTEMA] Ejecutando control de servicio: sudo systemctl ${action} ${sysSrvName}`);
+    execFileSync("sudo", ["systemctl", action, sysSrvName]);
     res.json({
       success: true,
       message: `Acción ${action.toUpperCase()} aplicada al servicio ${serviceId} con éxito.`
     });
   } catch (error: any) {
-    console.error(`Error controlando servicio ${serviceId}:`, error);
+    console.error("Error controlando servicio:", String(serviceId));
     res.status(500).json({ error: `Fallo de systemd: ${error.message}` });
   }
 });
@@ -293,10 +301,12 @@ app.post("/api/cminewar/system/power", (req, res) => {
   }
 
   try {
-    const cmd = action === "reboot" ? "sudo reboot" : "sudo shutdown -h now";
-    console.log(`[ALIMENTACION] Lanzando comando físico: ${cmd}`);
-    // Lanzar de forma asíncrona para que de tiempo a responder la API
-    exec(cmd);
+    console.log(`[ALIMENTACION] Lanzando comando físico: ${action}`);
+    if (action === "reboot") {
+      spawn("sudo", ["reboot"], { detached: true, stdio: "ignore" }).unref();
+    } else {
+      spawn("sudo", ["shutdown", "-h", "now"], { detached: true, stdio: "ignore" }).unref();
+    }
     res.json({
       success: true,
       message: `Orden de ${action.toUpperCase()} transmitida con éxito al kernel.`
@@ -380,8 +390,8 @@ app.post("/api/cminewar/install", (req, res) => {
 
     console.log(`[INSTALADOR] Lanzando instalador físico en Python para: /dev/${safeDisk}`);
     
-    // Lanzar el script en Python de fondo de forma desvinculada
-    const child = exec(`python3 -u "${scriptPath}" "${safeDisk}" "${safeOmitUser}" "${safeDisableSleep}" "${safeBrowser}"`);
+    // Lanzar el script en Python de fondo de forma desvinculada sin intérprete de comandos shell
+    const child = spawn("python3", ["-u", scriptPath, safeDisk, safeOmitUser, safeDisableSleep, safeBrowser]);
     
     // Capturar y escribir en tiempo real la salida en el archivo de log para evitar conflictos de redirección de shell
     child.stdout?.on("data", (data) => {
@@ -456,8 +466,8 @@ app.post("/api/cminewar/system-update", (req, res) => {
 
     console.log("[ACTUALIZADOR] Lanzando actualizador de sistema completo en Python...");
     
-    // Launch update script asynchronously in background
-    const child = exec(`python3 -u "${scriptPath}"`);
+    // Launch update script safely in background using spawn
+    const child = spawn("python3", ["-u", scriptPath]);
     
     child.stdout?.on("data", (data) => {
       try {
