@@ -228,6 +228,43 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
 
         # Instalar GRUB de forma removable/portable
         run_cmd(f"{chroot_cmd} grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CMineWarOS --removable {full_disk}", shell=True)
+
+        # Configurar entrada personalizada de rescate en GRUB (modo contingencia con consola y red sin arrancar X11)
+        grub_rescue_entry = """#!/bin/sh
+exec tail -n +3 $0
+# Entrada personalizada de contingencia para rescate y actualizacion rapida de CMineWar OS
+menuentry 'CMineWar OS Rescue & Network Emergency Update' --class debian --class gnu-linux --class gnu --class os {
+    load_video
+    insmod gzio
+    if [ x$grub_platform = xefi ]; then
+        insmod gettext
+    fi
+    insmod part_gpt
+    insmod ext2
+    set root='hd0,gpt2'
+    if [ x$feature_platform_search_hint = xy ]; then
+      search --no-floppy --fs-uuid --set=root --hint-bios=hd0,gpt2 --hint-efi=hd0,gpt2 --hint-baremetal=ahci0,gpt2  UUID_PLACEHOLDER
+    else
+      search --no-floppy --fs-uuid --set=root UUID_PLACEHOLDER
+    fi
+    echo    'Cargando Kernel de Emergencia para CMineWar OS...'
+    linux   /boot/vmlinuz-6.1.0-21-amd64 root=UUID=UUID_PLACEHOLDER ro single systemd.unit=multi-user.target cminewar.rescue=1
+    echo    'Cargando disco RAM de soporte...'
+    initrd  /boot/initrd.img-6.1.0-21-amd64
+}
+"""
+        # Intentar obtener el UUID de la particion raiz para hacer la entrada de GRUB 100% funcional y real
+        try:
+            uuid_res = subprocess.run(f"blkid -o value -s UUID {partition2}", shell=True, capture_output=True, text=True)
+            root_uuid = uuid_res.stdout.strip() if uuid_res.returncode == 0 and uuid_res.stdout.strip() else "REPLACE_WITH_ROOT_UUID"
+            grub_rescue_entry = grub_rescue_entry.replace("UUID_PLACEHOLDER", root_uuid)
+        except Exception:
+            grub_rescue_entry = grub_rescue_entry.replace("UUID_PLACEHOLDER", "REPLACE_WITH_ROOT_UUID")
+
+        with open(f"{mount_point}/etc/grub.d/40_custom", "w") as f:
+            f.write(grub_rescue_entry)
+        run_cmd(f"chmod +x {mount_point}/etc/grub.d/40_custom", shell=True)
+
         run_cmd(f"{chroot_cmd} update-grub", shell=True)
 
         # 6.2 Copiar la Suite CMineWar OS (React Frontend + Node.js Backend) al disco portátil
