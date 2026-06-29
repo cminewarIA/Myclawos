@@ -114,7 +114,7 @@ jobs:
             fi
           fi
           
-          # Validación final del jar
+          # Final validation of the jar
           if validate_jar; then
             echo "[✓] ¡gradle-wrapper.jar restaurado con éxito ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes) y listo para compilar!"
           else
@@ -189,7 +189,11 @@ jobs:
           if [ -s "bare-metal/boot.bin" ]; then
             echo "[✓] boot.bin generado con éxito ($(wc -c < bare-metal/boot.bin) bytes)"
           else
-            echo "[❌] Error: boot.bin no existe o est�           if [ -s "bare-metal/BOOTX64.EFI" ]; then
+            echo "[❌] Error: boot.bin no existe o está vacío"
+            exit 1
+          fi
+
+          if [ -s "bare-metal/BOOTX64.EFI" ]; then
             echo "[✓] BOOTX64.EFI generado con éxito ($(wc -c < bare-metal/BOOTX64.EFI) bytes)"
           else
             echo "[❌] Error: BOOTX64.EFI no existe o está vacío"
@@ -421,5 +425,3 @@ jobs:
           path: cminewarOS-live.iso
           retention-days: 7
           if-no-files-found: error
-
-
