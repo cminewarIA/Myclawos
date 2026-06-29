@@ -165,13 +165,50 @@ def main():
         print(f"[SANDBOX] Puntos de montaje creados en {mount_point} y boot EFI.")
         time.sleep(1)
 
-    # 4. debootstrap (base Debian)
-    print("\n[4/7] Instalando sistema base con debootstrap...")
+    # 4. debootstrap (base Debian) o extracción de rootfs local offline
+    print("\n[4/7] Instalando sistema base...")
     update_progress(60)
+    
+    # Comprobar si existe un archivo de rootfs offline preempaquetado en el directorio del instalador o en la ISO montada
+    installer_dir = Path(__file__).parent.absolute()
+    local_rootfs_xz = installer_dir / "rootfs.tar.xz"
+    local_rootfs_gz = installer_dir / "rootfs.tar.gz"
+    cdrom_rootfs_xz = Path("/cdrom/rootfs.tar.xz")
+    cdrom_rootfs_gz = Path("/cdrom/rootfs.tar.gz")
+    media_rootfs_xz = Path("/media/rootfs.tar.xz")
+    media_rootfs_gz = Path("/media/rootfs.tar.gz")
+    
+    rootfs_archive = None
+    if local_rootfs_xz.exists():
+        rootfs_archive = local_rootfs_xz
+    elif local_rootfs_gz.exists():
+        rootfs_archive = local_rootfs_gz
+    elif cdrom_rootfs_xz.exists():
+        rootfs_archive = cdrom_rootfs_xz
+    elif cdrom_rootfs_gz.exists():
+        rootfs_archive = cdrom_rootfs_gz
+    elif media_rootfs_xz.exists():
+        rootfs_archive = media_rootfs_xz
+    elif media_rootfs_gz.exists():
+        rootfs_archive = media_rootfs_gz
+
+    is_offline_install = False
     if not is_sandbox:
-        run_cmd(["debootstrap", "--arch", "amd64", "bookworm", mount_point, "http://deb.debian.org/debian"])
+        if rootfs_archive:
+            print(f"[✓] ¡Archivo rootfs de instalación offline detectado en: {rootfs_archive}!")
+            print("[+] Extrayendo sistema base de forma 100% offline...")
+            run_cmd(["tar", "-xf", str(rootfs_archive), "-C", mount_point])
+            is_offline_install = True
+        else:
+            print("[!] No se encontró ningún archivo de instalación offline ('rootfs.tar.xz' o 'rootfs.tar.gz').")
+            print("[+] Continuando en modo ONLINE: Ejecutando debootstrap para construir el sistema base desde la red...")
+            run_cmd(["debootstrap", "--arch", "amd64", "bookworm", mount_point, "http://deb.debian.org/debian"])
     else:
-        print("[SANDBOX] Instalando paquetes debootstrap (amd64 bookworm) [PROCESO SIMULADO DE ALTA VELOCIDAD]")
+        if rootfs_archive or Path("/tmp/mock_rootfs").exists():
+            print("[SANDBOX] Extraído archivo rootfs local precomprimido de forma OFFLINE.")
+            is_offline_install = True
+        else:
+            print("[SANDBOX] Instalando paquetes debootstrap (amd64 bookworm) [PROCESO SIMULADO DE ALTA VELOCIDAD]")
         time.sleep(1.5)
 
     # 5. Configuración básica
@@ -218,8 +255,12 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mount --bind /proc {mount_point}/proc", shell=True)
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 openbox lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 nodejs npm curl python3-tk", shell=True)
+        if not is_offline_install:
+            print("[+] Modo ONLINE: Descargando e instalando Kernel, GRUB y Entorno de Escritorio desde red...")
+            run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
+            run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 openbox lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 nodejs npm curl python3-tk", shell=True)
+        else:
+            print("[✓] Modo OFFLINE: Se asume que el Kernel y el Entorno de Escritorio ya se encuentran en el rootfs extraído.")
         
         # Asegurar lightdm como gestor por defecto de X11
         run_cmd(f"mkdir -p {mount_point}/etc/X11", shell=True)
@@ -275,8 +316,17 @@ menuentry 'CMineWar OS Rescue & Network Emergency Update' --class debian --class
         run_cmd(f"cp bare-metal/cminewar-desktop-app.py {mount_point}/opt/cminewar/cminewar-desktop-app.py", shell=True)
         run_cmd(f"chmod +x {mount_point}/opt/cminewar/cminewar-desktop-app.py", shell=True)
         
-        print("[+] Instalando dependencias de producción de Node.js en el sistema portátil...")
-        run_cmd(f"{chroot_cmd} npm --prefix /opt/cminewar install --omit=dev", shell=True)
+        # Copiar dependencias locales de Node si están presentes en la raíz de instalación
+        if Path("node_modules").exists():
+            print("[✓] Copiando dependencias locales 'node_modules' preinstaladas de forma offline...")
+            run_cmd(f"cp -r node_modules {mount_point}/opt/cminewar/", shell=True)
+        
+        # Solo ejecutar instalación npm online si no existe node_modules en destino y no es instalación offline
+        if not Path(f"{mount_point}/opt/cminewar/node_modules").exists() and not is_offline_install:
+            print("[+] Instalando dependencias de producción de Node.js en el sistema portátil desde la red...")
+            run_cmd(f"{chroot_cmd} npm --prefix /opt/cminewar install --omit=dev", shell=True)
+        else:
+            print("[✓] Se omitió la descarga online de dependencias de Node.js (usando caché offline local).")
 
         # 6.3 Registrar el daemon de servicio cminewar.service
         service_content = """[Unit]

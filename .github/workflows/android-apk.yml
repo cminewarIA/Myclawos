@@ -189,16 +189,61 @@ jobs:
           if [ -s "bare-metal/boot.bin" ]; then
             echo "[✓] boot.bin generado con éxito ($(wc -c < bare-metal/boot.bin) bytes)"
           else
-            echo "[❌] Error: boot.bin no existe o está vacío"
-            exit 1
-          fi
-
-          if [ -s "bare-metal/BOOTX64.EFI" ]; then
+            echo "[❌] Error: boot.bin no existe o est�           if [ -s "bare-metal/BOOTX64.EFI" ]; then
             echo "[✓] BOOTX64.EFI generado con éxito ($(wc -c < bare-metal/BOOTX64.EFI) bytes)"
           else
             echo "[❌] Error: BOOTX64.EFI no existe o está vacío"
             exit 1
           fi
+
+      - name: Build Offline Debian Rootfs Archive
+        run: |
+          echo "[+] Instalando debootstrap para generar el rootfs offline..."
+          sudo apt-get update || true
+          sudo apt-get install -y debootstrap
+          
+          echo "[+] Generando estructura base con debootstrap (bookworm)..."
+          sudo debootstrap --arch amd64 bookworm ./debian-rootfs http://deb.debian.org/debian
+          
+          echo "[+] Configurando repositorios para incluir non-free y firmware..."
+          sudo bash -c "cat <<EOF > ./debian-rootfs/etc/apt/sources.list
+          deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
+          deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+          deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+          EOF"
+          
+          echo "[+] Instalando Kernel, Sistema Base y Entorno XFCE4 en el rootfs de forma pre-empaquetada..."
+          sudo DEBIAN_FRONTEND=noninteractive chroot ./debian-rootfs apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive chroot ./debian-rootfs apt-get install -y \
+            --no-install-recommends \
+            linux-image-amd64 \
+            grub-efi-amd64 \
+            efibootmgr \
+            sudo \
+            network-manager \
+            xfce4 \
+            openbox \
+            lightdm \
+            lightdm-gtk-greeter \
+            xserver-xorg \
+            xserver-xorg-video-all \
+            xserver-xorg-input-all \
+            xinit \
+            dbus-x11 \
+            nodejs \
+            npm \
+            curl \
+            python3-tk \
+            python3-pip \
+            systemd-sysv
+          
+          echo "[+] Limpiando caché de apt para optimizar espacio..."
+          sudo DEBIAN_FRONTEND=noninteractive chroot ./debian-rootfs apt-get clean
+          sudo rm -rf ./debian-rootfs/var/lib/apt/lists/*
+          
+          echo "[+] Empaquetando rootfs en gzip ultra-rápido..."
+          sudo tar -czf bare-metal/rootfs.tar.gz -C ./debian-rootfs .
+          echo "[✓] Archivo de instalación offline 'rootfs.tar.gz' creado con éxito."
 
       - name: Build Dual-Boot (BIOS & UEFI) Bootable ISO Image
         run: |
@@ -244,8 +289,10 @@ jobs:
           
           # 3. Copiar archivos del sistema a la estructura de la ISO
           cp -r dist iso_root/
-          cp package.json download-wrapper.cjs iso_root/
+          cp package.json package-lock.json download-wrapper.cjs iso_root/
+          cp -r node_modules iso_root/ || true
           cp -r bare-metal/* iso_root/bare-metal/
+          cp bare-metal/rootfs.tar.gz iso_root/rootfs.tar.gz || true
           
           # Copiar los cargadores de arranque necesarios a la raíz para que El Torito los encuentre
           cp bare-metal/boot2048.bin iso_root/boot.bin
