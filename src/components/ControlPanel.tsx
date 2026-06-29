@@ -19,12 +19,14 @@ import {
   ShieldCheck
 } from "lucide-react";
 
+import BootDiagnosticsPanel from "./BootDiagnosticsPanel";
+
 interface ControlPanelProps {
   openWindow?: (id: string) => void;
 }
 
 export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
-  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper">("network");
+  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics">("network");
   
   // Simulated Statistics Real-time States
   const [ramUsed, setRamUsed] = useState(4120); // out of 16384 MB (Host representation)
@@ -96,9 +98,6 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   
   // Real Host Integration States (Debian Bare-Metal)
   const [isRealHost, setIsRealHost] = useState(false);
-  const [isRemoteDisconnected, setIsRemoteDisconnected] = useState(() => {
-    return localStorage.getItem("cminewar_remote_disconnected") === "true";
-  });
   const [firewallActive, setFirewallActive] = useState(false);
   const [isTogglingFirewall, setIsTogglingFirewall] = useState(false);
   const [uptime, setUptime] = useState(0);
@@ -173,10 +172,6 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
   // Fetch real-world metrics from Express system telemetry API (real Debian integration)
   const fetchMetrics = async () => {
-    if (isRemoteDisconnected) {
-      setIsRealHost(false);
-      return false;
-    }
     try {
       const res = await fetch("/api/cminewar/system-metrics");
       if (res.ok) {
@@ -199,27 +194,10 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         }
       }
     } catch (e) {
-      // benign network fail in sandbox mode
+      // benign network fail
     }
     setIsRealHost(false);
     return false;
-  };
-
-  // Disconnect manually from host system (force mock simulator)
-  const handleDisconnectRemote = () => {
-    setIsRemoteDisconnected(true);
-    setIsRealHost(false);
-    localStorage.setItem("cminewar_remote_disconnected", "true");
-  };
-
-  // Re-enable real system polling
-  const handleConnectRemote = () => {
-    setIsRemoteDisconnected(false);
-    localStorage.setItem("cminewar_remote_disconnected", "false");
-    // Trigger immediate refetch
-    setTimeout(() => {
-      fetchMetrics();
-    }, 100);
   };
 
   // Trigger real or simulated power state transitions (shutdown/reboot)
@@ -587,6 +565,19 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
           <Sparkles size={14} className={activeTab === "wallpaper" ? "text-pink-400" : "text-slate-500"} />
           <span className="whitespace-nowrap">Ajustes Fondo</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("diagnostics")}
+          className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${
+            activeTab === "diagnostics"
+              ? "bg-slate-900 text-amber-400 border border-amber-500/10 font-bold"
+              : "hover:bg-slate-900 border border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+          id="btn-tab-diagnostics"
+        >
+          <Activity size={14} className={activeTab === "diagnostics" ? "text-amber-400" : "text-slate-500"} />
+          <span className="whitespace-nowrap">Diagnóstico</span>
+        </button>
       </div>
 
       {/* Main Stats Panel Content */}
@@ -611,61 +602,41 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
               </div>
             </div>
             
-            {/* Real Host Power Controllers & Disconnect Option */}
+            {/* Real Host Power Controllers */}
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={handleDisconnectRemote}
-                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-[10px] font-mono rounded text-slate-300 font-bold transition flex items-center gap-1"
-                title="Desconectarse voluntariamente del host real y volver a modo simulación local"
-              >
-                <span>🔌 Desconectar</span>
-              </button>
-              <button
                 onClick={() => handlePowerAction("reboot")}
-                className="px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900 border border-amber-900/40 text-[10px] font-mono rounded text-amber-300 font-bold transition"
+                className="px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900 border border-amber-900/40 text-[10px] font-mono rounded text-amber-300 font-bold transition cursor-pointer"
               >
                 Reinicio Host
               </button>
               <button
                 onClick={() => handlePowerAction("shutdown")}
-                className="px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-900/40 text-[10px] font-mono rounded text-rose-300 font-bold transition"
+                className="px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-900/40 text-[10px] font-mono rounded text-rose-300 font-bold transition cursor-pointer"
               >
                 Apagar Host
               </button>
             </div>
           </div>
-        ) : isRemoteDisconnected ? (
-          <div className="mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        ) : (
+          <div className="mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
-              <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse shrink-0" />
               <div>
-                <div className="font-bold text-amber-400 font-mono">
-                  🔌 DESCONECTADO VOLUNTARIAMENTE DEL SERVIDOR REMOTO
+                <div className="font-bold text-rose-400 font-mono uppercase tracking-wider">
+                  ⚠️ NODO DEBIAN RESTRINGIDO / DESCONECTADO
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
-                  Operando en Modo Simulado Local. No se enviarán comandos físicos ni se monitorizará el host de Debian.
+                  No hay telemetría activa con el mainframe físico de CMineWar OS. Se requiere conexión real con el nodo.
                 </div>
               </div>
             </div>
             
             <button
-              onClick={handleConnectRemote}
-              className="px-2.5 py-1.5 bg-emerald-950/40 hover:bg-emerald-900 border border-emerald-900/40 text-[10px] font-mono rounded text-emerald-300 font-bold transition flex items-center gap-1"
-            >
-              <span>🔌 Reconectar al Servidor</span>
-            </button>
-          </div>
-        ) : (
-          <div className="mb-4 bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 text-xs flex items-center justify-between gap-2 text-slate-500">
-            <div className="flex items-center space-x-2">
-              <span className="w-1.5 h-1.5 bg-slate-600 rounded-full"></span>
-              <span>Modo Sandbox de Demostración (Simulador del Sistema Activo)</span>
-            </div>
-            <button
               onClick={() => fetchMetrics()}
-              className="text-[10px] font-mono text-slate-400 hover:text-slate-200 underline decoration-dotted"
+              className="px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-900/40 text-[10px] font-mono rounded text-rose-300 font-bold transition flex items-center gap-1 cursor-pointer"
             >
-              Buscar host físico...
+              <span>🔄 Reintentar Enlace Físico</span>
             </button>
           </div>
         )}
@@ -1311,6 +1282,10 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
               </p>
             </div>
           </div>
+        )}
+
+        {activeTab === "diagnostics" && (
+          <BootDiagnosticsPanel isRealHost={isRealHost} />
         )}
       </div>
     </div>

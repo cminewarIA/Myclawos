@@ -111,6 +111,31 @@ systemctl restart cminewar.service
 
 echo "[✔] Servicio 'cminewar.service' habilitado y arrancado con éxito en el puerto 3000."
 
+# 5.1 Configurar el Servicio de Diagnóstico y Rastreador de Arranque (Boot Tracer)
+echo "[+] Configurando servicio de diagnóstico de arranque automático (cminewar-boot-tracer)..."
+cp "$INSTALL_DIR/bare-metal/cminewar-boot-tracer.sh" /usr/local/bin/cminewar-boot-tracer.sh || true
+chmod +x /usr/local/bin/cminewar-boot-tracer.sh || true
+
+cat <<EOF > /etc/systemd/system/cminewar-boot-tracer.service
+[Unit]
+Description=CMineWar OS Boot Diagnostics and Trace Recorder
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/cminewar-boot-tracer.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target
+EOF
+
+systemctl daemon-reload
+systemctl enable cminewar-boot-tracer.service || true
+systemctl start cminewar-boot-tracer.service || true
+echo "[✔] Rastreador de arranque 'cminewar-boot-tracer.service' habilitado e instalado con éxito."
+
 # 5.5 Configurar el arranque en consola pura por defecto sin servidor gráfico
 echo "[+] Configurando el sistema operativo para inicio automático por defecto en consola pura (TUI/modo texto)..."
 systemctl set-default multi-user.target || true

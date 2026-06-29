@@ -219,7 +219,7 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
         run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 chromium nodejs npm curl", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 nodejs npm curl python3-tk", shell=True)
         
         # Asegurar lightdm como gestor por defecto de X11
         run_cmd(f"mkdir -p {mount_point}/etc/X11", shell=True)
@@ -235,6 +235,8 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mkdir -p {mount_point}/opt/cminewar", shell=True)
         run_cmd(f"cp -r dist {mount_point}/opt/cminewar/", shell=True)
         run_cmd(f"cp package.json package-lock.json download-wrapper.cjs {mount_point}/opt/cminewar/", shell=True)
+        run_cmd(f"cp bare-metal/cminewar-desktop-app.py {mount_point}/opt/cminewar/cminewar-desktop-app.py", shell=True)
+        run_cmd(f"chmod +x {mount_point}/opt/cminewar/cminewar-desktop-app.py", shell=True)
         
         print("[+] Instalando dependencias de producción de Node.js en el sistema portátil...")
         run_cmd(f"{chroot_cmd} npm --prefix /opt/cminewar install --omit=dev", shell=True)
@@ -288,21 +290,21 @@ autologin-session=xfce
         with open(f"{mount_point}/etc/lightdm/lightdm.conf.d/01_cminewar.conf", "w") as f:
             f.write(lightdm_config)
 
-        # 6.6 Configurar inicio automático del navegador Chromium en modo Kiosko en XFCE
-        print("[+] Configurando lanzador del entorno de escritorio en modo Kiosco de pantalla completa...")
+        # 6.6 Configurar inicio automático de la aplicación independiente de escritorio nativo de CMineWar OS
+        print("[+] Configurando lanzador del entorno de escritorio de la aplicación nativa...")
         autostart_dir = f"{mount_point}/etc/xdg/autostart"
         run_cmd(f"mkdir -p {autostart_dir}", shell=True)
         
-        kiosk_desktop = """[Desktop Entry]
+        desktop_entry = """[Desktop Entry]
 Type=Application
-Name=CMineWar OS Kiosk
-Exec=sh -c "xset s off -dpms || true; sleep 5; (chromium || chromium-browser) --no-sandbox --test-type --kiosk --start-maximized --no-first-run --simulate-outdated-no-deprecation-warning --autoplay-policy=no-user-gesture-required http://localhost:3000"
+Name=CMineWar OS Desktop
+Exec=sh -c "sleep 4; python3 /opt/cminewar/cminewar-desktop-app.py"
 Terminal=false
-Icon=chromium
-Comment=Launch CMineWar OS UI in fullscreen Kiosk mode
+Icon=utilities-terminal
+Comment=Launch CMineWar OS Independent Desktop Panel
 """
-        with open(f"{autostart_dir}/cminewar-kiosk.desktop", "w") as f:
-            f.write(kiosk_desktop)
+        with open(f"{autostart_dir}/cminewar-desktop.desktop", "w") as f:
+            f.write(desktop_entry)
 
         # 6.7 Establecer el objetivo de arranque del sistema en modo Gráfico
         run_cmd(f"{chroot_cmd} systemctl set-default graphical.target", shell=True)
@@ -322,7 +324,7 @@ Comment=Launch CMineWar OS UI in fullscreen Kiosk mode
             print(f"[SANDBOX] Configurado autologin de LightDM en grupo autologin para el usuario '{username}'.")
         else:
             print("[SANDBOX] Configurado autologin de superusuario 'root' en tty1 y LightDM.")
-        print("[SANDBOX] Registrado archivo de autostart /etc/xdg/autostart/cminewar-kiosk.desktop para iniciar Chromium en Kiosk mode.")
+        print("[SANDBOX] Registrado archivo de autostart /etc/xdg/autostart/cminewar-desktop.desktop para iniciar la aplicación nativa Python Tkinter.")
         print("[SANDBOX] Establecido por defecto systemd set-default graphical.target con LightDM.")
         time.sleep(1.5)
 

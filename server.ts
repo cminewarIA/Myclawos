@@ -431,6 +431,98 @@ app.get("/api/cminewar/install-status", (req, res) => {
   });
 });
 
+// CMineWar - Boot Tracer Diagnostics Retriever Endpoint
+app.get("/api/cminewar/boot-trace", (req, res) => {
+  const logFile = "/var/log/cminewar-boot.log";
+  if (fs.existsSync(logFile)) {
+    try {
+      const content = fs.readFileSync(logFile, "utf-8");
+      return res.json({ success: true, isReal: true, content });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  }
+
+  // Simulated fallback logs for standard demo mode / Virtual Machine container
+  const mockContent = `=========================================================================
+        🛸 INFORME DE DIAGNÓSTICO DE ARRANQUE DE CMINEWAR OS 🛸
+=========================================================================
+Fecha de Análisis: ${new Date().toISOString().replace('T', ' ').substring(0, 19)}
+Nombre de Host:    cminewar-virtual-mainframe
+Versión Kernel:    6.1.0-21-amd64 (Debian 6.1.90-1)
+Arquitectura:      x86_64
+Uptime Actual:     up 12 minutes
+=========================================================================
+
+[+] ⏱️ ANÁLISIS DEL TIEMPO DE ARRANQUE GENERAL (systemd-analyze):
+Startup finished in 2.152s (kernel) + 1.844s (initrd) + 22.450s (userspace) = 26.446s
+multi-user.target reached after 22.420s in userspace.
+
+[+] 🐢 DETALLE DE SERVICIOS MÁS LENTOS (systemd-analyze blame - Top 15):
+     12.102s apt-daily-upgrade.service
+      8.450s network-manager.service
+      5.230s keyboard-setup.service
+      4.810s systemd-journal-flush.service
+      3.950s dev-sda2.device
+      3.120s lvm2-monitor.service
+      2.840s cminewar.service (Servidor Web Node.js)
+      1.950s systemd-udev-trigger.service
+      1.220s user@0.service
+      0.950s systemd-sysctl.service
+      0.820s ssh.service
+      0.640s systemd-logind.service
+      0.550s polkit.service
+      0.480s lm-sensors.service
+      0.350s rsyslog.service
+
+[+] 🔗 CADENA CRÍTICA DE INICIALIZACIÓN (systemd-analyze critical-chain):
+multi-user.target @22.420s
+└─cminewar.service @19.580s +2.840s
+  └─network.target @19.550s
+    └─NetworkManager.service @11.100s +8.450s
+      └─network-pre.target @11.080s
+        └─firewalld.service @8.220s +2.860s
+          └─polkit.service @7.670s +0.550s
+            └─basic.target @7.600s
+              └─sockets.target @7.600s
+                └─dbus.socket @7.600s
+                  └─sysinit.target @7.580s
+
+[+] ⚠️ ALERTAS Y ERRORES RECIENTES EN DMESG (Niveles: Crit, Err, Warn):
+[    0.045012] ACPI BIOS Warning (bug): Optional FADT field Pm2ControlBlock has zero address or length: 0x0000000000000000/0x1 (20220412/tbfadt-220)
+[    0.852102] systemd[1]: File /lib/systemd/system/systemd-journald.service:24 configures an IP firewall, but the policy is not supported. Ignoring.
+[    1.254820] platform rtc_cmos: registered platform RTC device (same as pcrtc)
+[    2.101250] ACPI Warning: \\_SB.PCI0.PEG0.PEGP._DSM: Argument count mismatch - Found 4, Expected 3 (20220412/nsarguments-180)
+[    3.451025] ext4-fs (sda2): warning: mounting unchecked fs, running e2fsck is recommended
+[    5.910230] i915 0000:00:02.0: [drm] *ERROR* CPU pipe A FIFO underrun
+
+[+] 💾 ESTADO DE ESPACIO DE ALMACENAMIENTO:
+S.ficheros     Tamaño Usados  Disp Uso% Montado en
+/dev/sda2         20G   8.4G   11G  44% /
+udev             3.9G      0  3.9G   0% /dev
+tmpfs            794M   1.2M  793M   1% /run
+/dev/sda1        511M   5.2M  506M   2% /boot/efi
+
+[+] 🧠 UTILIZACIÓN DE MEMORIA RAM Y CPU AL INICIO:
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       1.4Gi       4.2Gi       120Mi       2.2Gi       6.1Gi
+Soporte:       2.0Gi          0B       2.0Gi
+
+Carga del Procesador (Load Average):
+0.45 0.32 0.15 1/450 1205
+
+[+] 🐉 ÚLTIMOS LOGS DEL SERVICIO CMINEWAR OS:
+Jun 29 05:01:10 cminewar-virtual-mainframe node[1205]: Server running on http://localhost:3000
+Jun 29 05:01:12 cminewar-virtual-mainframe node[1205]: [OTA AUTOMATIC DEAMON] Telemetry daemon listening for physical node handshakes
+Jun 29 05:01:15 cminewar-virtual-mainframe node[1205]: [DB] Connected to persistent local engine storage.
+
+=========================================================================
+     🐉 FIN DEL REPORTE DE DIAGNÓSTICO DE ARRANQUE CMINEWAR OS 🐉
+=========================================================================`;
+
+  res.json({ success: true, isReal: false, content: mockContent });
+});
+
 // CMineWar Cognitive Central Core Chat Endpoint
 app.post("/api/cminewar/chat", async (req, res) => {
   const { message } = req.body;

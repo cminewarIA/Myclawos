@@ -1,0 +1,12 @@
+[Unit]
+Description=CMineWar OS Boot Diagnostics and Trace Recorder
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /bare-metal/cminewar-boot-tracer.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

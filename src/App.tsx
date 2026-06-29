@@ -1356,13 +1356,15 @@ export default function App() {
               />
             </div>
 
-            <button
-              id="connect_node_btn"
-              type="submit"
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-red-900/20 active:translate-y-[1px]"
-            >
-              Establecer Conexión
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                id="connect_node_btn"
+                type="submit"
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-red-900/20 active:translate-y-[1px] cursor-pointer"
+              >
+                Establecer Conexión
+              </button>
+            </div>
           </form>
 
           <div className="w-full flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-800 pt-4 font-mono">
