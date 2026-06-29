@@ -136,31 +136,15 @@ jobs:
             echo "[!] Falló la compilación mediante gradlew wrapper. Intentando compilar usando el comando Gradle de sistema directamente..."
             gradle assembleDebug --no-daemon --stacktrace
           }
+          cp app/build/outputs/apk/debug/app-debug.apk ../cminewar-remote-control.apk
 
-      - name: Upload Debug APK Artifact
+      - name: Upload Remote Control APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CMineWar_OS_Mobile_Debug_APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: cminewarOS_Remote_Control_APK
+          path: cminewar-remote-control.apk
           retention-days: 7
-          if-no-files-found: warn
-
-      - name: Build Android APK (Release Unsigned)
-        run: |
-          cd android
-          echo "[+] Compilando versión Release (Sin firmar)..."
-          ./gradlew assembleRelease --no-daemon --stacktrace || {
-            echo "[!] Falló la compilación mediante gradlew wrapper. Intentando compilar usando el comando Gradle de sistema directamente..."
-            gradle assembleRelease --no-daemon --stacktrace
-          }
-
-      - name: Upload Release APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: CMineWar_OS_Mobile_Release_APK
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-          retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: error
 
   build_ubuntu:
     name: Compile and Package Ubuntu App
@@ -325,6 +309,63 @@ jobs:
           # Comprimir en un archivo tar.gz
           tar -czf cminewarOS-Ubuntu-amd64.tar.gz cminewar-ubuntu-amd64/
           echo "[✓] Distribución cminewarOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
+
+      - name: Build Remote Control Debian Package (.deb)
+        run: |
+          echo "[+] Construyendo paquete .deb para la aplicación de control remoto desde otros equipos..."
+          mkdir -p deb_root/DEBIAN
+          mkdir -p deb_root/usr/bin
+          mkdir -p deb_root/usr/share/applications
+          mkdir -p deb_root/usr/share/cminewar
+          
+          # Copiar la aplicación companion
+          cp bare-metal/cminewar-companion.py deb_root/usr/share/cminewar/cminewar-companion.py
+          
+          # Crear script lanzador
+          cat << 'EOF' > deb_root/usr/bin/cminewar-companion
+          #!/usr/bin/env bash
+          python3 /usr/share/cminewar/cminewar-companion.py "$@"
+          EOF
+          chmod +x deb_root/usr/bin/cminewar-companion
+          
+          # Crear archivo .desktop
+          cat << 'EOF' > deb_root/usr/share/applications/cminewar-companion.desktop
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=CMineWar Remote Control
+          Comment=Cliente de control remoto para servidores CMineWar OS
+          Exec=cminewar-companion
+          Icon=utilities-terminal
+          Terminal=false
+          Categories=Utility;System;
+          EOF
+          
+          # Crear archivo control
+          cat << 'EOF' > deb_root/DEBIAN/control
+          Package: cminewar-companion
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Depends: python3, python3-tk
+          Maintainer: CMineWar OS Team <CMineWar1.5@gmail.com>
+          Description: Cliente de control remoto para la administracion de CMineWar OS.
+           Una herramienta liviana en Python y Tkinter para controlar remotamente
+           cortafuegos, servicios, actualizaciones de sistema y GRUB, y diagnosticos.
+          EOF
+          
+          # Construir .deb
+          dpkg-deb --build deb_root cminewar-companion.deb
+          echo "[✓] Paquete .deb cminewar-companion.deb generado correctamente."
+
+      - name: Upload Remote Control DEB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cminewarOS_Remote_Control_DEB
+          path: cminewar-companion.deb
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload Bootable ISO Image Artifact
         uses: actions/upload-artifact@v4

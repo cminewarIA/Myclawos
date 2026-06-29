@@ -1994,8 +1994,13 @@ echo "========================================================================="
                   <span>Compilación Automática en GitHub Actions:</span>
                 </span>
                 <p className="text-[10px] text-slate-300">
-                  ¡Hemos añadido soporte para Integración Continua (CI)! Al subir este proyecto a tu repositorio de GitHub, el workflow <code className="text-yellow-400 font-mono bg-slate-900 px-1 py-0.5 rounded">android-apk.yml</code> compilará automáticamente tanto la APK Debug como la APK Release usando Java 17, el SDK de Android y Gradle. Podrás descargar tu APK directamente desde los artefactos de tu repositorio de GitHub sin configuraciones locales complejas.
+                  ¡Soporte para compilación automática integral (CI)! Al subir este proyecto a tu repositorio de GitHub, se generarán de forma autónoma:
                 </p>
+                <ul className="list-disc pl-4 text-[9.5px] text-slate-400 space-y-1">
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_APK</strong>: Fichero <code className="text-slate-200">cminewar-remote-control.apk</code> listo para instalar en cualquier teléfono móvil Android.</li>
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Live_Bootable_ISO</strong>: Imagen <code className="text-slate-200">cminewarOS-live.iso</code> híbrida dual (BIOS + UEFI) completa para grabar en un USB e instalar.</li>
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_DEB</strong>: Fichero <code className="text-slate-200">cminewar-companion.deb</code> para instalar el control remoto con <code className="text-pink-400 bg-slate-900 px-1 py-0.5 rounded">sudo dpkg -i</code> en otro equipo con Debian/Ubuntu.</li>
+                </ul>
               </div>
 
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
