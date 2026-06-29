@@ -457,7 +457,7 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
                   CMINEWAR OS
                 </h1>
                 <p className="text-[10px] text-slate-550 font-mono tracking-wider uppercase">
-                  Booting Linux Kernel v6.10-claw
+                  Iniciando Kernel Linux v6.10-claw
                 </p>
               </div>
 
@@ -472,9 +472,9 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
                 </div>
                 
                 <div className="flex justify-between text-slate-400 font-mono px-0.5">
-                  <span className="text-slate-600">SECTOR STATUS:</span>
+                  <span className="text-slate-600">ESTADO DEL SECTOR:</span>
                   <span className="text-pink-400 font-bold">
-                    {bootProgress < 30 ? "ANALYZING CHS" : bootProgress < 60 ? "LOADING KERNEL" : bootProgress < 90 ? "MOUNTING VFS" : "PREPARING DEBIAN DE"}
+                    {bootProgress < 30 ? "ANALIZANDO CHS" : bootProgress < 60 ? "CARGANDO KERNEL" : bootProgress < 90 ? "MONTANDO VFS" : "PREPARANDO ESCRITORIO DEBIAN"}
                   </span>
                 </div>
               </div>

@@ -66,6 +66,7 @@ export default function App() {
   });
 
   const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
+  const [connError, setConnError] = useState<string | null>(null);
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -1324,7 +1325,10 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-wider text-red-500 font-mono uppercase">
               CMINEWAR OS
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-[10px] tracking-widest text-emerald-500 font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-900/30 inline-block uppercase">
+              ● MODO PRODUCCIÓN EXCLUSIVO
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
               PANEL DE ENLACE NUCLEO DIRECTO
             </p>
           </div>
@@ -1336,6 +1340,21 @@ export default function App() {
               const ipInput = form.elements.namedItem("node_ip") as HTMLInputElement;
               const ipVal = ipInput.value.trim();
               if (!ipVal) return;
+
+              // Prohibit any connections to virtual simulators/loopback
+              const isSimulator = 
+                ipVal === "127.0.0.1" || 
+                ipVal.toLowerCase() === "localhost" || 
+                ipVal.startsWith("10.0.2.") || 
+                ipVal === "10.0.2.2" || 
+                ipVal === "10.0.2.15";
+
+              if (isSimulator) {
+                setConnError("CONEXIÓN DE SIMULADOR RECHAZADA. Las directrices de producción prohíben la vinculación con emuladores o entornos simulados.");
+                return;
+              }
+
+              setConnError(null);
               setConnectedServerIp(ipVal);
               setBootLifecycle("bootloader");
             }}
@@ -1343,18 +1362,24 @@ export default function App() {
           >
             <div className="space-y-2">
               <label htmlFor="node_ip" className="text-xs font-semibold text-slate-400 block uppercase tracking-widest">
-                Dirección IP del Nodo
+                Dirección IP del Nodo de Producción
               </label>
               <input
                 id="node_ip"
                 name="node_ip"
                 type="text"
                 required
-                placeholder="Ej. 10.0.2.15"
-                defaultValue="10.0.2.15"
+                placeholder="Ej. 192.168.1.100"
+                defaultValue="192.168.1.100"
                 className="w-full px-4 py-3 bg-[#020617] border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-red-500 transition font-mono text-center"
               />
             </div>
+
+            {connError && (
+              <div className="w-full p-3 bg-red-950/40 border border-red-900/55 text-red-400 rounded-lg text-[11px] font-mono leading-relaxed text-center shadow-lg">
+                ⚠️ {connError}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <button

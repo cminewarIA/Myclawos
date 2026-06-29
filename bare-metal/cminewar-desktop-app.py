@@ -348,7 +348,7 @@ class CMineWarDesktopApp:
             except Exception as e:
                 self.boot_logs_text.insert(tk.END, f"Fallo al abrir logs reales de /var/log: {e}")
         else:
-            # Fallback en modo simulación local
+            # Fallback en entorno de producción sin logs históricos registrados
             fallback_text = (
                 "=========================================================================\n"
                 "        🛸 INFORME DE DIAGNÓSTICO DE ARRANQUE DE CMINEWAR OS 🛸\n"
@@ -389,8 +389,8 @@ class CMineWarDesktopApp:
                     self.server_status.set("DETENIDO (INACTIVO)")
                     self.srv_status_lbl.configure(fg=self.accent_color)
             except Exception:
-                self.server_status.set("ONLINE (SIMULADOR DE DESARROLLO)")
-                self.srv_status_lbl.configure(fg=self.emerald_color)
+                self.server_status.set("ERROR: SERVICIO INACTIVO EN ENTORNO DE PRODUCCIÓN")
+                self.srv_status_lbl.configure(fg=self.accent_color)
 
             # 3. Monitoreo CPU (Load Avg)
             try:
