@@ -4,9 +4,32 @@ interface DragonLogoProps {
   size?: number;
   className?: string;
   glow?: boolean;
+  useImage?: boolean;
+  imageFormat?: "png" | "jpg";
 }
 
-export default function DragonLogo({ size = 48, className = "", glow = true }: DragonLogoProps) {
+export default function DragonLogo({ 
+  size = 48, 
+  className = "", 
+  glow = true,
+  useImage = false,
+  imageFormat = "png"
+}: DragonLogoProps) {
+  const [hasError, setHasError] = React.useState(false);
+
+  if (useImage && !hasError) {
+    return (
+      <img
+        src={`/assets/branding/logo.${imageFormat}`}
+        alt="CMineWar OS Dragon Logo"
+        style={{ width: size, height: size }}
+        className={`object-contain rounded-full select-none ${glow ? "shadow-[0_0_20px_rgba(239,68,68,0.35)]" : ""} ${className}`}
+        onError={() => setHasError(true)}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
   return (
     <svg
       width={size}

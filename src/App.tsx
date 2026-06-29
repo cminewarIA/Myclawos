@@ -1317,7 +1317,7 @@ export default function App() {
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-orange-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000" />
             <div className="relative bg-[#0f172a] p-4 rounded-full border border-slate-800">
-              <DragonLogo size={80} glow={true} />
+              <DragonLogo size={80} glow={true} useImage={true} imageFormat="png" />
             </div>
           </div>
           
@@ -2154,7 +2154,7 @@ export default function App() {
               
               {/* Loop over static and dynamic apps */}
               {[
-                { id: "openclaw_core", name: "Antigravity CLI", desc: "Núcleo cognitivo central", icon: DragonLogo, customIcon: true, system: true },
+                { id: "openclaw_core", name: "Antigravity CLI", desc: "Núcleo cognitivo central", icon: (props: any) => <DragonLogo {...props} useImage={true} imageFormat="jpg" />, customIcon: true, system: true },
                 { id: "terminal", name: "Terminal", desc: "Consola CMineWarBash", icon: TerminalIcon, system: true },
                 { id: "file_manager", name: "Archivos VFS", desc: "Explorador de ficheros", icon: FolderOpen, system: true, iconCol: "text-cyan-400" },
                 { id: "text_editor", name: "Notepad++", desc: "Editor de textos y código avanzado", icon: FileCode, system: true, iconCol: "text-lime-500" },
