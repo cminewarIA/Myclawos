@@ -12,6 +12,9 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// Enable trust proxy so that express-rate-limit can accurately detect IP addresses through Cloud Run proxy
+app.set("trust proxy", 1);
+
 // Enable standard rate limiter to prevent DOS / abuse across all paths
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -412,6 +415,81 @@ app.post("/api/cminewar/install", (req, res) => {
 app.get("/api/cminewar/install-status", (req, res) => {
   const progressFile = "/tmp/cminewar_install_progress.txt";
   const logFile = "/tmp/cminewar_install_log.txt";
+
+  let progress = "0";
+  let logs: string[] = [];
+
+  if (fs.existsSync(progressFile)) {
+    progress = fs.readFileSync(progressFile, "utf-8").trim();
+  }
+
+  if (fs.existsSync(logFile)) {
+    const rawLogs = fs.readFileSync(logFile, "utf-8");
+    logs = rawLogs.split("\n").filter(l => l.trim() !== "");
+  }
+
+  res.json({
+    progress,
+    logs
+  });
+});
+
+// CMineWar - Start full system and GRUB update background service execution
+app.post("/api/cminewar/system-update", (req, res) => {
+  try {
+    const scriptPath = path.join(process.cwd(), "bare-metal", "update_system.py");
+    if (fs.existsSync(scriptPath)) {
+      try {
+        fs.chmodSync(scriptPath, "755");
+      } catch (e) {
+        // Safe to ignore on non-POSIX/read-only filesystems in dev
+      }
+    }
+
+    // Clean or initialize files for update tracking
+    try {
+      fs.writeFileSync("/tmp/cminewar_update_progress.txt", "0");
+      fs.writeFileSync("/tmp/cminewar_update_log.txt", "[+] Inicializando sintonizador de actualizaciones de CMineWar OS...\n");
+    } catch (err) {
+      console.error("No se pudieron inicializar los archivos de log de actualizacion:", err);
+    }
+
+    console.log("[ACTUALIZADOR] Lanzando actualizador de sistema completo en Python...");
+    
+    // Launch update script asynchronously in background
+    const child = exec(`python3 -u "${scriptPath}"`);
+    
+    child.stdout?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/cminewar_update_log.txt", data);
+      } catch (e) {
+        console.error("Error escribiendo en log de actualizacion:", e);
+      }
+    });
+
+    child.stderr?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/cminewar_update_log.txt", data);
+      } catch (e) {
+        console.error("Error escribiendo en log de error de actualizacion:", e);
+      }
+    });
+    
+    res.json({
+      status: "started",
+      pid: child.pid,
+      message: "Actualización integral del sistema iniciada en segundo plano."
+    });
+  } catch (error: any) {
+    console.error("Fallo al lanzar script de actualización en Python:", error);
+    res.status(500).json({ error: `Fallo al lanzar actualizador: ${error.message}` });
+  }
+});
+
+// CMineWar - Full system and GRUB update status log retriever endpoint
+app.get("/api/cminewar/system-update-status", (req, res) => {
+  const progressFile = "/tmp/cminewar_update_progress.txt";
+  const logFile = "/tmp/cminewar_update_log.txt";
 
   let progress = "0";
   let logs: string[] = [];

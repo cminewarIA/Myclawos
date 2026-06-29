@@ -914,6 +914,59 @@ echo "========================================================================="
     }, 350);
   };
 
+  const executeFullSystemUpdate = async () => {
+    if (updating || rebooting) return;
+    setUpdating(true);
+    setUpdateProgress(0);
+    setUpdateLogs(["[+] Iniciando llamada a la API de actualización del sistema..."]);
+
+    try {
+      const response = await fetch("/api/cminewar/system-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!response.ok) {
+        throw new Error("La API de actualización retornó un estado de error.");
+      }
+
+      const interval = setInterval(async () => {
+        try {
+          const statusRes = await fetch("/api/cminewar/system-update-status");
+          if (statusRes.ok) {
+            const data = await statusRes.json();
+            const progNum = Number(data.progress);
+            setUpdateProgress(progNum);
+            if (data.logs && data.logs.length > 0) {
+              setUpdateLogs(data.logs);
+            }
+
+            if (progNum >= 100) {
+              clearInterval(interval);
+              setUpdating(false);
+              setRebooting(true);
+              setRebootLogs([
+                "Consolidando cambios en disco duro...",
+                "Re-indexando base de datos de firmware...",
+                "Reiniciando subsistemas de arranque y cargador GRUB...",
+                "¡CMineWar OS actualizado con éxito!"
+              ]);
+              setTimeout(() => {
+                setRebooting(false);
+                triggerNotification("¡Sistema y cargador GRUB actualizados por completo!", "success");
+              }, 2000);
+            }
+          }
+        } catch (e) {
+          console.error("Error consultando estado de actualización:", e);
+        }
+      }, 800);
+    } catch (err: any) {
+      setUpdateLogs((old) => [...old, `[❌] Error crítico: ${err.message}`]);
+      setUpdating(false);
+      triggerNotification("Error al iniciar la actualización del sistema.", "info");
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-slate-900 text-slate-300 min-h-0 select-none relative font-sans h-full">
       
@@ -2564,6 +2617,24 @@ echo "========================================================================="
                     Actualizar Híbrido Todo
                   </button>
                 </div>
+              </div>
+
+              {/* Real system updates with GRUB */}
+              <div className="flex flex-col gap-2 pt-2.5 border-t border-slate-900">
+                <span className="text-[9px] text-pink-500 uppercase font-mono tracking-wider font-bold flex items-center">
+                  <RefreshCw size={10} className="mr-1.5 text-pink-400 animate-spin" />
+                  Actualización de Sistema Debian & GRUB:
+                </span>
+                <p className="text-[9.5px] text-slate-500 leading-relaxed">
+                  Realiza un dist-upgrade completo una vez instalado, refrescando repositorios y regenerando GRUB entero (grub-install + update-grub) para asegurar el arranque rápido y limpio.
+                </p>
+                <button
+                  onClick={executeFullSystemUpdate}
+                  className="w-full p-2.5 bg-gradient-to-r from-pink-950/40 to-slate-900 hover:from-pink-900/40 hover:to-slate-850 border border-pink-500/30 text-pink-400 rounded text-[10.5px] font-black tracking-wide uppercase transition active:scale-95 cursor-pointer text-center"
+                  title="Ejecuta actualización nativa con apt-get dist-upgrade y actualiza el sector de arranque de GRUB"
+                >
+                  ⚙️ Actualizar Sistema Completo & GRUB
+                </button>
               </div>
             </div>
 

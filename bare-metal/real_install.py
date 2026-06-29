@@ -219,7 +219,7 @@ UUID={efi_uuid} /boot/efi vfat umask=0077 0 1
         run_cmd(f"mount --bind /sys {mount_point}/sys", shell=True)
 
         run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get update", shell=True)
-        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 nodejs npm curl python3-tk", shell=True)
+        run_cmd(f"DEBIAN_FRONTEND=noninteractive {chroot_cmd} apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' linux-image-amd64 grub-efi-amd64 efibootmgr sudo network-manager xfce4 openbox lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-video-all xserver-xorg-input-all xinit dbus-x11 nodejs npm curl python3-tk", shell=True)
         
         # Asegurar lightdm como gestor por defecto de X11
         run_cmd(f"mkdir -p {mount_point}/etc/X11", shell=True)
@@ -283,7 +283,7 @@ WantedBy=multi-user.target
         lightdm_config = f"""[Seat:*]
 autologin-user={username}
 autologin-user-timeout=0
-autologin-session=xfce
+autologin-session=openbox
 """
         with open(f"{mount_point}/etc/lightdm/lightdm.conf", "w") as f:
             f.write(lightdm_config)
@@ -305,6 +305,17 @@ Comment=Launch CMineWar OS Independent Desktop Panel
 """
         with open(f"{autostart_dir}/cminewar-desktop.desktop", "w") as f:
             f.write(desktop_entry)
+
+        # Configurar inicio ultra-rápido directo para Openbox (sin entornos de escritorio lentos)
+        openbox_autostart_dir = f"{mount_point}/etc/xdg/openbox"
+        run_cmd(f"mkdir -p {openbox_autostart_dir}", shell=True)
+        openbox_autostart_content = """# Desactivar protector de pantalla y suspensión por hardware
+xset s off -dpms &
+# Ejecutar la aplicación de estación de trabajo nativa e independiente CMineWar OS
+python3 /opt/cminewar/cminewar-desktop-app.py &
+"""
+        with open(f"{openbox_autostart_dir}/autostart", "w") as f:
+            f.write(openbox_autostart_content)
 
         # 6.7 Establecer el objetivo de arranque del sistema en modo Gráfico
         run_cmd(f"{chroot_cmd} systemctl set-default graphical.target", shell=True)
