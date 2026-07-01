@@ -442,7 +442,7 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=cminewar-companion
-          Icon=cminewar-companion
+          Icon=/usr/share/pixmaps/cminewar-companion.png
           Terminal=false
           Categories=Utility;System;
           EOF
@@ -493,7 +493,32 @@ jobs:
           
           echo "[+] Preparando publicación pública de la versión $TAG_NAME (Build #$BUILD_NUM)..."
           
-          # Renombrar los archivos para que tengan el número de versión correcto e identificadores claros
+          # Asegurar que los archivos están en la raíz antes de agregarlos con git
+          cp cminewar-remote-control.apk ./cminewar-remote-control.apk || true
+          cp cminewar-companion.deb ./cminewar-companion.deb || true
+          cp cminewarOS-live.iso ./cminewarOS-live.iso || true
+
+          # 1.5. Configurar Git y subir archivos de producción a la raíz del repositorio
+          echo "[+] Configurando Git para subir binarios directo a la raíz del repositorio..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Cambiar a la rama actual para evitar estado 'detached HEAD'
+          git checkout ${{ github.ref_name }} || true
+          
+          # Forzar agregado de los binarios
+          git add -f cminewar-remote-control.apk cminewar-companion.deb cminewarOS-live.iso
+          
+          if git diff --staged --quiet; then
+            echo "[✓] No hay cambios en los binarios compilados en la raíz. Saltando push de Git."
+          else
+            echo "[+] Cambios detectados en los binarios de la raíz. Confirmando y subiendo..."
+            git commit -m "[CI] Compilación de binarios de producción (v${APP_VERSION} #${BUILD_NUM}) [skip ci]"
+            # Subir de forma segura
+            git push origin ${{ github.ref_name }} || echo "[⚠️] Advertencia: No se pudo realizar el push directo a la rama. Puede deberse a protección de ramas en GitHub."
+          fi
+
+          # Renombrar los archivos para que tengan el número de versión correcto e identificadores claros para la release
           cp cminewar-remote-control.apk "cminewar-remote-control_v${APP_VERSION}.apk" || true
           cp cminewar-companion.deb "cminewar-companion_v${APP_VERSION}.deb" || true
           cp cminewarOS-live.iso "cminewarOS-live_v${APP_VERSION}.iso" || true
