@@ -33,6 +33,21 @@ class CMineWarCompanionApp:
         self.root.geometry("820x620")
         self.root.configure(bg="#080b16")
         
+        # Cargar icono de la aplicación en la ventana para que se vea el dragón
+        try:
+            icon_path = "/usr/share/pixmaps/cminewar-companion.png"
+            if os.path.exists(icon_path):
+                img = tk.PhotoImage(file=icon_path)
+                self.root.iconphoto(True, img)
+            elif os.path.exists("assets/logo.png"):
+                img = tk.PhotoImage(file="assets/logo.png")
+                self.root.iconphoto(True, img)
+            elif os.path.exists("public/assets/branding/logo.png"):
+                img = tk.PhotoImage(file="public/assets/branding/logo.png")
+                self.root.iconphoto(True, img)
+        except Exception:
+            pass
+            
         # Paleta de colores Cyberpunk / Enterprise
         self.bg_color = "#080b16"
         self.card_color = "#111625"
@@ -337,30 +352,8 @@ class CMineWarCompanionApp:
             )
             btn_restart.pack(side="left", padx=(4, 15))
             
-            # Almacenar referencia a variables para actualizar en tiempo real
-            self.services_widgets[srv["id"]] = {
-                "status_var": status_badge_var := status_sub_frame if False else status_sub_frame, # dummy reference
-                "status_var_real": status_sub_frame,
-                "label_widget": lbl_title if False else srv_lbl_title if False else None,
-                "status_text_var": status_sub_frame,
-                "badge": self.api_status_label,
-                "raw_vars": {
-                    "text_var": srv_frame,
-                    "status_label": self.api_status_label
-                },
-                "status_var": tk.StringVar(value="INACTIVO"),
-                "label_widget": self.api_status_label, # placeholder
-                "status_label_ref": self.api_status_label # placeholder
-            }
-            
-            # We override specific mapping references to actually edit labels in poll loop
-            if srv["id"] == "cminewar-service":
-                self.cminewar_srv_status = srv_frame
-                self.cminewar_label_ref = self.api_status_label
-            
             # Almacenar en una estructura de datos limpia para el actualizador
-            srv["ui_lbl_var"] = tk.StringVar(value="DESCONECTADO")
-            srv_lbl_title.grid_forget() # Clean up leftover grid references
+            srv["ui_lbl_var"] = status_badge_var
             
             # Vamos a reconstruir un panel de control real más flexible para systemd
             # En lugar de Tkinter StringVar directamente en grids rotas, mantenemos un dict de Labels dinámicos:

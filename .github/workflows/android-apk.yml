@@ -259,6 +259,8 @@ jobs:
             cp assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
           elif [ -f src/assets/logo.png ]; then
             cp src/assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+          elif [ -f public/assets/branding/logo.png ]; then
+            cp public/assets/branding/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
           fi
           
           # Crear script lanzador cminewar-companion
@@ -266,9 +268,8 @@ jobs:
           #!/usr/bin/env bash
           python3 /usr/share/cminewar/cminewar-companion.py "$@"
           EOF
-          chmod 755 cminewar-package/usr/bin/cminewar-companion
           
-          # Crear archivo .desktop
+          # Crear archivo .desktop con soporte de iconos estandar de escritorio
           cat << 'EOF' > cminewar-package/usr/share/applications/cminewar-companion.desktop
           [Desktop Entry]
           Version=1.0
@@ -276,10 +277,18 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=cminewar-companion
-          Icon=/usr/share/pixmaps/cminewar-companion.png
+          Icon=cminewar-companion
           Terminal=false
           Categories=Utility;System;
           EOF
+          
+          # Asegurar permisos correctos en toda la estructura de archivos del paquete .deb
+          # para evitar que no abra por falta de permisos de lectura en usuarios no root
+          find cminewar-package -type d -exec chmod 755 {} +
+          find cminewar-package -type f -exec chmod 644 {} +
+          chmod 755 cminewar-package/usr/bin/cminewar-companion
+          chmod 755 cminewar-package/usr/share/cminewar/cminewar-companion.py
+          chmod 755 cminewar-package/usr/local/bin/cminewar-firewall
           
           # Crear script del cortafuegos cminewar-firewall
           cat << 'EOF' > cminewar-package/usr/local/bin/cminewar-firewall
@@ -701,25 +710,7 @@ jobs:
           cp cminewar-companion.deb ./cminewar-companion.deb || true
           cp cminewarOS-live.iso ./cminewarOS-live.iso || true
 
-          # 1.5. Configurar Git y subir archivos de producción a la raíz del repositorio
-          echo "[+] Configurando Git para subir binarios directo a la raíz del repositorio..."
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # Cambiar a la rama actual para evitar estado 'detached HEAD'
-          git checkout ${{ github.ref_name }} || true
-          
-          # Forzar agregado de los binarios
-          git add -f cminewar-remote-control.apk cminewar-companion.deb cminewarOS-live.iso
-          
-          if git diff --staged --quiet; then
-            echo "[✓] No hay cambios en los binarios compilados en la raíz. Saltando push de Git."
-          else
-            echo "[+] Cambios detectados en los binarios de la raíz. Confirmando y subiendo..."
-            git commit -m "[CI] Compilación de binarios de producción (v${APP_VERSION} #${BUILD_NUM}) [skip ci]"
-            # Subir de forma segura
-            git push origin ${{ github.ref_name }} || echo "[⚠️] Advertencia: No se pudo realizar el push directo a la rama. Puede deberse a protección de ramas en GitHub."
-          fi
+
 
           # Renombrar los archivos para que tengan el número de versión correcto e identificadores claros para la release
           cp cminewar-remote-control.apk "cminewar-remote-control_v${APP_VERSION}.apk" || true
