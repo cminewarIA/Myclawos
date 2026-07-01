@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { TerminalLine, VFSNode } from "../types";
 import { parsePath, getNodeByPath, setNodeAtPath, deleteNodeAtPath } from "../vfs";
 import { VERSION, BUILD_NUMBER } from "../version";
+import { cminewarFetch } from "../utils/api";
 import { 
   Terminal as TerminalIcon, 
   Sparkles,
@@ -605,7 +606,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
         addLine("Estableciendo enlace de baja latencia con Antigravity CLI...", "info");
         
         try {
-          const response = await fetch("/api/cminewar/chat", {
+          const response = await cminewarFetch("/api/cminewar/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: chatPrompt }),

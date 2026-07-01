@@ -3,6 +3,7 @@ import { VFSNode } from "../types";
 import { setNodeAtPath } from "../vfs";
 import DragonLogo from "./DragonLogo";
 import { VERSION, BUILD_NUMBER } from "../version";
+import { cminewarFetch } from "../utils/api";
 import { 
   Github, 
   GitBranch, 
@@ -923,7 +924,7 @@ echo "========================================================================="
     setUpdateLogs(["[+] Iniciando llamada a la API de actualización del sistema..."]);
 
     try {
-      const response = await fetch("/api/cminewar/system-update", {
+      const response = await cminewarFetch("/api/cminewar/system-update", {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -933,7 +934,7 @@ echo "========================================================================="
 
       const interval = setInterval(async () => {
         try {
-          const statusRes = await fetch("/api/cminewar/system-update-status");
+          const statusRes = await cminewarFetch("/api/cminewar/system-update-status");
           if (statusRes.ok) {
             const data = await statusRes.json();
             const progNum = Number(data.progress);

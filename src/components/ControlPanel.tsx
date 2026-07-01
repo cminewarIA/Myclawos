@@ -18,6 +18,7 @@ import {
   Bot,
   ShieldCheck
 } from "lucide-react";
+import { cminewarFetch } from "../utils/api";
 
 import BootDiagnosticsPanel from "./BootDiagnosticsPanel";
 
@@ -173,7 +174,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   // Fetch real-world metrics from Express system telemetry API (real Debian integration)
   const fetchMetrics = async () => {
     try {
-      const res = await fetch("/api/cminewar/system-metrics");
+      const res = await cminewarFetch("/api/cminewar/system-metrics");
       if (res.ok) {
         const data = await res.json();
         if (data.isRealHost) {
@@ -206,7 +207,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     if (!confirmation) return;
 
     try {
-      const res = await fetch("/api/cminewar/system/power", {
+      const res = await cminewarFetch("/api/cminewar/system/power", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action })
@@ -225,7 +226,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     
     if (isRealHost) {
       try {
-        const res = await fetch("/api/cminewar/firewall/toggle", {
+        const res = await cminewarFetch("/api/cminewar/firewall/toggle", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: nextAction })
@@ -290,7 +291,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
       if (!srv) return;
       const action = srv.status === "active" ? "stop" : "start";
       try {
-        const res = await fetch("/api/cminewar/services/control", {
+        const res = await cminewarFetch("/api/cminewar/services/control", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ serviceId: id, action })

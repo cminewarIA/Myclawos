@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Cpu, Database, Thermometer, ShieldAlert, Wifi, Activity } from "lucide-react";
+import { cminewarFetch } from "../utils/api";
 
 export default function SystemMonitor() {
   const [cpuUsage, setCpuUsage] = useState(12);
@@ -14,7 +15,7 @@ export default function SystemMonitor() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch("/api/cminewar/system-metrics");
+        const res = await cminewarFetch("/api/cminewar/system-metrics");
         if (res.ok) {
           const data = await res.json();
           if (data.isRealHost) {

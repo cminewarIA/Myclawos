@@ -16,6 +16,7 @@ import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
 import Bootloader from "./components/Bootloader";
 import { VERSION, BUILD_NUMBER } from "./version";
+import { cminewarFetch } from "./utils/api";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
 import HardwareControl from "./components/HardwareControl";
@@ -55,48 +56,8 @@ import {
   LogOut
 } from "lucide-react";
 
-// Enforce exclusive real connections and intercept all API calls to point to the real remote host IP
-if (typeof window !== "undefined") {
-  const originalFetch = window.fetch;
-  window.fetch = async (input, init) => {
-    let url = "";
-    if (typeof input === "string") {
-      url = input;
-    } else if (input instanceof Request) {
-      url = input.url;
-    }
+// Enforce exclusive real connections and intercept all API calls to point to the real remote host IP via helper utility
 
-    // Rewrite relative /api/cminewar/ paths to the remote server IP if configured
-    if (url.startsWith("/api/cminewar") || url.includes("/api/cminewar")) {
-      const savedIp = localStorage.getItem("cminewar_connected_server_ip");
-      if (savedIp) {
-        // Only rewrite if it's not already absolute
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          const formattedUrl = `http://${savedIp}:3000${url.startsWith("/") ? url : "/" + url}`;
-          if (typeof input === "string") {
-            input = formattedUrl;
-          } else if (input instanceof Request) {
-            const requestInit: RequestInit = {
-              method: input.method,
-              headers: input.headers,
-              body: input.body,
-              mode: input.mode,
-              credentials: input.credentials,
-              cache: input.cache,
-              redirect: input.redirect,
-              referrer: input.referrer,
-              integrity: input.integrity,
-              keepalive: input.keepalive,
-              signal: input.signal
-            };
-            input = new Request(formattedUrl, requestInit);
-          }
-        }
-      }
-    }
-    return originalFetch(input, init);
-  };
-}
 
 export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
@@ -133,7 +94,7 @@ export default function App() {
 
     const checkOtaStatus = async () => {
       try {
-        const res = await fetch("/api/cminewar/system-status");
+        const res = await cminewarFetch("/api/cminewar/system-status");
         if (!res.ok) return;
         const data = await res.json();
         
@@ -1419,7 +1380,7 @@ export default function App() {
               const controller = new AbortController();
               const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-              fetch(checkUrl, { signal: controller.signal })
+              cminewarFetch(checkUrl, { signal: controller.signal })
                 .then(async (res) => {
                   clearTimeout(timeoutId);
                   if (res.ok) {

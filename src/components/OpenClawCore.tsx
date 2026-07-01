@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "../types";
 import { Send, RefreshCw, Terminal, Activity, Info } from "lucide-react";
+import { cminewarFetch } from "../utils/api";
 
 interface OpenClawCoreProps {
   chatHistory: ChatMessage[];
@@ -64,7 +65,7 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
         text: m.text,
       }));
 
-      const res = await fetch("/api/cminewar/chat", {
+      const res = await cminewarFetch("/api/cminewar/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

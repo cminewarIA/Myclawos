@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { VFSNode } from "../types";
 import { setNodeAtPath } from "../vfs";
+import { cminewarFetch } from "../utils/api";
 import { 
   Download, 
   HardDrive, 
@@ -43,7 +44,7 @@ export default function ClawInstaller({
   ]);
 
   useEffect(() => {
-    fetch("/api/cminewar/disks")
+    cminewarFetch("/api/cminewar/disks")
       .then(res => res.json())
       .then(data => {
         if (data && data.disks && Array.isArray(data.disks)) {
@@ -263,7 +264,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
     ]);
 
     try {
-      const response = await fetch("/api/cminewar/install", {
+      const response = await cminewarFetch("/api/cminewar/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -284,7 +285,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       let failedAttempts = 0;
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch("/api/cminewar/install-status");
+          const statusRes = await cminewarFetch("/api/cminewar/install-status");
           if (!statusRes.ok) {
             failedAttempts++;
             if (failedAttempts > 5) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Activity, RefreshCw, Terminal, Search, AlertTriangle, ShieldCheck, Download, CheckCircle } from "lucide-react";
+import { cminewarFetch } from "../utils/api";
 
 interface BootDiagnosticsPanelProps {
   isRealHost?: boolean;
@@ -15,7 +16,7 @@ export default function BootDiagnosticsPanel({ isRealHost = false }: BootDiagnos
   const fetchBootTrace = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch("/api/cminewar/boot-trace");
+      const res = await cminewarFetch("/api/cminewar/boot-trace");
       if (res.ok) {
         const data = await res.json();
         if (data && data.success) {

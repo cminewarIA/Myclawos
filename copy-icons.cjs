@@ -21,17 +21,32 @@ console.log(`[ICONS SETUP] Using logo from: ${selectedLogo}`);
 
 try {
   if (fs.existsSync(resPath)) {
-    // Delete adaptive files from anydpi
+    // Setup adaptive files in anydpi-v26 to ensure proper rendering on Android 8.0+ (API 26+)
     const anyDpiPath = path.join(resPath, 'mipmap-anydpi-v26');
-    if (fs.existsSync(anyDpiPath)) {
-      const anyDpiFiles = ['ic_launcher.xml', 'ic_launcher_round.xml', 'ic_launcher_background.xml'];
-      anyDpiFiles.forEach(file => {
-        const filePath = path.join(anyDpiPath, file);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          console.log(`[ICONS SETUP] Deleted adaptive XML file: ${file}`);
-        }
-      });
+    if (!fs.existsSync(anyDpiPath)) {
+      fs.mkdirSync(anyDpiPath, { recursive: true });
+    }
+
+    const adaptiveXmlContent = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>`;
+
+    fs.writeFileSync(path.join(anyDpiPath, 'ic_launcher.xml'), adaptiveXmlContent, 'utf8');
+    fs.writeFileSync(path.join(anyDpiPath, 'ic_launcher_round.xml'), adaptiveXmlContent, 'utf8');
+    console.log('[ICONS SETUP] Configured adaptive xml files in mipmap-anydpi-v26.');
+
+    // Update background color to dark CMineWar brand color (#020617)
+    const valuesPath = path.join(resPath, 'values');
+    const bgXmlPath = path.join(valuesPath, 'ic_launcher_background.xml');
+    if (fs.existsSync(valuesPath)) {
+      const bgXmlContent = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#020617</color>
+</resources>`;
+      fs.writeFileSync(bgXmlPath, bgXmlContent, 'utf8');
+      console.log('[ICONS SETUP] Updated ic_launcher_background.xml with deep dark color (#020617).');
     }
 
     // Process all mipmap directories

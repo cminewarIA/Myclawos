@@ -138,7 +138,7 @@ jobs:
           sed -i "s/versionName \".*\"/versionName \"$APP_VERSION\"/g" android/app/build.gradle
           sed -i "s/versionCode .*/versionCode $BUILD_NUM/g" android/app/build.gradle
           
-          # 2. Reemplazar los iconos mipmap con el logo oficial del dragón
+          # 2. Reemplazar los iconos mipmap con el logo oficial del dragón y configurar iconos adaptativos
           LOGO_PATH=""
           if [ -f assets/logo.png ]; then
             LOGO_PATH="assets/logo.png"
@@ -149,10 +149,33 @@ jobs:
           if [ ! -z "$LOGO_PATH" ]; then
             echo "[+] Instalando logotipo oficial del Dragón CMineWar ($LOGO_PATH) como icono de la APK..."
             
-            # Eliminar archivos XML adaptativos de anydpi que causan conflictos de recursos duplicados con las imágenes PNG reales
-            rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml || true
-            rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml || true
-            rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_background.xml || true
+            # Crear directorio anydpi-v26 si no existe y configurar iconos adaptativos
+            mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+            
+            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+EOF
+
+            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+EOF
+            
+            # Asegurar color de fondo oscuro de marca (#020617)
+            mkdir -p android/app/src/main/res/values
+            cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#020617</color>
+</resources>
+EOF
             
             for mipmap in android/app/src/main/res/mipmap-*; do
               if [ -d "$mipmap" ]; then
@@ -165,7 +188,7 @@ jobs:
                 cp "$LOGO_PATH" "$mipmap/ic_launcher_foreground.png" || true
               fi
             done
-            echo "[✓] Icono de launcher actualizado correctamente en todos los directorios mipmap."
+            echo "[✓] Icono de launcher actualizado y adaptativos configurados correctamente."
           else
             echo "[⚠️] Advertencia: No se encontró el logotipo para el icono."
           fi
