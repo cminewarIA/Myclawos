@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { VFSNode } from "../types";
 import { setNodeAtPath } from "../vfs";
 import DragonLogo from "./DragonLogo";
+import { VERSION, BUILD_NUMBER } from "../version";
 import { 
   Github, 
   GitBranch, 
@@ -272,7 +273,7 @@ export default function GitHubUpdater({
 
   // States for APK Compilation Engine
   const [apkPackageName, setApkPackageName] = useState("com.cminewar.os");
-  const [apkVersion, setApkVersion] = useState("7.2.1");
+  const [apkVersion, setApkVersion] = useState(VERSION);
   const [isCompilingApk, setIsCompilingApk] = useState(false);
   const [apkCompileProgress, setApkCompileProgress] = useState(0);
   const [apkCompileLogs, setApkCompileLogs] = useState<string[]>([]);
@@ -545,7 +546,8 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
 
     const compileSteps = [
       `[WORKSPACE] Copiando plantilla nativa de WebView y AndroidManifest.xml...`,
-      `[MANIFEST] Configurando paquete: package="${apkPackageName}" con Android:versionName="${apkVersion}"`,
+      `[MANIFEST] Configurando paquete: package="${apkPackageName}" con Android:versionName="${apkVersion}" y versionCode=${BUILD_NUMBER}`,
+      `[BRANDING] Instalando logotipo oficial del Dragón CMineWar (assets/logo.png) como ic_launcher en todos los directorios mipmap...`,
       `[CONFIG] Habilitando soporte de orientación automática (Horizontal/Vertical) y barra translúcida.`,
       `[OTA CLIENT] ENLACE EN CALIENTE AUTOMÁTICO (Fondo & Núcleo): Configurando módulo daemon OTA de segundo plano en puerto 3000 para auto-actualizaciones transparentes sin reinstalación.`,
       `[ASSETS] Compilando recursos y activos estáticos de la interfaz React + Vite para producción...`,

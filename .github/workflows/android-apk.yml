@@ -127,6 +127,39 @@ jobs:
           cp android/app/src/main/res/mipmap-hdpi/*.png android/app/src/main/res/mipmap-mdpi/ || true
           echo "[✓] Mipmaps corregidos con éxito."
 
+      - name: Apply Dynamic Version & Icon to Android App
+        run: |
+          # 1. Obtener la versión y número de build dinámicamente desde src/version.ts
+          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.16")
+          BUILD_NUM=$(grep "export const BUILD_NUMBER" src/version.ts | grep -o '[0-3][0-9]*' || echo "16")
+          echo "[+] Configurando APK con Versión: $APP_VERSION (Código de compilación: $BUILD_NUM)"
+          
+          # Actualizar android/app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"$APP_VERSION\"/g" android/app/build.gradle
+          sed -i "s/versionCode .*/versionCode $BUILD_NUM/g" android/app/build.gradle
+          
+          # 2. Reemplazar los iconos mipmap con el logo oficial del dragón
+          LOGO_PATH=""
+          if [ -f assets/logo.png ]; then
+            LOGO_PATH="assets/logo.png"
+          elif [ -f src/assets/logo.png ]; then
+            LOGO_PATH="src/assets/logo.png"
+          fi
+          
+          if [ ! -z "$LOGO_PATH" ]; then
+            echo "[+] Instalando logotipo oficial del Dragón CMineWar ($LOGO_PATH) como icono de la APK..."
+            for mipmap in android/app/src/main/res/mipmap-*; do
+              if [ -d "$mipmap" ]; then
+                cp "$LOGO_PATH" "$mipmap/ic_launcher.png" || true
+                cp "$LOGO_PATH" "$mipmap/ic_launcher_round.png" || true
+                cp "$LOGO_PATH" "$mipmap/ic_launcher_foreground.png" || true
+              fi
+            done
+            echo "[✓] Icono de launcher actualizado correctamente en todos los directorios mipmap."
+          else
+            echo "[⚠️] Advertencia: No se encontró el logotipo para el icono."
+          fi
+
       - name: Build Android APK (Debug)
         run: |
           cd android
