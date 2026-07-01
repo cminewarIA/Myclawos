@@ -276,19 +276,11 @@ jobs:
           Type=Application
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
-          Exec=cminewar-companion
-          Icon=cminewar-companion
+          Exec=/usr/bin/cminewar-companion
+          Icon=/usr/share/pixmaps/cminewar-companion.png
           Terminal=false
           Categories=Utility;System;
           EOF
-          
-          # Asegurar permisos correctos en toda la estructura de archivos del paquete .deb
-          # para evitar que no abra por falta de permisos de lectura en usuarios no root
-          find cminewar-package -type d -exec chmod 755 {} +
-          find cminewar-package -type f -exec chmod 644 {} +
-          chmod 755 cminewar-package/usr/bin/cminewar-companion
-          chmod 755 cminewar-package/usr/share/cminewar/cminewar-companion.py
-          chmod 755 cminewar-package/usr/local/bin/cminewar-firewall
           
           # Crear script del cortafuegos cminewar-firewall
           cat << 'EOF' > cminewar-package/usr/local/bin/cminewar-firewall
@@ -419,15 +411,44 @@ jobs:
           # Crear script postinst
           cat << 'EOF' > cminewar-package/DEBIAN/postinst
           #!/bin/sh
+          # =========================================================================
+          # SCRIPT POST-INSTALACIÓN (POSTINST) - CMINEWAR REMOTE CONTROL / BACKEND
+          # =========================================================================
           set -e
 
-          # Recargar systemd para que detecte el nuevo servicio instalado en /lib/systemd/system/
-          systemctl daemon-reload
+          echo "[+] Ejecutando script post-instalación de CMineWar..."
 
-          # Habilitar e iniciar el servicio backend de CMineWar
-          systemctl enable cminewar.service
-          systemctl restart cminewar.service
+          # 1. Asegurar permisos de ejecución explícitos en binarios y scripts en el sistema de archivos raíz
+          echo "[+] Configurando permisos de ejecución para scripts y ejecutables..."
+          chmod +x /usr/bin/cminewar-companion
+          chmod +x /usr/share/cminewar/cminewar-companion.py
+          chmod +x /usr/local/bin/cminewar-firewall
 
+          # 2. Asegurar permisos correctos (644) en el acceso directo del escritorio (.desktop)
+          DESKTOP_FILE="/usr/share/applications/cminewar-companion.desktop"
+          if [ -f "$DESKTOP_FILE" ]; then
+              echo "[+] Configurando permisos 644 para acceso de escritorio..."
+              chmod 644 "$DESKTOP_FILE"
+          fi
+
+          # 3. Recargar e iniciar servicios de fondo mediante systemd usando rutas absolutas verificadas
+          SYSTEMCTL_BIN=$(command -v systemctl || echo "/bin/systemctl")
+
+          if [ -x "$SYSTEMCTL_BIN" ]; then
+              echo "[+] Detectado systemctl en: $SYSTEMCTL_BIN"
+              echo "[+] Recargando el demonio de systemd..."
+              "$SYSTEMCTL_BIN" daemon-reload
+              
+              echo "[+] Habilitando el servicio cminewar.service..."
+              "$SYSTEMCTL_BIN" enable cminewar.service
+              
+              echo "[+] Reiniciando el servicio cminewar.service..."
+              "$SYSTEMCTL_BIN" restart cminewar.service
+          else
+              echo "[⚠️] Advertencia: systemctl no encontrado o no ejecutable. Ignorando inicio de servicio de fondo."
+          fi
+
+          echo "[✔] Despliegue completado con éxito."
           exit 0
           EOF
           chmod 755 cminewar-package/DEBIAN/postinst
@@ -439,14 +460,21 @@ jobs:
 
           if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
               # Detener y deshabilitar el servicio de fondo
-              systemctl stop cminewar.service || true
-              systemctl disable cminewar.service || true
+              if command -v systemctl >/dev/null 2>&1; then
+                  systemctl stop cminewar.service || true
+                  systemctl disable cminewar.service || true
+              fi
           fi
 
           exit 0
           EOF
           chmod 755 cminewar-package/DEBIAN/prerm
           
+          # Asegurar permisos correctos en toda la estructura del paquete .deb
+          # utilizando el script de verificación y normalización automatizado
+          chmod +x bare-metal/verify_deb_structure.sh
+          ./bare-metal/verify_deb_structure.sh
+
           # Construir .deb
           dpkg-deb --build cminewar-package cminewar-companion.deb
           echo "[✓] Paquete .deb cminewar-companion.deb (Versión $APP_VERSION) generado correctamente con estructura completa y scripts de control."

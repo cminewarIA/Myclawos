@@ -1,0 +1,40 @@
+#!/bin/sh
+# =========================================================================
+# SCRIPT POST-INSTALACIÓN (POSTINST) - CMINEWAR REMOTE CONTROL / BACKEND
+# =========================================================================
+set -e
+
+echo "[+] Ejecutando script post-instalación de CMineWar..."
+
+# 1. Asegurar permisos de ejecución explícitos en binarios y scripts en el sistema de archivos raíz
+echo "[+] Configurando permisos de ejecución para scripts y ejecutables..."
+chmod +x /usr/bin/cminewar-companion
+chmod +x /usr/share/cminewar/cminewar-companion.py
+chmod +x /usr/local/bin/cminewar-firewall
+
+# 2. Asegurar permisos correctos (644) en el acceso directo del escritorio (.desktop)
+DESKTOP_FILE="/usr/share/applications/cminewar-companion.desktop"
+if [ -f "$DESKTOP_FILE" ]; then
+    echo "[+] Configurando permisos 644 para acceso de escritorio..."
+    chmod 644 "$DESKTOP_FILE"
+fi
+
+# 3. Recargar e iniciar servicios de fondo mediante systemd usando rutas absolutas verificadas
+SYSTEMCTL_BIN=$(command -v systemctl || echo "/bin/systemctl")
+
+if [ -x "$SYSTEMCTL_BIN" ]; then
+    echo "[+] Detectado systemctl en: $SYSTEMCTL_BIN"
+    echo "[+] Recargando el demonio de systemd..."
+    "$SYSTEMCTL_BIN" daemon-reload
+    
+    echo "[+] Habilitando el servicio cminewar.service..."
+    "$SYSTEMCTL_BIN" enable cminewar.service
+    
+    echo "[+] Reiniciando el servicio cminewar.service..."
+    "$SYSTEMCTL_BIN" restart cminewar.service
+else
+    echo "[⚠️] Advertencia: systemctl no encontrado o no ejecutable. Ignorando inicio de servicio de fondo."
+fi
+
+echo "[✔] Despliegue completado con éxito."
+exit 0
