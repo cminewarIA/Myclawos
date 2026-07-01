@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION_WARNING: 'false'
@@ -470,3 +470,67 @@ jobs:
           path: cminewarOS-live.iso
           retention-days: 7
           if-no-files-found: error
+
+      - name: Release and Share Compiled Files Publicly
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Obtener la versión dinámicamente desde src/version.ts
+          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.16")
+          BUILD_NUM=$(grep "export const BUILD_NUMBER" src/version.ts | grep -o '[0-3][0-9]*' || echo "16")
+          TAG_NAME="v$APP_VERSION"
+          
+          echo "[+] Preparando publicación pública de la versión \$TAG_NAME (Build #\$BUILD_NUM)..."
+          
+          # Renombrar los archivos para que tengan el número de versión correcto e identificadores claros
+          cp cminewar-remote-control.apk "cminewar-remote-control_v\$APP_VERSION.apk" || true
+          cp cminewar-companion.deb "cminewar-companion_v\$APP_VERSION.deb" || true
+          cp cminewarOS-live.iso "cminewarOS-live_v\$APP_VERSION.iso" || true
+          
+          # Crear o actualizar release de la versión específica
+          echo "[+] Eliminando tag y release anteriores para evitar conflictos..."
+          gh release delete "\$TAG_NAME" --yes || true
+          git tag -d "\$TAG_NAME" || true
+          git push origin :refs/tags/"\$TAG_NAME" || true
+          
+          echo "[+] Creando GitHub Release para \$TAG_NAME..."
+          gh release create "\$TAG_NAME" \
+            "cminewar-remote-control_v\$APP_VERSION.apk" \
+            "cminewar-companion_v\$APP_VERSION.deb" \
+            "cminewarOS-live_v\$APP_VERSION.iso" \
+            --title "CMineWar OS v\$APP_VERSION (Compilación #\$BUILD_NUM)" \
+            --notes "### 🐉 CMineWar OS - Estación de Trabajo Cognitiva y Sistema Operativo
+
+Esta versión ha sido compilada y empaquetada de forma automática por el pipeline continuo de integración de GitHub Actions.
+
+#### 📦 Descarga de Binarios Públicos:
+*   📱 **Android App (Remote Control APK)**: [\`cminewar-remote-control_v\$APP_VERSION.apk\`](https://github.com/\${{ github.repository }}/releases/download/\$TAG_NAME/cminewar-remote-control_v\$APP_VERSION.apk)
+*   💻 **Debian Companion Package (DEB)**: [\`cminewar-companion_v\$APP_VERSION.deb\`](https://github.com/\${{ github.repository }}/releases/download/\$TAG_NAME/cminewar-companion_v\$APP_VERSION.deb)
+*   💿 **Live Bootable ISO Image (ISO)**: [\`cminewarOS-live_v\$APP_VERSION.iso\`](https://github.com/\${{ github.repository }}/releases/download/\$TAG_NAME/cminewarOS-live_v\$APP_VERSION.iso)
+
+*Fecha de compilación:* \$(date -u)" \
+            --prerelease=false || echo "[⚠️] Falló la creación de la release de versión, continuando..."
+            
+          # Crear o actualizar una release fija 'latest' para enlaces de descarga permanentes
+          echo "[+] Eliminando tag 'latest' y release anteriores..."
+          gh release delete "latest" --yes || true
+          git tag -d "latest" || true
+          git push origin :refs/tags/"latest" || true
+          
+          echo "[+] Creando GitHub Release estática 'latest'..."
+          gh release create "latest" \
+            "cminewar-remote-control.apk" \
+            "cminewar-companion.deb" \
+            "cminewarOS-live.iso" \
+            --title "CMineWar OS (Última compilación estable)" \
+            --notes "### 🐉 Enlaces de Descarga Directa y Permanente (Siempre actualizados):
+            
+Utiliza estos enlaces estáticos para integrarlos en tus scripts de instalación o descargas rápidas en tus sistemas:
+
+*   📱 **Android App (Remote Control APK)**: [Descargar Última APK](https://github.com/\${{ github.repository }}/releases/download/latest/cminewar-remote-control.apk)
+*   💻 **Debian Companion Package (DEB)**: [Descargar Último .deb](https://github.com/\${{ github.repository }}/releases/download/latest/cminewar-companion.deb) (Instalar con \`sudo dpkg -i\`)
+*   💿 **Live Bootable ISO Image (ISO)**: [Descargar Última ISO](https://github.com/\${{ github.repository }}/releases/download/latest/cminewarOS-live.iso)
+
+*Compilado dinámicamente desde el núcleo cognitivo:* Versión v\$APP_VERSION (Compilación #\$BUILD_NUM) en fecha \$(date -u)" \
+            --prerelease=false || echo "[⚠️] Falló la creación de la release 'latest', continuando..."
