@@ -189,9 +189,8 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  build_ubuntu:
-    name: Compile and Package Ubuntu App
-    needs: build_android
+  build_deb:
+    name: Compile and Package Debian App
     runs-on: ubuntu-latest
 
     steps:
@@ -200,11 +199,266 @@ jobs:
         with:
           lfs: true
 
-      - name: Download Remote Control APK Artifact
-        uses: actions/download-artifact@v4
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
         with:
-          name: cminewarOS_Remote_Control_APK
-          path: .
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: Build Web Application (React/Vite & Server)
+        run: |
+          npm run build
+
+      - name: Package CMineWar OS Ubuntu/Debian Distribution Bundle
+        run: |
+          echo "[+] Preparando paquete de distribución de CMineWar OS para Ubuntu/Debian..."
+          mkdir -p cminewar-ubuntu-amd64/bare-metal
+          
+          # Copiar archivos compilados y fuentes necesarios
+          cp -r dist cminewar-ubuntu-amd64/
+          cp package.json package-lock.json download-wrapper.cjs cminewar-ubuntu-amd64/
+          cp -r bare-metal/* cminewar-ubuntu-amd64/bare-metal/
+          
+          # Asegurar permisos de ejecución correctos en los scripts de instalación física y servicios
+          chmod +x cminewar-ubuntu-amd64/bare-metal/*.sh || true
+          chmod +x cminewar-ubuntu-amd64/bare-metal/*.py || true
+          
+          # Comprimir en un archivo tar.gz
+          tar -czf cminewarOS-Ubuntu-amd64.tar.gz cminewar-ubuntu-amd64/
+          echo "[✓] Distribución cminewarOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
+
+      - name: Build Remote Control Debian Package (.deb)
+        run: |
+          echo "[+] Construyendo paquete .deb con la estructura de backend y control..."
+          mkdir -p cminewar-package/DEBIAN
+          mkdir -p cminewar-package/usr/bin
+          mkdir -p cminewar-package/usr/share/applications
+          mkdir -p cminewar-package/usr/share/cminewar/backend
+          mkdir -p cminewar-package/usr/share/pixmaps
+          mkdir -p cminewar-package/usr/local/bin
+          mkdir -p cminewar-package/lib/systemd/system
+          
+          # Obtener la versión dinámicamente desde src/version.ts
+          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.16")
+          echo "[+] Versión detectada para el paquete .deb: $APP_VERSION"
+          
+          # Copiar la aplicación companion
+          cp bare-metal/cminewar-companion.py cminewar-package/usr/share/cminewar/cminewar-companion.py
+          
+          # Copiar backend compilado (dist/ y node_modules/) y package.json
+          cp -r dist cminewar-package/usr/share/cminewar/backend/
+          cp -r node_modules cminewar-package/usr/share/cminewar/backend/ || true
+          cp package.json cminewar-package/usr/share/cminewar/backend/
+          
+          # Copiar el logotipo de CMineWar para que sirva de icono de sistema en Debian
+          if [ -f assets/logo.png ]; then
+            cp assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+          elif [ -f src/assets/logo.png ]; then
+            cp src/assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+          fi
+          
+          # Crear script lanzador cminewar-companion
+          cat << 'EOF' > cminewar-package/usr/bin/cminewar-companion
+          #!/usr/bin/env bash
+          python3 /usr/share/cminewar/cminewar-companion.py "$@"
+          EOF
+          chmod 755 cminewar-package/usr/bin/cminewar-companion
+          
+          # Crear archivo .desktop
+          cat << 'EOF' > cminewar-package/usr/share/applications/cminewar-companion.desktop
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=CMineWar Remote Control
+          Comment=Cliente de control remoto para servidores CMineWar OS
+          Exec=cminewar-companion
+          Icon=/usr/share/pixmaps/cminewar-companion.png
+          Terminal=false
+          Categories=Utility;System;
+          EOF
+          
+          # Crear script del cortafuegos cminewar-firewall
+          cat << 'EOF' > cminewar-package/usr/local/bin/cminewar-firewall
+          #!/usr/bin/env bash
+          # =========================================================================
+          # CONTROL DE CORTAFUEGOS CMINEWAR OS - TRÁFICO WAN / AISLAMIENTOS LOCALES DE RED
+          # =========================================================================
+
+          set -e
+
+          if [ "$EUID" -ne 0 ]; then
+            echo "[-] ERROR: Requiere privilegios de root."
+            exit 1
+          fi
+
+          ACTION=$1
+
+          if [ -z "$ACTION" ]; then
+              echo "Uso: cminewar-firewall [block | allow | status]"
+              echo ""
+              echo "  block  - Bloquea todo el tráfico a Internet (WAN), manteniendo la red local libre."
+              echo "  allow  - Permite libre acceso a internet (comportamiento estándar)."
+              echo "  status - Muestra las reglas de filtrado de red de iptables vigentes."
+              exit 0
+          fi
+
+          case "$ACTION" in
+              block)
+                  echo "[!] Activando reglas de aislamiento WAN en iptables..."
+                  
+                  # Guardar comportamiento actual para deshacer
+                  iptables --flush OUTPUT || true
+                  
+                  # 1. Permitir todo el tráfico en la interfaz de bucle local (loopback)
+                  iptables -A OUTPUT -o lo -j ACCEPT
+                  
+                  # 2. Permitir tráfico de salida con destino a redes locales privadas standard (LAN)
+                  iptables -A OUTPUT -d 192.168.0.0/16 -j ACCEPT
+                  iptables -A OUTPUT -d 172.16.0.0/12 -j ACCEPT
+                  iptables -A OUTPUT -d 10.0.0.0/8 -j ACCEPT
+                  
+                  # 3. El resto del tráfico de salida hacia Internet (WAN) queda terminantemente bloqueado
+                  iptables -P OUTPUT DROP
+                  
+                  # Guardar reglas de persistencia
+                  if command -v iptables-save &> /dev/null; then
+                      mkdir -p /etc/iptables || true
+                      iptables-save > /etc/iptables/rules.v4 || true
+                  fi
+                  
+                  echo "[✔] Cortafuegos ACTIVADO con Éxito."
+                  echo "    El equipo se encuentra completamente aislado de la WAN (Internet)."
+                  echo "    Acceso de administración LAN sigue 100% abierto."
+                  ;;
+                  
+              allow)
+                  echo "[+] Abriendo compuertas del Cortafuegos para libre acceso a Internet..."
+                  
+                  # Restaurar comportamiento de políticas por defecto
+                  iptables -P OUTPUT ACCEPT
+                  iptables --flush OUTPUT || true
+                  
+                  # Guardar reglas de persistencia
+                  if command -v iptables-save &> /dev/null; then
+                      mkdir -p /etc/iptables || true
+                      iptables-save > /etc/iptables/rules.v4 || true
+                  fi
+                  
+                  echo "[✔] Cortafuegos APAGADO con Éxito. Acceso a Internet completamente libre."
+                  ;;
+                  
+              status)
+                  echo "========================================================================="
+                  echo "     ESTADO DE CONTROL DE RUTAS FÍSICAS DE RED DE CMINEWAR OS - IP_TABLES"
+                  echo "========================================================================="
+                  POLICY=$(iptables -S OUTPUT | grep "\-P" | awk '{print $3}')
+                  if [ "$POLICY" = "DROP" ]; then
+                      echo -e "ESTADO GLOBAL DE RED DE SALIDA: \033[31m🔒 WAN BLOQUEADA (Aislamiento LAN Activo)\033[0m"
+                  else
+                      echo -e "ESTADO GLOBAL DE RED DE SALIDA: \033[32m🟢 WAN + LAN LIBRES Y ABIERTAS\033[0m"
+                  fi
+                  echo ""
+                  echo "Lista de reglas actuales de salida en iptables:"
+                  iptables -L OUTPUT -n --line-numbers
+                  ;;
+                  
+              *)
+                  echo "[-] Dirección u opción desconocida. Usa block, allow o status."
+                  exit 1
+                  ;;
+          esac
+          EOF
+          chmod 755 cminewar-package/usr/local/bin/cminewar-firewall
+          
+          # Crear archivo de servicio de systemd
+          cat << 'EOF' > cminewar-package/lib/systemd/system/cminewar.service
+          [Unit]
+          Description=CMineWar OS - Estación Servidora Cognitiva
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=/usr/share/cminewar/backend
+          ExecStart=/usr/bin/node dist/server.cjs
+          Restart=always
+          RestartSec=5
+          Environment=NODE_ENV=production PORT=3000
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Crear archivo control con dependencias actualizadas (nodejs, iptables)
+          cat << EOF > cminewar-package/DEBIAN/control
+          Package: cminewar-companion
+          Version: $APP_VERSION
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Depends: python3, python3-tk, nodejs, iptables
+          Maintainer: CMineWar OS Team <CMineWar1.5@gmail.com>
+          Description: Cliente de control remoto para la administracion de CMineWar OS.
+           Una herramienta liviana en Python y Tkinter para controlar remotamente
+           cortafuegos, servicios, actualizaciones de sistema y GRUB, y diagnosticos.
+          EOF
+          
+          # Crear script postinst
+          cat << 'EOF' > cminewar-package/DEBIAN/postinst
+          #!/bin/sh
+          set -e
+
+          # Recargar systemd para que detecte el nuevo servicio instalado en /lib/systemd/system/
+          systemctl daemon-reload
+
+          # Habilitar e iniciar el servicio backend de CMineWar
+          systemctl enable cminewar.service
+          systemctl restart cminewar.service
+
+          exit 0
+          EOF
+          chmod 755 cminewar-package/DEBIAN/postinst
+          
+          # Crear script prerm
+          cat << 'EOF' > cminewar-package/DEBIAN/prerm
+          #!/bin/sh
+          set -e
+
+          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+              # Detener y deshabilitar el servicio de fondo
+              systemctl stop cminewar.service || true
+              systemctl disable cminewar.service || true
+          fi
+
+          exit 0
+          EOF
+          chmod 755 cminewar-package/DEBIAN/prerm
+          
+          # Construir .deb
+          dpkg-deb --build cminewar-package cminewar-companion.deb
+          echo "[✓] Paquete .deb cminewar-companion.deb (Versión $APP_VERSION) generado correctamente con estructura completa y scripts de control."
+
+      - name: Upload Remote Control DEB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cminewarOS_Remote_Control_DEB
+          path: cminewar-companion.deb
+          retention-days: 7
+          if-no-files-found: error
+
+  build_iso:
+    name: Compile Bare-metal and Live ISO
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
@@ -393,93 +647,6 @@ jobs:
             fi
           fi
 
-      - name: Package CMineWar OS Ubuntu/Debian Distribution Bundle
-        run: |
-          echo "[+] Preparando paquete de distribución de CMineWar OS para Ubuntu/Debian..."
-          mkdir -p cminewar-ubuntu-amd64/bare-metal
-          
-          # Copiar archivos compilados y fuentes necesarios
-          cp -r dist cminewar-ubuntu-amd64/
-          cp package.json package-lock.json download-wrapper.cjs cminewar-ubuntu-amd64/
-          cp -r bare-metal/* cminewar-ubuntu-amd64/bare-metal/
-          
-          # Asegurar permisos de ejecución correctos en los scripts de instalación física y servicios
-          chmod +x cminewar-ubuntu-amd64/bare-metal/*.sh || true
-          chmod +x cminewar-ubuntu-amd64/bare-metal/*.py || true
-          
-          # Comprimir en un archivo tar.gz
-          tar -czf cminewarOS-Ubuntu-amd64.tar.gz cminewar-ubuntu-amd64/
-          echo "[✓] Distribución cminewarOS-Ubuntu-amd64.tar.gz empaquetada con éxito."
-
-      - name: Build Remote Control Debian Package (.deb)
-        run: |
-          echo "[+] Construyendo paquete .deb para la aplicación de control remoto desde otros equipos..."
-          mkdir -p deb_root/DEBIAN
-          mkdir -p deb_root/usr/bin
-          mkdir -p deb_root/usr/share/applications
-          mkdir -p deb_root/usr/share/cminewar
-          mkdir -p deb_root/usr/share/pixmaps
-          
-          # Obtener la versión dinámicamente desde src/version.ts
-          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.12")
-          echo "[+] Versión detectada para el paquete .deb: $APP_VERSION"
-          
-          # Copiar la aplicación companion
-          cp bare-metal/cminewar-companion.py deb_root/usr/share/cminewar/cminewar-companion.py
-          
-          # Copiar el logotipo de CMineWar para que sirva de icono de sistema en Debian
-          if [ -f assets/logo.png ]; then
-            cp assets/logo.png deb_root/usr/share/pixmaps/cminewar-companion.png
-          elif [ -f src/assets/logo.png ]; then
-            cp src/assets/logo.png deb_root/usr/share/pixmaps/cminewar-companion.png
-          fi
-          
-          # Crear script lanzador
-          cat << 'EOF' > deb_root/usr/bin/cminewar-companion
-          #!/usr/bin/env bash
-          python3 /usr/share/cminewar/cminewar-companion.py "$@"
-          EOF
-          chmod +x deb_root/usr/bin/cminewar-companion
-          
-          # Crear archivo .desktop
-          cat << 'EOF' > deb_root/usr/share/applications/cminewar-companion.desktop
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=CMineWar Remote Control
-          Comment=Cliente de control remoto para servidores CMineWar OS
-          Exec=cminewar-companion
-          Icon=/usr/share/pixmaps/cminewar-companion.png
-          Terminal=false
-          Categories=Utility;System;
-          EOF
-          
-          # Crear archivo control con la versión dinámica
-          cat << EOF > deb_root/DEBIAN/control
-          Package: cminewar-companion
-          Version: $APP_VERSION
-          Section: utils
-          Priority: optional
-          Architecture: all
-          Depends: python3, python3-tk
-          Maintainer: CMineWar OS Team <CMineWar1.5@gmail.com>
-          Description: Cliente de control remoto para la administracion de CMineWar OS.
-           Una herramienta liviana en Python y Tkinter para controlar remotamente
-           cortafuegos, servicios, actualizaciones de sistema y GRUB, y diagnosticos.
-          EOF
-          
-          # Construir .deb
-          dpkg-deb --build deb_root cminewar-companion.deb
-          echo "[✓] Paquete .deb cminewar-companion.deb (Versión $APP_VERSION) generado correctamente con su icono oficial."
-
-      - name: Upload Remote Control DEB Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cminewarOS_Remote_Control_DEB
-          path: cminewar-companion.deb
-          retention-days: 7
-          if-no-files-found: error
-
       - name: Upload Bootable ISO Image Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -488,8 +655,37 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  release_assets:
+    name: Publish Releases and Share Compiled Files Publicly
+    needs: [build_android, build_deb, build_iso]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Download Android APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cminewarOS_Remote_Control_APK
+          path: .
+
+      - name: Download Debian Package Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cminewarOS_Remote_Control_DEB
+          path: .
+
+      - name: Download Bootable ISO Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cminewarOS_Live_Bootable_ISO
+          path: .
+
       - name: Release and Share Compiled Files Publicly
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -567,7 +763,7 @@ jobs:
             --title "CMineWar OS v${APP_VERSION} (Compilación #${BUILD_NUM})" \
             --notes-file release_notes_version.md \
             --prerelease=false || echo "[⚠️] Falló la creación de la release de versión, continuando..."
-            
+             
           # Crear o actualizar una release fija 'latest' para enlaces de descarga permanentes
           echo "[+] Eliminando tag 'latest' y release anteriores..."
           gh release delete "latest" --yes || true
