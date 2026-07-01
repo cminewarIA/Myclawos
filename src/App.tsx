@@ -55,6 +55,49 @@ import {
   LogOut
 } from "lucide-react";
 
+// Enforce exclusive real connections and intercept all API calls to point to the real remote host IP
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    let url = "";
+    if (typeof input === "string") {
+      url = input;
+    } else if (input instanceof Request) {
+      url = input.url;
+    }
+
+    // Rewrite relative /api/cminewar/ paths to the remote server IP if configured
+    if (url.startsWith("/api/cminewar") || url.includes("/api/cminewar")) {
+      const savedIp = localStorage.getItem("cminewar_connected_server_ip");
+      if (savedIp) {
+        // Only rewrite if it's not already absolute
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          const formattedUrl = `http://${savedIp}:3000${url.startsWith("/") ? url : "/" + url}`;
+          if (typeof input === "string") {
+            input = formattedUrl;
+          } else if (input instanceof Request) {
+            const requestInit: RequestInit = {
+              method: input.method,
+              headers: input.headers,
+              body: input.body,
+              mode: input.mode,
+              credentials: input.credentials,
+              cache: input.cache,
+              redirect: input.redirect,
+              referrer: input.referrer,
+              integrity: input.integrity,
+              keepalive: input.keepalive,
+              signal: input.signal
+            };
+            input = new Request(formattedUrl, requestInit);
+          }
+        }
+      }
+    }
+    return originalFetch(input, init);
+  };
+}
+
 export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
   // Starts with Gateway requesting Node IP.
@@ -63,11 +106,20 @@ export default function App() {
       localStorage.removeItem("cminewar_force_reboot");
       return "bootloader";
     }
+    if (typeof window !== "undefined" && localStorage.getItem("cminewar_connected_server_ip")) {
+      return "bootloader";
+    }
     return "gateway";
   });
 
-  const [connectedServerIp, setConnectedServerIp] = useState<string | null>(null);
+  const [connectedServerIp, setConnectedServerIp] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cminewar_connected_server_ip");
+    }
+    return null;
+  });
   const [connError, setConnError] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -1337,6 +1389,8 @@ export default function App() {
           <form 
             onSubmit={(e) => {
               e.preventDefault();
+              if (isConnecting) return;
+
               const form = e.currentTarget;
               const ipInput = form.elements.namedItem("node_ip") as HTMLInputElement;
               const ipVal = ipInput.value.trim();
@@ -1355,9 +1409,41 @@ export default function App() {
                 return;
               }
 
-              setConnError(null);
-              setConnectedServerIp(ipVal);
-              setBootLifecycle("bootloader");
+              setIsConnecting(true);
+              setConnError("Estableciendo enlace de red de producción...");
+
+              // Support relative URLs for web developers/previews
+              const isRelative = ipVal === "production" || ipVal === "server" || ipVal === (typeof window !== "undefined" ? window.location.hostname : "") || ipVal === (typeof window !== "undefined" ? window.location.host : "");
+              const checkUrl = isRelative ? "/api/cminewar/system-status" : `http://${ipVal}:3000/api/cminewar/system-status`;
+
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+              fetch(checkUrl, { signal: controller.signal })
+                .then(async (res) => {
+                  clearTimeout(timeoutId);
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.uptime !== undefined) {
+                      setConnError(null);
+                      localStorage.setItem("cminewar_connected_server_ip", ipVal);
+                      setConnectedServerIp(ipVal);
+                      setBootLifecycle("bootloader");
+                    } else {
+                      setConnError("NODO INVÁLIDO. El host respondió pero no tiene el formato de CMineWar OS.");
+                    }
+                  } else {
+                    setConnError(`ERROR DE CONEXIÓN (${res.status}). El servidor remoto no está disponible.`);
+                  }
+                })
+                .catch((err) => {
+                  clearTimeout(timeoutId);
+                  console.error("Real connection handshake failed:", err);
+                  setConnError("NODO INACCESIBLE. Asegúrese de que el servidor CMineWar OS esté encendido, conectado a la misma red y que el puerto 3000 esté activo.");
+                })
+                .finally(() => {
+                  setIsConnecting(false);
+                });
             }}
             className="w-full space-y-4"
           >
@@ -1370,9 +1456,10 @@ export default function App() {
                 name="node_ip"
                 type="text"
                 required
+                disabled={isConnecting}
                 placeholder="Ej. 192.168.1.100"
                 defaultValue="192.168.1.100"
-                className="w-full px-4 py-3 bg-[#020617] border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-red-500 transition font-mono text-center"
+                className="w-full px-4 py-3 bg-[#020617] border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-red-500 transition font-mono text-center disabled:opacity-50"
               />
             </div>
 
@@ -1386,9 +1473,17 @@ export default function App() {
               <button
                 id="connect_node_btn"
                 type="submit"
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-red-900/20 active:translate-y-[1px] cursor-pointer"
+                disabled={isConnecting}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-850 disabled:cursor-not-allowed text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-red-900/20 active:translate-y-[1px] cursor-pointer flex items-center justify-center space-x-2"
               >
-                Establecer Conexión
+                {isConnecting ? (
+                  <>
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-dashed border-white animate-spin"></span>
+                    <span>Verificando Enlace...</span>
+                  </>
+                ) : (
+                  <span>Establecer Conexión</span>
+                )}
               </button>
             </div>
           </form>
@@ -1525,6 +1620,7 @@ export default function App() {
               <div className="h-4 w-[1px] bg-slate-800 shrink-0"></div>
               <button
                 onClick={() => {
+                  localStorage.removeItem("cminewar_connected_server_ip");
                   setConnectedServerIp(null);
                   setBootLifecycle("gateway");
                 }}
