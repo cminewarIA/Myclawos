@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Terminal, ShieldAlert, Cpu, Download, RefreshCw, Layers, CheckCircle2, RotateCcw } from "lucide-react";
 import DragonLogo from "./DragonLogo";
+import { VERSION, BUILD_NUMBER } from "../version";
 
 interface BootloaderProps {
   onComplete: (serverIp?: string) => void;
@@ -432,7 +433,7 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
       {bootPhase === "bios" && (
         <div className="flex-1 flex flex-col min-h-0 bg-black text-left font-mono" id="cminewar-bootloader-screen">
           <div className="flex items-center justify-between border-b border-slate-900 pb-2 mb-4 text-[10px] text-slate-500">
-            <span>CMINEWAR BIOS v1.02 • SYSTEM START</span>
+            <span>CMINEWAR BIOS v{VERSION} • INICIO DEL SISTEMA</span>
             <span className="animate-pulse font-bold text-pink-400">BOOTING... {bootProgress}%</span>
           </div>
 

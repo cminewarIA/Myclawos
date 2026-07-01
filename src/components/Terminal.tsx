@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { TerminalLine, VFSNode } from "../types";
 import { parsePath, getNodeByPath, setNodeAtPath, deleteNodeAtPath } from "../vfs";
+import { VERSION, BUILD_NUMBER } from "../version";
 import { 
   Terminal as TerminalIcon, 
   Sparkles,
@@ -362,14 +363,14 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           const isRoot = localStorage.getItem("claw_is_root") === "true";
           addLine(`       /\\_/\\       ${isRoot ? "root" : "user"}@cminewar.linux.os`, "success");
           addLine(`      ( o.o )      ----------------------------`, "success");
-          addLine(`       > ^ <       OS: CMineWar OS Linux v1.1.0`, "success");
+          addLine(`       > ^ <       SO: CMineWar OS Linux v${VERSION} (Compilación #${BUILD_NUMBER})`, "success");
           addLine(`      /     \\      Kernel: 5.16.0-cminewar-${isRoot ? "direct-root" : "generic"}`, "success");
-          addLine(`     |       |     Uptime: 1 hour, 42 mins`, "success");
-          addLine(`    (_______)      Shell: CMineWarBash 3.2`, "success");
-          addLine(`                   Theme: CMineWarDE (Modern Dark)`, "success");
-          addLine(`                   CPU: Cortex Quantum Emulator (4 Cores)`, "success");
-          addLine(`                   Memory: 4096MB / 16384MB (32%)`, "success");
-          addLine(`                   CMineWar OS Core AI Engine: ONLINE (Active)`, "success");
+          addLine(`     |       |     Tiempo encendido: 1 hora, 42 minutos`, "success");
+          addLine(`    (_______)      Consola: CMineWarBash 3.2`, "success");
+          addLine(`                   Tema: CMineWarDE (Oscuro Moderno)`, "success");
+          addLine(`                   CPU: Emulador de Núcleo Cuántico Cortex (4 Núcleos)`, "success");
+          addLine(`                   Memoria: 4096MB / 16384MB (32%)`, "success");
+          addLine(`                   Motor de IA Núcleo CMineWar OS: EN LÍNEA (Activo)`, "success");
         }
         break;
 

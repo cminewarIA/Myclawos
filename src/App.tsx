@@ -15,6 +15,7 @@ import Beini from "./components/Beini";
 import BananaWallpaper from "./components/BananaWallpaper";
 import DragonLogo from "./components/DragonLogo";
 import Bootloader from "./components/Bootloader";
+import { VERSION, BUILD_NUMBER } from "./version";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
 import HardwareControl from "./components/HardwareControl";
@@ -1393,8 +1394,8 @@ export default function App() {
           </form>
 
           <div className="w-full flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-800 pt-4 font-mono">
-            <span>BARE-METAL DRIVER</span>
-            <span>SECURE LINK v1.1.2</span>
+            <span>CONTROLADOR DE MÁQUINA REAL</span>
+            <span>ENLACE SEGURO v{VERSION}</span>
           </div>
         </div>
       </div>
@@ -2213,8 +2214,8 @@ export default function App() {
           </div>
 
           <div className="pt-4 border-t border-slate-800 max-w-5xl mx-auto w-full flex justify-between items-center text-[10px] text-slate-500 font-mono shrink-0">
-            <span>CMineWar OS Debian Workspace v1.2</span>
-            <span>Autodetecting Screen Mode: Fully Responsive</span>
+            <span>CMineWar OS Debian Workspace v{VERSION} (Compilación #{BUILD_NUMBER})</span>
+            <span>Detección automática de pantalla: Completamente adaptable</span>
           </div>
         </div>
       )}
