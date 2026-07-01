@@ -368,9 +368,21 @@ jobs:
           mkdir -p deb_root/usr/bin
           mkdir -p deb_root/usr/share/applications
           mkdir -p deb_root/usr/share/cminewar
+          mkdir -p deb_root/usr/share/pixmaps
+          
+          # Obtener la versión dinámicamente desde src/version.ts
+          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.12")
+          echo "[+] Versión detectada para el paquete .deb: $APP_VERSION"
           
           # Copiar la aplicación companion
           cp bare-metal/cminewar-companion.py deb_root/usr/share/cminewar/cminewar-companion.py
+          
+          # Copiar el logotipo de CMineWar para que sirva de icono de sistema en Debian
+          if [ -f assets/logo.png ]; then
+            cp assets/logo.png deb_root/usr/share/pixmaps/cminewar-companion.png
+          elif [ -f src/assets/logo.png ]; then
+            cp src/assets/logo.png deb_root/usr/share/pixmaps/cminewar-companion.png
+          fi
           
           # Crear script lanzador
           cat << 'EOF' > deb_root/usr/bin/cminewar-companion
@@ -387,15 +399,15 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=cminewar-companion
-          Icon=utilities-terminal
+          Icon=cminewar-companion
           Terminal=false
           Categories=Utility;System;
           EOF
           
-          # Crear archivo control
-          cat << 'EOF' > deb_root/DEBIAN/control
+          # Crear archivo control con la versión dinámica
+          cat << EOF > deb_root/DEBIAN/control
           Package: cminewar-companion
-          Version: 1.0.0
+          Version: $APP_VERSION
           Section: utils
           Priority: optional
           Architecture: all
@@ -408,7 +420,7 @@ jobs:
           
           # Construir .deb
           dpkg-deb --build deb_root cminewar-companion.deb
-          echo "[✓] Paquete .deb cminewar-companion.deb generado correctamente."
+          echo "[✓] Paquete .deb cminewar-companion.deb (Versión $APP_VERSION) generado correctamente con su icono oficial."
 
       - name: Upload Remote Control DEB Artifact
         uses: actions/upload-artifact@v4
