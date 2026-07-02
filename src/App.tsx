@@ -10,6 +10,7 @@ import SystemMonitor from "./components/SystemMonitor";
 import ControlPanel from "./components/ControlPanel";
 import CMineWarInstaller from "./components/CMineWarInstaller";
 import GitHubUpdater from "./components/GitHubUpdater";
+import GlobalClipboard from "./components/GlobalClipboard";
 import Chromium from "./components/Chromium";
 import Beini from "./components/Beini";
 import BananaWallpaper from "./components/BananaWallpaper";
@@ -1685,6 +1686,13 @@ export default function App() {
             <Battery size={13} className="hover:text-slate-200 cursor-pointer text-emerald-400" title="Batería: 100% cargada" />
             <Wifi size={13} className="text-emerald-400 cursor-pointer" title="Red: Gigabit Ethernet virtual conectada" />
           </div>
+
+          {/* Global Clipboard Manager */}
+          <GlobalClipboard
+            windows={windows}
+            handleFocusWindow={handleFocusWindow}
+            triggerNotification={triggerNotification}
+          />
 
           {/* Toggle Widget Panel Button */}
           <button
