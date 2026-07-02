@@ -115,7 +115,54 @@ if [ -d "android/app" ]; then
   fi
 fi
 
-# 6. Compilación del APK usando Gradle
+# 6. Reparación y Validación del Gradle Wrapper (Para evitar errores de Jar Corrupto)
+if [ -d "android" ]; then
+  echo -e "${BLUE}[+] Validando integridad del gradle-wrapper.jar...${NC_PLAIN}"
+  
+  # Función para validar si el jar es correcto y no está corrupto (usando unzip -t para validar estructura zip/jar)
+  validate_local_jar() {
+    if [ -f "android/gradle/wrapper/gradle-wrapper.jar" ] && unzip -t "android/gradle/wrapper/gradle-wrapper.jar" >/dev/null 2>&1; then
+      return 0
+    fi
+    return 1
+  }
+  
+  if validate_local_jar; then
+    echo -e "${GREEN}[✓] gradle-wrapper.jar es válido y ha pasado la prueba de integridad.${NC_PLAIN}"
+  else
+    echo -e "${YELLOW}[!] gradle-wrapper.jar no es válido o está corrupto. Reparando...${NC_PLAIN}"
+    rm -f android/gradle/wrapper/gradle-wrapper.jar
+    mkdir -p android/gradle/wrapper
+    
+    # Método 1: Usar gradle nativo del sistema si está disponible
+    if command -v gradle >/dev/null 2>&1; then
+      echo -e "${BLUE}[+] Usando gradle nativo del sistema para regenerar el wrapper...${NC_PLAIN}"
+      cd android
+      gradle wrapper --gradle-version 8.14.3 || gradle wrapper || true
+      cd ..
+    fi
+    
+    # Método 2: Descargar desde el repositorio oficial de Gradle en GitHub (sin Git LFS)
+    if ! validate_local_jar; then
+      echo -e "${BLUE}[+] Descargando gradle-wrapper.jar desde el repositorio de código oficial de Gradle...${NC_PLAIN}"
+      curl -f -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar || true
+    fi
+    
+    # Método 3: Descargar de Spring Boot como fallback
+    if ! validate_local_jar; then
+      echo -e "${BLUE}[+] Descargando gradle-wrapper.jar de Spring Boot...${NC_PLAIN}"
+      curl -f -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-boot/main/gradle/wrapper/gradle-wrapper.jar || true
+    fi
+    
+    if validate_local_jar; then
+      echo -e "${GREEN}[✓] gradle-wrapper.jar restaurado con éxito.${NC_PLAIN}"
+    else
+      echo -e "${RED}[⚠️] Advertencia: No se pudo verificar ni descargar un gradle-wrapper.jar válido tras múltiples métodos.${NC_PLAIN}"
+    fi
+  fi
+fi
+
+# 7. Compilación del APK usando Gradle
 if [ -d "android" ] && [ -f "android/gradlew" ]; then
   echo -e "${BLUE}[+] Detectando entorno para compilación de APK...${NC_PLAIN}"
   

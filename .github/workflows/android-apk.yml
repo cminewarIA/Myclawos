@@ -79,46 +79,46 @@ jobs:
           cd android
           echo "[+] Detectando y reparando posibles corrupciones de gradle-wrapper.jar..."
           
-          # Función para validar si el jar es correcto (>45KB para asegurar que es un binario real y no un puntero LFS o un error HTML 404)
+          # Función para validar si el jar es correcto y no está corrupto (usando unzip -t para validar estructura zip/jar)
           validate_jar() {
-            if [ -f "gradle/wrapper/gradle-wrapper.jar" ] && [ $(wc -c < "gradle/wrapper/gradle-wrapper.jar") -gt 45000 ]; then
+            if [ -f "gradle/wrapper/gradle-wrapper.jar" ] && unzip -t "gradle/wrapper/gradle-wrapper.jar" >/dev/null 2>&1; then
               return 0
             fi
             return 1
           }
           
-          # Si ya existe un jar válido, no hacemos nada
+          # Si ya existe un jar válido que pase la integridad zip, no hacemos nada
           if validate_jar; then
-            echo "[✓] gradle-wrapper.jar ya es válido ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes)."
+            echo "[✓] gradle-wrapper.jar ya existe, es válido y ha pasado la prueba de integridad zip ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes)."
           else
-            echo "[!] gradle-wrapper.jar no es válido o está ausente. Restaurando desde fuentes confiables..."
+            echo "[!] gradle-wrapper.jar no es válido, está corrupto o ausente. Iniciando restauración..."
             rm -f gradle/wrapper/gradle-wrapper.jar
             mkdir -p gradle/wrapper
             
-            # Descargar de Spring Boot (Garantizado binario real y sin Git LFS)
-            echo "[+] Descargando gradle-wrapper desde el repositorio oficial de Spring Boot..."
-            curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-boot/main/gradle/wrapper/gradle-wrapper.jar || true
-            
-            # Si falló, intentar Spring Framework
-            if ! validate_jar; then
-              echo "[+] Descargando gradle-wrapper desde el repositorio de Spring Framework..."
-              rm -f gradle/wrapper/gradle-wrapper.jar
-              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-framework/main/gradle/wrapper/gradle-wrapper.jar || true
+            # Método 1: Usar gradle nativo del runner si está disponible para regenerarlo localmente (la forma más limpia y compatible)
+            if command -v gradle >/dev/null 2>&1; then
+              echo "[+] Usando gradle nativo del sistema para regenerar el wrapper..."
+              gradle wrapper --gradle-version 8.14.3 || gradle wrapper || true
             fi
             
-            # Si falló, usar gradle nativo del runner si está disponible
-            if ! validate_jar && command -v gradle >/dev/null 2>&1; then
-              echo "[+] Usando gradle nativo del runner para regenerar el wrapper..."
-              rm -f gradle/wrapper/gradle-wrapper.jar
-              gradle wrapper --gradle-version 8.14.3 || gradle wrapper || true
+            # Método 2: Descargar desde el repositorio oficial de Gradle en GitHub (sin Git LFS)
+            if ! validate_jar; then
+              echo "[+] Descargando gradle-wrapper.jar desde el repositorio de código oficial de Gradle..."
+              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar || true
+            fi
+            
+            # Método 3: Descargar de Spring Boot como fallback
+            if ! validate_jar; then
+              echo "[+] Descargando gradle-wrapper.jar de Spring Boot..."
+              curl -f -sSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/spring-projects/spring-boot/main/gradle/wrapper/gradle-wrapper.jar || true
             fi
           fi
           
-          # Final validation of the jar
+          # Validación final del jar
           if validate_jar; then
-            echo "[✓] ¡gradle-wrapper.jar restaurado con éxito ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes) y listo para compilar!"
+            echo "[✓] ¡gradle-wrapper.jar restaurado con éxito ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes) y validado correctamente!"
           else
-            echo "[⚠️] Advertencia: No se pudo verificar gradle-wrapper.jar. Se dependerá del Gradle del sistema si está disponible."
+            echo "[⚠️] Advertencia extrema: No se pudo verificar ni descargar un gradle-wrapper.jar válido tras múltiples métodos."
           fi
 
       - name: Repair Corrupted mipmap-mdpi PNGs (Fix AAPT2 dimensions 0x0 error)
