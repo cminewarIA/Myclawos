@@ -1357,6 +1357,15 @@ export default function App() {
               const ipVal = ipInput.value.trim();
               if (!ipVal) return;
 
+              // Support bypass keyword "demo" to launch local sandbox / demo simulation instantly
+              if (ipVal.toLowerCase() === "demo") {
+                setConnError(null);
+                localStorage.setItem("cminewar_connected_server_ip", "demo");
+                setConnectedServerIp("demo");
+                setBootLifecycle("bootloader");
+                return;
+              }
+
               // Prohibit any connections to virtual simulators/loopback
               const isSimulator = 
                 ipVal === "127.0.0.1" || 
@@ -1418,10 +1427,13 @@ export default function App() {
                 type="text"
                 required
                 disabled={isConnecting}
-                placeholder="Ej. 192.168.1.100"
+                placeholder="Ej. 192.168.1.100 o 'demo'"
                 defaultValue="192.168.1.100"
                 className="w-full px-4 py-3 bg-[#020617] border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-red-500 transition font-mono text-center disabled:opacity-50"
               />
+              <p className="text-[10px] text-slate-500 text-center">
+                Tip: Escribe <span className="text-red-400 font-mono font-bold">demo</span> para iniciar la demostración sin un servidor remoto.
+              </p>
             </div>
 
             {connError && (

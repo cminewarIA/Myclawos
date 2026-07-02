@@ -161,13 +161,21 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
   ];
 
   // If remote server IP is given, let's prepend custom server connections logs!
-  const serverHandshakeSequence = [
-    `⚡ ESTABLECIENDO CONEXIÓN REMOTA CON SERVIDOR NATIVO: ${selectedServerIp || "192.168.1.100"}...`,
-    "🔄 [CONECTADO] Inicializando socket TCP en puerto 2222/3000...",
-    "🔑 Handshaking SSH secure authorization keys con el cluster Debian...",
-    "🚀 [OK] Canal tunelado SSH remoto establecido con éxito.",
-    "📂 [SFTP] Sincronizando directorio compartido /vfs/remote_root...",
-  ];
+  const serverHandshakeSequence = selectedServerIp && selectedServerIp.toLowerCase() === "demo"
+    ? [
+        "⚡ INICIANDO MODO DEMOSTRACIÓN (SIMULACIÓN DE PRODUCCIÓN COMPLETA)...",
+        "🔄 Cargando base de datos simulada y respuestas simuladas locales...",
+        "🔑 Handshaking local bypass secure keys...",
+        "🚀 [OK] Entorno sandbox local listo para exploración.",
+        "📂 [SANDBOX] Cargando directorio virtualizado /vfs/demo_root..."
+      ]
+    : [
+        `⚡ ESTABLECIENDO CONEXIÓN REMOTA CON SERVIDOR NATIVO: ${selectedServerIp || "192.168.1.100"}...`,
+        "🔄 [CONECTADO] Inicializando socket TCP en puerto 2222/3000...",
+        "🔑 Handshaking SSH secure authorization keys con el cluster Debian...",
+        "🚀 [OK] Canal tunelado SSH remoto establecido con éxito.",
+        "📂 [SFTP] Sincronizando directorio compartido /vfs/remote_root...",
+      ];
 
   useEffect(() => {
     // Scroll logs automatically

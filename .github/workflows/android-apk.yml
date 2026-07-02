@@ -153,29 +153,29 @@ jobs:
             mkdir -p android/app/src/main/res/mipmap-anydpi-v26
             
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-</adaptive-icon>
-EOF
+            <?xml version="1.0" encoding="utf-8"?>
+            <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+                <background android:drawable="@color/ic_launcher_background" />
+                <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+            </adaptive-icon>
+            EOF
 
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-</adaptive-icon>
-EOF
+            <?xml version="1.0" encoding="utf-8"?>
+            <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+                <background android:drawable="@color/ic_launcher_background" />
+                <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+            </adaptive-icon>
+            EOF
             
             # Asegurar color de fondo oscuro de marca (#020617)
             mkdir -p android/app/src/main/res/values
             cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">#020617</color>
-</resources>
-EOF
+            <?xml version="1.0" encoding="utf-8"?>
+            <resources>
+                <color name="ic_launcher_background">#020617</color>
+            </resources>
+            EOF
             
             for mipmap in android/app/src/main/res/mipmap-*; do
               if [ -d "$mipmap" ]; then
