@@ -152,30 +152,24 @@ jobs:
             # Crear directorio anydpi-v26 si no existe y configurar iconos adaptativos
             mkdir -p android/app/src/main/res/mipmap-anydpi-v26
             
-            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-            <?xml version="1.0" encoding="utf-8"?>
-            <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-                <background android:drawable="@color/ic_launcher_background" />
-                <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-            </adaptive-icon>
-            EOF
+            echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            echo '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            echo '    <background android:drawable="@color/ic_launcher_background" />' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            echo '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            echo '</adaptive-icon>' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 
-            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-            <?xml version="1.0" encoding="utf-8"?>
-            <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-                <background android:drawable="@color/ic_launcher_background" />
-                <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-            </adaptive-icon>
-            EOF
+            echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+            echo '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+            echo '    <background android:drawable="@color/ic_launcher_background" />' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+            echo '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+            echo '</adaptive-icon>' >> android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
             
             # Asegurar color de fondo oscuro de marca (#020617)
             mkdir -p android/app/src/main/res/values
-            cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
-            <?xml version="1.0" encoding="utf-8"?>
-            <resources>
-                <color name="ic_launcher_background">#020617</color>
-            </resources>
-            EOF
+            echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/values/ic_launcher_background.xml
+            echo '<resources>' >> android/app/src/main/res/values/ic_launcher_background.xml
+            echo '    <color name="ic_launcher_background">#020617</color>' >> android/app/src/main/res/values/ic_launcher_background.xml
+            echo '</resources>' >> android/app/src/main/res/values/ic_launcher_background.xml
             
             for mipmap in android/app/src/main/res/mipmap-*; do
               if [ -d "$mipmap" ]; then
