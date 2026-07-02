@@ -28,3 +28,6 @@ export interface ChatMessage {
   text: string;
   timestamp: Date;
 }
+
+// Proyecto propiedad de Yonah Llanes
+

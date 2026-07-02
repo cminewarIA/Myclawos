@@ -187,3 +187,5 @@ else
     echo "[✔] ÉXITO: El paquete '$PACKAGE_DIR' está en un estado óptimo y es 100% válido para ser empaquetado con dpkg-deb."
     exit 0
 fi
+
+# Proyecto propiedad de Yonah Llanes

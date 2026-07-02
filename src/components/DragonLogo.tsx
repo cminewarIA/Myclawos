@@ -272,3 +272,5 @@ export default function DragonLogo({
     </svg>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

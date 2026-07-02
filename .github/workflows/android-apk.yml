@@ -12,14 +12,48 @@ env:
   ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION_WARNING: 'false'
 
 jobs:
+  increment_version:
+    name: Increment Version and Push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Increment Version
+        run: |
+          node increment-version.cjs
+
+      - name: Commit and Push Updated Version File
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/version.ts
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "chore: increment version [skip ci]"
+            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            git push origin HEAD:$BRANCH_NAME
+          else
+            echo "No version change detected."
+          fi
+
   build_android:
     name: Compile Android APK
+    needs: increment_version
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           lfs: true
 
       - name: Setup Node.js Environment
@@ -196,24 +230,30 @@ jobs:
             echo "[!] Falló la compilación mediante gradlew wrapper. Intentando compilar usando el comando Gradle de sistema directamente..."
             gradle assembleDebug --no-daemon --stacktrace
           }
+          APP_VERSION=$(grep "export const VERSION" ../src/version.ts | cut -d'"' -f2 || echo "1.2.16")
           cp app/build/outputs/apk/debug/app-debug.apk ../cminewar-remote-control.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../cminewar-remote-control_v${APP_VERSION}.apk
 
       - name: Upload Remote Control APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: cminewarOS_Remote_Control_APK
-          path: cminewar-remote-control.apk
+          path: |
+            cminewar-remote-control.apk
+            cminewar-remote-control_v*.apk
           retention-days: 7
           if-no-files-found: error
 
   build_deb:
     name: Compile and Package Debian App
+    needs: increment_version
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           lfs: true
 
       - name: Setup Node.js Environment
@@ -494,24 +534,29 @@ jobs:
 
           # Construir .deb
           dpkg-deb --build cminewar-package cminewar-companion.deb
+          cp cminewar-companion.deb cminewar-companion_v${APP_VERSION}.deb
           echo "[✓] Paquete .deb cminewar-companion.deb (Versión $APP_VERSION) generado correctamente con estructura completa y scripts de control."
 
       - name: Upload Remote Control DEB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: cminewarOS_Remote_Control_DEB
-          path: cminewar-companion.deb
+          path: |
+            cminewar-companion.deb
+            cminewar-companion_v*.deb
           retention-days: 7
           if-no-files-found: error
 
   build_iso:
     name: Compile Bare-metal and Live ISO
+    needs: increment_version
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           lfs: true
 
       - name: Setup Node.js Environment
@@ -568,11 +613,9 @@ jobs:
           sudo debootstrap --arch amd64 bookworm ./debian-rootfs http://deb.debian.org/debian
           
           echo "[+] Configurando repositorios para incluir non-free y firmware..."
-          sudo bash -c "cat <<EOF > ./debian-rootfs/etc/apt/sources.list
-          deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
-          EOF"
+          sudo bash -c 'echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware" > ./debian-rootfs/etc/apt/sources.list'
+          sudo bash -c 'echo "deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware" >> ./debian-rootfs/etc/apt/sources.list'
+          sudo bash -c 'echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware" >> ./debian-rootfs/etc/apt/sources.list'
           
           echo "[+] Instalando Kernel, Sistema Base y Entorno XFCE4 en el rootfs de forma pre-empaquetada..."
           sudo DEBIAN_FRONTEND=noninteractive chroot ./debian-rootfs apt-get update
@@ -700,12 +743,16 @@ jobs:
               echo "[✓] ISO arrancable (Solo BIOS) generada con éxito como fallback seguro."
             fi
           fi
+          APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.16")
+          cp cminewarOS-live.iso "cminewarOS-live_v${APP_VERSION}.iso" || true
 
       - name: Upload Bootable ISO Image Artifact
         uses: actions/upload-artifact@v4
         with:
           name: cminewarOS_Live_Bootable_ISO
-          path: cminewarOS-live.iso
+          path: |
+            cminewarOS-live.iso
+            cminewarOS-live_v*.iso
           retention-days: 7
           if-no-files-found: error
 
@@ -814,3 +861,5 @@ jobs:
             --title "CMineWar OS (Última compilación de producción)" \
             --notes-file release_notes_latest.md \
             --prerelease=false || echo "[⚠️] Falló la creación de la release 'latest', continuando..."
+
+# Proyecto propiedad de Yonah Llanes

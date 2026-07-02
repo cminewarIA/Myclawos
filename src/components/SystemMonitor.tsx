@@ -219,3 +219,5 @@ export default function SystemMonitor() {
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

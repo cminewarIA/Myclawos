@@ -109,3 +109,5 @@ done
 
 echo "[✔] Auditoría y normalización completas con éxito. El paquete está listo para ser compilado con 'dpkg-deb'."
 exit 0
+
+# Proyecto propiedad de Yonah Llanes

@@ -1082,3 +1082,5 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

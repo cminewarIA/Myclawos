@@ -177,7 +177,8 @@ if [ -d "android" ] && [ -f "android/gradlew" ]; then
     if ./gradlew assembleDebug --no-daemon; then
       echo -e "${GREEN}[✓] ¡Compilación exitosa! APK generada correctamente.${NC_PLAIN}"
       cp app/build/outputs/apk/debug/app-debug.apk ../cminewar-remote-control.apk
-      echo -e "${GREEN}[✓] Archivo copiado a la raíz: cminewar-remote-control.apk${NC_PLAIN}"
+      cp app/build/outputs/apk/debug/app-debug.apk ../cminewar-remote-control_v${APP_VERSION}.apk
+      echo -e "${GREEN}[✓] Archivo copiado a la raíz: cminewar-remote-control.apk y cminewar-remote-control_v${APP_VERSION}.apk${NC_PLAIN}"
     else
       echo -e "${YELLOW}[⚠️] Error en compilación de Gradle. Es posible que falten componentes del Android SDK local.${NC_PLAIN}"
       echo -e "${YELLOW}Esto es normal en entornos sandbox limitados. La parte web y del servidor funciona perfectamente.${NC_PLAIN}"
@@ -193,3 +194,5 @@ fi
 echo -e "\n${GREEN}=========================================================================${NC_PLAIN}"
 echo -e "${GREEN}  ¡PROCESO DE COMPILACIÓN FINALIZADO DE FORMA SEGURA Y CORRECTA!${NC_PLAIN}"
 echo -e "${GREEN}=========================================================================${NC_PLAIN}"
+
+# Proyecto propiedad de Yonah Llanes

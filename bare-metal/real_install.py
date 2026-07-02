@@ -444,3 +444,5 @@ python3 /opt/cminewar/cminewar-desktop-app.py &
 
 if __name__ == "__main__":
     main()
+
+# Proyecto propiedad de Yonah Llanes

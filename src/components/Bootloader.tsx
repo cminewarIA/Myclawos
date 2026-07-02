@@ -691,3 +691,5 @@ export default function Bootloader({ onComplete, selectedServerIp = null, isSafe
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

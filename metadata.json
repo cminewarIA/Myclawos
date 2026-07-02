@@ -2,5 +2,6 @@
   "name": "CMineWar OS",
   "description": "Un sistema operativo Linux simulado basado en Debian con una interfaz de escritorio amigable, el núcleo inteligente CMineWar AI como asistente central, terminal Bash interactivo, explorador de archivos, monitor de sistema y utilidades.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
+  "owner": "Yonah Llanes"
 }

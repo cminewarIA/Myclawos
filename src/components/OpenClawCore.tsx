@@ -257,3 +257,5 @@ export default function OpenClawCore({ chatHistory, setChatHistory }: OpenClawCo
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

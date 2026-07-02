@@ -68,3 +68,6 @@ try {
 } catch (error) {
   console.error('[ICONS SETUP] Error updating launcher icons:', error);
 }
+
+// Proyecto propiedad de Yonah Llanes
+

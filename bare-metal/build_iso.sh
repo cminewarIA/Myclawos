@@ -93,3 +93,5 @@ EOF
 echo "[+] Archivo grub.cfg UEFI de arranque guardado en: $WORK_DIR/grub.cfg"
 echo "[+] Estructuras cognitivas del instalador bare-metal preparadas con éxito para empaquetar manualmente."
 echo "[+] Proceso concluido. Sigue los pasos del archivo HOWTO_BOOT_BARE_METAL.md de este directorio."
+
+# Proyecto propiedad de Yonah Llanes

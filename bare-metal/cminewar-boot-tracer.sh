@@ -96,3 +96,5 @@ echo "     🐉 FIN DEL REPORTE DE DIAGNÓSTICO DE ARRANQUE CMINEWAR OS 🐉" >>
 echo "=========================================================================" >> "$LOG_FILE"
 
 echo "[✔] Registro de eventos de arranque generado con éxito en $LOG_FILE"
+
+# Proyecto propiedad de Yonah Llanes

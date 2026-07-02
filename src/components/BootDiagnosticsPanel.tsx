@@ -207,3 +207,5 @@ export default function BootDiagnosticsPanel({ isRealHost = false }: BootDiagnos
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

@@ -584,3 +584,5 @@ echo "     * Para bloquear internet:  sudo cminewar-firewall block"
 echo "     * Para habilitar internet:  sudo cminewar-firewall allow"
 echo "     * Para ver estado actual:  sudo cminewar-firewall status"
 echo "========================================================================="
+
+# Proyecto propiedad de Yonah Llanes

@@ -19,16 +19,19 @@ try {
     const newVersion = `1.2.${newBuildNum}`;
     const newTimestamp = new Date().toISOString();
     
-    const newContent = `export const VERSION = "${newVersion}";\nexport const BUILD_NUMBER = ${newBuildNum};\nexport const LAST_UPDATED = "${newTimestamp}";\n`;
+    const newContent = `export const VERSION = "${newVersion}";\nexport const BUILD_NUMBER = ${newBuildNum};\nexport const LAST_UPDATED = "${newTimestamp}";\n\n// Proyecto propiedad de Yonah Llanes\n`;
     
     fs.writeFileSync(versionFilePath, newContent, 'utf8');
     console.log(`[VERSION INCREMENT] Successfully updated src/version.ts to Version ${newVersion} (Build ${newBuildNum})`);
   } else {
     // Create it if it doesn't exist
-    const initialContent = `export const VERSION = "1.2.11";\nexport const BUILD_NUMBER = 11;\nexport const LAST_UPDATED = "${new Date().toISOString()}";\n`;
+    const initialContent = `export const VERSION = "1.2.11";\nexport const BUILD_NUMBER = 11;\nexport const LAST_UPDATED = "${new Date().toISOString()}";\n\n// Proyecto propiedad de Yonah Llanes\n`;
     fs.writeFileSync(versionFilePath, initialContent, 'utf8');
     console.log(`[VERSION INCREMENT] Created initial src/version.ts with Version 1.2.11`);
   }
 } catch (error) {
   console.error('[VERSION INCREMENT] Error updating version file:', error);
 }
+
+// Proyecto propiedad de Yonah Llanes
+

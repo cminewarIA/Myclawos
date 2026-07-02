@@ -42,3 +42,5 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 python3 "$SCRIPT_DIR/real_install.py" "$DISK" "$OMIT_USER" "$DISABLE_SLEEP" "$BROWSER_CHROMIUM"
 exit $?
+
+# Proyecto propiedad de Yonah Llanes

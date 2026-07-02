@@ -725,3 +725,5 @@ export function EuroSlide({ vfs, setVfs, triggerNotification }: EuroOfficeProps)
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

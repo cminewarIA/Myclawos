@@ -456,3 +456,5 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

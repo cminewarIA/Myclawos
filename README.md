@@ -126,3 +126,6 @@ Si deseas instalar **CMineWar OS** en un disco de almacenamiento USB o unidad de
 
 ---
 *Producido con orgullo y rigurosidad técnica para la suite oficial de CMineWar OS.*
+
+*Este proyecto es propiedad de Yonah Llanes.*
+

@@ -1292,3 +1292,5 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

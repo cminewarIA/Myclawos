@@ -506,3 +506,5 @@ export default function HardwareControl({
     </div>
   );
 }
+
+// Proyecto propiedad de Yonah Llanes

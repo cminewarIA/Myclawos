@@ -15,3 +15,5 @@ fi
 
 # Lanzar la aplicación
 python3 "$SCRIPT_DIR/cminewar-companion.py" "$@"
+
+# Proyecto propiedad de Yonah Llanes
