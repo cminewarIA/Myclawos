@@ -289,14 +289,14 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `cminewar-os-v1.1.2-live-${isRoot ? "root" : "user"}.iso`;
+            link.download = `cminewar-os-v${VERSION}-live-${isRoot ? "root" : "user"}.iso`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
             addLine("[SUCCESS] ¡Proceso de compilación de firmware completado con éxito!", "success");
-            addLine(`[SUCCESS] Se descargó el archivo 'cminewar-os-v1.1.2-live-${isRoot ? "root" : "user"}.iso'.`, "success");
+            addLine(`[SUCCESS] Se descargó el archivo 'cminewar-os-v${VERSION}-live-${isRoot ? "root" : "user"}.iso'.`, "success");
           }, 1200);
         }
         break;

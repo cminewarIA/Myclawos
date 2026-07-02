@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Activity, RefreshCw, Terminal, Search, AlertTriangle, ShieldCheck, Download, CheckCircle } from "lucide-react";
 import { cminewarFetch } from "../utils/api";
+import { VERSION } from "../version";
 
 interface BootDiagnosticsPanelProps {
   isRealHost?: boolean;
@@ -75,7 +76,7 @@ export default function BootDiagnosticsPanel({ isRealHost = false }: BootDiagnos
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `cminewar_boot_trace_${new Date().toISOString().slice(0, 10)}.log`;
+      link.download = `cminewar_boot_trace_v${VERSION}_${new Date().toISOString().slice(0, 10)}.log`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

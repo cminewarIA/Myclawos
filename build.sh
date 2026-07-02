@@ -18,6 +18,17 @@ NC_PLAIN='\033[0m'
 
 echo -e "${BLUE}[+] Iniciando proceso de compilación unificado de CMineWar OS...${NC_PLAIN}"
 
+# Obtener versión y número de compilación desde src/version.ts de forma global
+if [ -f "src/version.ts" ]; then
+  APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.86")
+  BUILD_NUM=$(grep "export const BUILD_NUMBER" src/version.ts | grep -o '[0-3][0-9]*' || echo "86")
+else
+  APP_VERSION="1.2.86"
+  BUILD_NUM="86"
+fi
+
+echo -e "${GREEN}[✓] Versión global detectada: $APP_VERSION (Build: $BUILD_NUM)${NC_PLAIN}"
+
 # 1. Limpieza y preparación de directorios
 echo -e "${BLUE}[+] Limpiando directorios de compilación previos...${NC_PLAIN}"
 rm -rf dist
@@ -53,16 +64,7 @@ fi
 if [ -d "android/app" ]; then
   echo -e "${BLUE}[+] Aplicando configuración dinámica de versión e iconos adaptativos...${NC_PLAIN}"
   
-  # Obtener versión y número de compilación desde src/version.ts
-  if [ -f "src/version.ts" ]; then
-    APP_VERSION=$(grep "export const VERSION" src/version.ts | cut -d'"' -f2 || echo "1.2.86")
-    BUILD_NUM=$(grep "export const BUILD_NUMBER" src/version.ts | grep -o '[0-3][0-9]*' || echo "86")
-  else
-    APP_VERSION="1.2.86"
-    BUILD_NUM="86"
-  fi
-  
-  echo -e "${GREEN}[✓] Versión detectada: $APP_VERSION (Build: $BUILD_NUM)${NC_PLAIN}"
+  echo -e "${GREEN}[✓] Versión utilizada para Android: $APP_VERSION (Build: $BUILD_NUM)${NC_PLAIN}"
   
   # Actualizar versión en android/app/build.gradle
   if [ -f "android/app/build.gradle" ]; then

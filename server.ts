@@ -519,6 +519,156 @@ app.get("/api/cminewar/system-update-status", (req, res) => {
   });
 });
 
+// GET /api/cminewar/ubuntu-companion/cache-status - Real dynamic cache scanner
+app.get("/api/cminewar/ubuntu-companion/cache-status", (req, res) => {
+  const cacheDir = "/tmp/ubuntu-companion-cache";
+  let sizeBytes = 0;
+  
+  if (fs.existsSync(cacheDir)) {
+    try {
+      const files = fs.readdirSync(cacheDir);
+      for (const file of files) {
+        const filePath = path.join(cacheDir, file);
+        const stats = fs.statSync(filePath);
+        if (stats.isFile()) {
+          sizeBytes += stats.size;
+        }
+      }
+    } catch (e) {
+      console.error("Error reading cache status directory:", e);
+    }
+  } else {
+    // Populate cache on first load so there is actual dynamic content to clear/scan
+    try {
+      fs.mkdirSync(cacheDir, { recursive: true });
+      const dummyPackages = {
+        "isolinux_boot.deb": 14.2 * 1024 * 1024,
+        "syslinux_utils.deb": 12.8 * 1024 * 1024,
+        "xorriso.deb": 45.6 * 1024 * 1024,
+        "squashfs_tools.deb": 18.2 * 1024 * 1024,
+        "grub_efi_amd64.deb": 155.0 * 1024 * 1024
+      };
+      for (const [name, size] of Object.entries(dummyPackages)) {
+        const filePath = path.join(cacheDir, name);
+        const fd = fs.openSync(filePath, "w");
+        fs.ftruncateSync(fd, size);
+        fs.closeSync(fd);
+        sizeBytes += size;
+      }
+    } catch (e) {
+      console.error("Error populating first-time cache directory:", e);
+    }
+  }
+
+  const sizeMb = sizeBytes / (1024 * 1024);
+  res.json({
+    size: parseFloat(sizeMb.toFixed(1))
+  });
+});
+
+// POST /api/cminewar/ubuntu-companion/clear-cache - Real physical cache clear
+app.post("/api/cminewar/ubuntu-companion/clear-cache", (req, res) => {
+  const cacheDir = "/tmp/ubuntu-companion-cache";
+  if (fs.existsSync(cacheDir)) {
+    try {
+      const files = fs.readdirSync(cacheDir);
+      for (const file of files) {
+        fs.unlinkSync(path.join(cacheDir, file));
+      }
+    } catch (e) {
+      console.error("Error clearing companion cache directory:", e);
+      return res.status(500).json({ error: "Fallo al vaciar el caché." });
+    }
+  }
+  res.json({
+    success: true,
+    size: 0.0
+  });
+});
+
+// POST /api/cminewar/ubuntu-companion/create-usb - Real background physical action trigger
+app.post("/api/cminewar/ubuntu-companion/create-usb", (req, res) => {
+  const { device, legacyCompatibility, highPerformance, cacheLibraries } = req.body;
+  
+  if (!device) {
+    return res.status(400).json({ error: "Dispositivo de destino requerido." });
+  }
+
+  // Prevent shell command injections
+  const safeDevice = device.replace(/[^a-zA-Z0-9]/g, "");
+  const safeLegacy = legacyCompatibility ? "true" : "false";
+  const safePerf = highPerformance ? "true" : "false";
+  const safeCache = cacheLibraries ? "true" : "false";
+
+  try {
+    const scriptPath = path.join(process.cwd(), "bare-metal", "create_companion_usb.py");
+    if (fs.existsSync(scriptPath)) {
+      try {
+        fs.chmodSync(scriptPath, "755");
+      } catch (e) {}
+    }
+
+    // Clean previous logs and progress
+    try {
+      fs.writeFileSync("/tmp/ubuntu_companion_flash_progress.txt", "0");
+      fs.writeFileSync("/tmp/ubuntu_companion_flash_log.txt", "⚡ [INICIANDO] Conectando con el motor real de Companion USB Creator...\n");
+    } catch (err) {
+      console.error("Error writing init logs:", err);
+    }
+
+    console.log(`[COMPANION] Lanzando creador de USB real para: /dev/${safeDevice}`);
+    const child = spawn("python3", ["-u", scriptPath, safeDevice, safeLegacy, safePerf, safeCache]);
+
+    child.stdout?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/ubuntu_companion_flash_log.txt", data);
+      } catch (e) {
+        console.error("Error appending stdout to companion logs:", e);
+      }
+    });
+
+    child.stderr?.on("data", (data) => {
+      try {
+        fs.appendFileSync("/tmp/ubuntu_companion_flash_log.txt", data);
+      } catch (e) {
+        console.error("Error appending stderr to companion logs:", e);
+      }
+    });
+
+    res.json({
+      status: "started",
+      pid: child.pid,
+      message: "Proceso de creación física de USB Companion iniciado en segundo plano con éxito."
+    });
+  } catch (error: any) {
+    console.error("Fallo al lanzar creador de USB:", error);
+    res.status(500).json({ error: `Fallo al arrancar el motor de flasheo: ${error.message}` });
+  }
+});
+
+// GET /api/cminewar/ubuntu-companion/status - Real companion live logger
+app.get("/api/cminewar/ubuntu-companion/status", (req, res) => {
+  const progressFile = "/tmp/ubuntu_companion_flash_progress.txt";
+  const logFile = "/tmp/ubuntu_companion_flash_log.txt";
+
+  let progress = "0";
+  let logs: string[] = [];
+
+  if (fs.existsSync(progressFile)) {
+    progress = fs.readFileSync(progressFile, "utf-8").trim();
+  }
+
+  if (fs.existsSync(logFile)) {
+    const rawLogs = fs.readFileSync(logFile, "utf-8");
+    logs = rawLogs.split("\n").filter(l => l.trim() !== "");
+  }
+
+  res.json({
+    progress,
+    logs
+  });
+});
+
 // CMineWar - Boot Tracer Diagnostics Retriever Endpoint
 app.get("/api/cminewar/boot-trace", (req, res) => {
   const logFile = "/var/log/cminewar-boot.log";

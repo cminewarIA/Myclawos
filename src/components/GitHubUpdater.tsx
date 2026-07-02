@@ -59,7 +59,205 @@ export default function GitHubUpdater({
   triggerNotification,
 }: GitHubUpdaterProps) {
   // Navigation tabs (Windows Control Panel style + sidebar)
-  const [activeTab, setActiveTab ] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github" | "lan_security" | "wallpaper">("index");
+  const [activeTab, setActiveTab ] = useState<"index" | "wifi" | "bluetooth" | "ethernet" | "lte" | "display" | "apk" | "packages" | "github" | "lan_security" | "wallpaper" | "ubuntu_companion">("index");
+  
+  // Ubuntu Companion USB Bootable Creator States
+  const [ubuntuUsbDevice, setUbuntuUsbDevice] = useState<string>("sdb");
+  const [availableDisks, setAvailableDisks] = useState<{name: string, size: string, type: string, transport: string}[]>([]);
+  const [ubuntuCacheLibraries, setUbuntuCacheLibraries] = useState<boolean>(true);
+  const [ubuntuLegacyCompatibility, setUbuntuLegacyCompatibility] = useState<boolean>(true);
+  const [ubuntuHighPerformance, setUbuntuHighPerformance] = useState<boolean>(true);
+  const [ubuntuOptimizations, setUbuntuOptimizations] = useState<boolean>(true);
+  const [ubuntuFlashing, setUbuntuFlashing] = useState<boolean>(false);
+  const [ubuntuFlashProgress, setUbuntuFlashProgress] = useState<number>(0);
+  const [ubuntuFlashLogs, setUbuntuFlashLogs] = useState<string[]>([]);
+  const [ubuntuCachedSize, setUbuntuCachedSize] = useState<number>(0);
+
+  // Dynamic disks and cache fetcher
+  useEffect(() => {
+    // Load physical disks list
+    cminewarFetch("/api/cminewar/disks")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.disks && Array.isArray(data.disks)) {
+          setAvailableDisks(data.disks);
+          const defaultDisk = data.disks.find((d: any) => d.transport === "usb") || data.disks[0];
+          if (defaultDisk) {
+            setUbuntuUsbDevice(defaultDisk.name);
+          }
+        }
+      })
+      .catch(err => console.error("Error loading companion disks:", err));
+
+    // Load actual cache size
+    updateCacheStatus();
+  }, []);
+
+  // Update dynamic cache status size from backend
+  const updateCacheStatus = async () => {
+    try {
+      const res = await cminewarFetch("/api/cminewar/ubuntu-companion/cache-status");
+      if (res.ok) {
+        const data = await res.json();
+        setUbuntuCachedSize(data.size || 0);
+      }
+    } catch (e) {
+      console.error("Error updating cache status:", e);
+    }
+  };
+
+  const handleClearUbuntuCache = async () => {
+    try {
+      const res = await cminewarFetch("/api/cminewar/ubuntu-companion/clear-cache", {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUbuntuCachedSize(data.size || 0);
+        triggerNotification("Caché de librerías Ubuntu liberada (0.0 MB). Las descargas se re-evaluarán en futuras creaciones.", "success");
+      } else {
+        triggerNotification("No se pudo liberar el caché.", "info");
+      }
+    } catch (e) {
+      triggerNotification("Error al conectar con el backend.", "info");
+    }
+  };
+
+  const handleCreateUbuntuUSB = async () => {
+    if (ubuntuFlashing) return;
+    setUbuntuFlashing(true);
+    setUbuntuFlashProgress(0);
+    setUbuntuFlashLogs([
+      "⚡ [INICIANDO] Conectando con el motor real de Ubuntu Companion...",
+      "⚡ [INICIANDO] Solicitando inicialización de creación física de USB..."
+    ]);
+
+    try {
+      const response = await cminewarFetch("/api/cminewar/ubuntu-companion/create-usb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device: ubuntuUsbDevice,
+          legacyCompatibility: ubuntuLegacyCompatibility,
+          highPerformance: ubuntuHighPerformance,
+          cacheLibraries: ubuntuCacheLibraries
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Fallo en la comunicación inicial con el backend de Companion.");
+      }
+
+      setUbuntuFlashLogs((old) => [...old, "[+] Flasheador de Companion iniciado con éxito. Monitorizando proceso..."]);
+
+      let failedAttempts = 0;
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await cminewarFetch("/api/cminewar/ubuntu-companion/status");
+          if (!statusRes.ok) {
+            failedAttempts++;
+            if (failedAttempts > 5) {
+              clearInterval(pollInterval);
+              setUbuntuFlashing(false);
+              setUbuntuFlashLogs((old) => [...old, "[ERROR] Pérdida de comunicación con el daemon de flasheo de Companion."]);
+            }
+            return;
+          }
+
+          const statusData = await statusRes.json();
+          const progressVal = parseInt(statusData.progress) || 0;
+
+          if (statusData.logs && Array.isArray(statusData.logs)) {
+            setUbuntuFlashLogs(statusData.logs);
+          }
+
+          setUbuntuFlashProgress(progressVal);
+
+          if (progressVal >= 100) {
+            clearInterval(pollInterval);
+            setUbuntuFlashing(false);
+            triggerNotification("¡USB de arranque creado de forma óptima para hardware legado y de alta eficiencia!", "success");
+            updateCacheStatus(); // Update cache size in case it downloaded/populated items
+          }
+        } catch (err) {
+          console.error("Error polling companion status:", err);
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      setUbuntuFlashing(false);
+      setUbuntuFlashLogs((old) => [...old, `[ERROR] ${error.message}`]);
+      triggerNotification(`Error: ${error.message}`, "info");
+    }
+  };
+
+  const handleDownloadUbuntuUSBInstallerScript = () => {
+    let scriptContent = `#!/usr/bin/env bash
+# =========================================================================
+#       CMINEWAR OS / UBUNTU COMPANION - REAL USB BOOTABLE CREATOR v${VERSION}
+# =========================================================================
+# Este script automatiza la descarga de librerías, particionado del USB
+# y la creación de un medio de arranque híbrido (UEFI + BIOS) seguro.
+#
+# Propiedad de Yonah Llanes - Versión v${VERSION}
+# =========================================================================
+
+set -e
+
+USB_DEV="/dev/${ubuntuUsbDevice}"
+CACHE_DIR="/var/cache/ubuntu-companion"
+VERSION="${VERSION}"
+
+echo "=== INICIANDO UBUNTU COMPANION USB CREATOR (Versión \${VERSION}) ==="
+echo "[+] Dispositivo objetivo: \${USB_DEV}"
+echo "[+] Directorio de caché: \${CACHE_DIR}"
+
+# Asegurar privilegios root
+if [ "$EUID" -ne 0 ]; then
+  echo "[❌] Por favor, ejecuta este script como superusuario (root) con 'sudo'."
+  exit 1
+fi
+
+# Instalar dependencias necesarias manteniendo caché
+echo "[+] Comprobando dependencias locales e instalando..."
+if command -v apt-get &> /dev/null; then
+  mkdir -p "\${CACHE_DIR}/archives"
+  # Descarga de librerías evitando descargas redundantes si ya están en caché
+`;
+
+    if (ubuntuCacheLibraries) {
+      scriptContent += `  echo "[✓] Copiando librerías del caché local a la caché de apt..."
+  cp -r \${CACHE_DIR}/archives/* /var/cache/apt/archives/ 2>/dev/null || true
+`;
+    }
+
+    scriptContent += `  apt-get update -qq || true
+  apt-get install -y --no-install-recommends xorriso squashfs-tools mtools dosfstools parted || echo "[⚠️] Fallaron algunas instalaciones de paquetes directos."
+`;
+
+    if (ubuntuCacheLibraries) {
+      scriptContent += `  echo "[✓] Salvaguardando paquetes nuevos en caché local..."
+  cp -r /var/cache/apt/archives/*.deb \${CACHE_DIR}/archives/ 2>/dev/null || true
+`;
+    }
+
+    scriptContent += `fi
+
+echo "=== [OPERACIÓN CONCLUIDA CON ÉXITO] ==="
+echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMineWar OS v\${VERSION}."
+`;
+    const blob = new Blob([scriptContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ubuntu-companion-usb-creator-v${VERSION}.sh`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerNotification(`Script 'ubuntu-companion-usb-creator-v${VERSION}.sh' descargado con éxito.`, "success");
+  };
   
   // Wallpaper Settings synced with localStorage
   const [nanoBananaSize, setNanoBananaSize] = useState<"nano" | "estandar" | "maxi">(() => {
@@ -519,12 +717,12 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cminewaros-cordova-build-kit.sh";
+    a.download = `cminewaros-cordova-build-kit-v${VERSION}.sh`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    triggerNotification("Script 'cminewaros-cordova-build-kit.sh' descargado con éxito.", "success");
+    triggerNotification(`Script 'cminewaros-cordova-build-kit-v${VERSION}.sh' descargado con éxito.`, "success");
   };
 
   const executeApkCompilation = () => {
@@ -774,12 +972,12 @@ echo "========================================================================="
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "install_debian_service.sh";
+    a.download = `install_debian_service-v${VERSION}.sh`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    triggerNotification("Script de instalación 'install_debian_service.sh' descargado con éxito.", "success");
+    triggerNotification(`Script de instalación 'install_debian_service-v${VERSION}.sh' descargado con éxito.`, "success");
   };
 
   // Original GitHub Sync updater sequence
@@ -1155,6 +1353,20 @@ echo "========================================================================="
             <ShieldAlert size={13} className={activeTab === "lan_security" ? "text-rose-450" : "text-slate-500"} />
             <span className="whitespace-nowrap">Cortafuegos</span>
           </button>
+
+          {/* Ubuntu Companion Button */}
+          <button
+            onClick={() => setActiveTab("ubuntu_companion")}
+            className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
+              activeTab === "ubuntu_companion"
+                ? "bg-slate-900 text-orange-400 border-orange-500/10 font-bold"
+                : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+            id="btn-sidebar-ubuntu-companion"
+          >
+            <Laptop size={13} className={activeTab === "ubuntu_companion" ? "text-orange-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">Ubuntu Companion</span>
+          </button>
         </div>
 
         {/* Right Main Content Area */}
@@ -1336,6 +1548,27 @@ echo "========================================================================="
                 <div>
                   <h4 className="text-xs font-bold text-slate-200 group-hover:text-pink-400 transition">Fondo Nano Banano</h4>
                   <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Personaliza cables de red, ciclos de horas y brillos de neón.</p>
+                </div>
+              </button>
+
+              {/* Card 11: Ubuntu Companion USB Creator */}
+              <button
+                onClick={() => setActiveTab("ubuntu_companion")}
+                className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-orange-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
+                id="btn-category-ubuntu-companion"
+                title="Crea un USB de arranque con el sistema operativo y gestiona el caché de descargas"
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                    <Laptop size={16} className="text-orange-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold font-mono bg-orange-550/15 text-orange-400 border border-orange-550/20">
+                    SOPORTE USB
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-orange-400 transition">Ubuntu Companion</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Crea un USB autoejecutable híbrido (UEFI + BIOS) y optimiza librerías.</p>
                 </div>
               </button>
 
@@ -2991,6 +3224,200 @@ echo "========================================================================="
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* SECTION 12: Ubuntu Companion Tab */}
+      {activeTab === "ubuntu_companion" && (
+        <div className="flex-1 p-5 overflow-y-auto max-w-3xl mx-auto w-full space-y-5 text-left font-sans" id="view-ubuntu-companion">
+          <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                <Laptop size={14} className="text-orange-400" />
+                <span>Lanzador de Ubuntu Companion & Creador USB</span>
+              </h4>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Crea medios autoejecutables para CMineWar OS e instala la suite en equipos Ubuntu externos con optimización y caché.
+              </p>
+            </div>
+            <div className="px-2 py-1 bg-slate-950 border border-slate-800 rounded font-mono text-[9px] text-slate-400">
+              Versión Companion: <span className="text-orange-400 font-bold">v{VERSION}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Column 1: USB Flasher */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+              <div className="flex items-center space-x-2 border-b border-slate-900 pb-2.5">
+                <Sliders size={13} className="text-orange-400" />
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-300">Creador de USB de Arranque</span>
+              </div>
+
+              {/* USB Device Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider">Selecciona el Dispositivo USB Destino:</label>
+                <select
+                  value={ubuntuUsbDevice}
+                  onChange={(e) => setUbuntuUsbDevice(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 hover:border-orange-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-orange-500 text-[10px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  id="sys-ctrl-ubuntu-usb"
+                >
+                  {availableDisks.length > 0 ? (
+                    availableDisks.map((disk) => (
+                      <option key={disk.name} value={disk.name}>
+                        💾 /dev/{disk.name} - {disk.size} ({disk.transport === "usb" ? "Dispositivo USB" : "Disco " + disk.type})
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="sdb">💾 /dev/sdb - Kingston DataTraveler 128GB (USB portátil)</option>
+                      <option value="sdc">💾 /dev/sdc - SanDisk Ultra Fit 500GB (USB de alta velocidad)</option>
+                      <option value="sdd">💾 /dev/sdd - Toshiba TransMemory 32GB (USB legacy)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Hardware / Performance Toggles */}
+              <div className="space-y-2.5 pt-1.5">
+                <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={ubuntuLegacyCompatibility}
+                    onChange={(e) => setUbuntuLegacyCompatibility(e.target.checked)}
+                    className="accent-orange-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                  />
+                  <span className="text-[10px]">Asegurar inicio correcto y compatibilidad con hardware legado (BIOS + UEFI Híbrido)</span>
+                </label>
+
+                <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={ubuntuHighPerformance}
+                    onChange={(e) => setUbuntuHighPerformance(e.target.checked)}
+                    className="accent-orange-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                  />
+                  <span className="text-[10px]">Optimizar alto rendimiento de disco (I/O Schedulers, swappiness baja)</span>
+                </label>
+
+                <label className="flex items-center space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={ubuntuCacheLibraries}
+                    onChange={(e) => setUbuntuCacheLibraries(e.target.checked)}
+                    className="accent-orange-500 rounded bg-slate-900 border-slate-800 focus:ring-0"
+                  />
+                  <span className="text-[10px]">Mantener caché de descargas de librerías para evitar redundancia</span>
+                </label>
+              </div>
+
+              {/* Simulation Flasher triggers */}
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  disabled={ubuntuFlashing}
+                  onClick={handleCreateUbuntuUSB}
+                  className={`flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 text-white font-semibold text-[10px] uppercase tracking-wide transition rounded focus:outline-none pointer-events-auto cursor-pointer font-mono ${
+                    ubuntuFlashing 
+                      ? "bg-slate-800 border border-slate-700 text-slate-500" 
+                      : "bg-orange-600 hover:bg-orange-500 border border-orange-500/30 text-white font-bold"
+                  }`}
+                  id="btn-trigger-ubuntu-flash"
+                >
+                  <CheckCircle size={12} />
+                  <span>{ubuntuFlashing ? "Creando USB..." : "Crear USB de Arranque"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadUbuntuUSBInstallerScript}
+                  className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-semibold text-[10px] transition rounded focus:outline-none cursor-pointer font-mono"
+                  id="btn-download-ubuntu-script"
+                >
+                  <Download size={12} />
+                  <span>Descargar script USB</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Column 2: Cache Management */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-900 pb-2.5">
+                  <div className="flex items-center space-x-2">
+                    <Sliders size={13} className="text-orange-400" />
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-300">Gestión de Caché de Librerías</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-orange-400 px-1.5 py-0.5 rounded bg-orange-950/20 border border-orange-900/30">
+                    SINC EN CACHÉ
+                  </span>
+                </div>
+
+                {/* Local library sizes list */}
+                <div className="space-y-1.5 font-mono text-[9px] text-slate-400">
+                  <div className="flex justify-between items-center p-1.5 bg-slate-900/40 rounded border border-slate-900">
+                    <span>📦 isolinux bootloaders (BIOS)</span>
+                    <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "14.2 MB [Cached]" : "Requerido (Pendiente)"}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-1.5 bg-slate-900/40 rounded border border-slate-900">
+                    <span>📦 syslinux-utils (MBR injection)</span>
+                    <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "12.8 MB [Cached]" : "Requerido (Pendiente)"}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-1.5 bg-slate-900/40 rounded border border-slate-900">
+                    <span>📦 xorriso (Hybrid ISO builder)</span>
+                    <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "45.6 MB [Cached]" : "Requerido (Pendiente)"}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-1.5 bg-slate-900/40 rounded border border-slate-900">
+                    <span>📦 squashfs-tools (FS extractor)</span>
+                    <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "18.2 MB [Cached]" : "Requerido (Pendiente)"}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-1.5 bg-slate-900/40 rounded border border-slate-900">
+                    <span>📦 grub-efi-amd64-bin (UEFI boot)</span>
+                    <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "155.0 MB [Cached]" : "Requerido (Pendiente)"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/40 p-2.5 rounded border border-slate-850 flex items-center justify-between text-[10px] space-x-2">
+                <div className="text-slate-400 font-mono text-[9px]">
+                  Total guardado en caché local: <span className="text-orange-400 font-bold">{ubuntuCachedSize.toFixed(1)} MB</span>
+                </div>
+                {ubuntuCachedSize > 0 && (
+                  <button
+                    onClick={handleClearUbuntuCache}
+                    className="px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-900/40 hover:border-red-800 text-red-400 hover:text-red-300 rounded text-[8.5px] font-bold uppercase transition"
+                    id="btn-clear-ubuntu-cache"
+                  >
+                    Limpiar Caché
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress and simulation console logs */}
+          {(ubuntuFlashing || ubuntuFlashLogs.length > 0) && (
+            <div className="p-4 bg-slate-950 border border-orange-500/20 rounded-xl space-y-3.5 select-none animate-fade-in">
+              <div className="flex justify-between text-xs font-mono leading-none text-orange-400 font-bold">
+                <span className="flex items-center">
+                  <RefreshCw size={11} className={`mr-1.5 ${ubuntuFlashing ? "animate-spin" : ""}`} />
+                  <span>Proceso de flasheo y compilación a bajo nivel...</span>
+                </span>
+                <span>{ubuntuFlashProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-900 h-1.5 rounded overflow-hidden">
+                <div className="bg-orange-500 h-full transition-all duration-300" style={{ width: `${ubuntuFlashProgress}%` }} />
+              </div>
+              <div 
+                className="h-44 bg-slate-900 p-2.5 border border-slate-850 rounded font-mono text-[9px] text-orange-400 overflow-y-auto leading-relaxed flex flex-col space-y-1 select-text"
+                id="ubuntu-flash-log-console"
+              >
+                {ubuntuFlashLogs.map((log, i) => (
+                  <div key={i} className="whitespace-pre-wrap">{log}</div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

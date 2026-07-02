@@ -15,6 +15,8 @@ jobs:
   increment_version:
     name: Increment Version and Push
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.git_commit.outputs.sha }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -27,21 +29,32 @@ jobs:
           node-version: 22
 
       - name: Increment Version
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           node increment-version.cjs
 
       - name: Commit and Push Updated Version File
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        id: git_commit
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/version.ts
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "chore: increment version [skip ci]"
-            BRANCH_NAME=${GITHUB_REF#refs/heads/}
-            git push origin HEAD:$BRANCH_NAME
+          
+          if [ "${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}" = "true" ]; then
+            git add src/version.ts
+            if ! git diff-index --quiet HEAD; then
+              git commit -m "chore: increment version [skip ci]"
+              BRANCH_NAME=${GITHUB_REF#refs/heads/}
+              git push origin HEAD:$BRANCH_NAME
+              NEW_SHA=$(git rev-parse HEAD)
+              echo "sha=$NEW_SHA" >> $GITHUB_OUTPUT
+              echo "Incremented version and pushed commit: $NEW_SHA"
+            else
+              echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+              echo "No version change, using original SHA: ${{ github.sha }}"
+            fi
           else
-            echo "No version change detected."
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "Skipping version increment for event: ${{ github.event_name }}"
           fi
 
   build_android:
@@ -53,7 +66,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ needs.increment_version.outputs.sha }}
           lfs: true
 
       - name: Setup Node.js Environment
@@ -253,7 +266,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ needs.increment_version.outputs.sha }}
           lfs: true
 
       - name: Setup Node.js Environment
@@ -556,7 +569,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ needs.increment_version.outputs.sha }}
           lfs: true
 
       - name: Setup Node.js Environment

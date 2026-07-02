@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { VFSNode } from "../types";
 import { setNodeAtPath } from "../vfs";
 import { cminewarFetch } from "../utils/api";
+import { VERSION } from "../version";
 import { 
   Download, 
   HardDrive, 
@@ -221,7 +222,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
-          link.download = `cminewaros-v1.1.2-live-${omitStandardUser ? "root" : "user"}.iso`;
+          link.download = `cminewaros-v${VERSION}-live-${omitStandardUser ? "root" : "user"}.iso`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
