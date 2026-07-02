@@ -14,7 +14,7 @@ const URLS = [
 
 function download(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.get(url, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
         // Handle redirect
         download(res.headers.location).then(resolve).catch(reject);
@@ -32,11 +32,22 @@ function download(url) {
         const buffer = Buffer.concat(chunks);
         resolve(buffer);
       });
-    }).on('error', reject);
+    });
+
+    req.on('error', reject);
+    req.setTimeout(3000, () => {
+      req.destroy();
+      reject(new Error('Connection timeout (3s)'));
+    });
   });
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' || process.env.CI) {
+    console.log('[+] Entorno de producción o CI detectado. Omitiendo la descarga de gradle-wrapper.jar para evitar demoras y fallos de red.');
+    process.exit(0);
+  }
+
   console.log('[+] Iniciando descarga de gradle-wrapper.jar limpio...');
   
   if (!fs.existsSync(TARGET_DIR)) {

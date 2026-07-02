@@ -1357,7 +1357,7 @@ export default function App() {
               const ipVal = ipInput.value.trim();
               if (!ipVal) return;
 
-              // Support bypass keyword "demo" to launch local sandbox / demo simulation instantly
+              // Support bypass keyword "demo" to launch local sandbox / demo simulation instantly without any network traffic
               if (ipVal.toLowerCase() === "demo") {
                 setConnError(null);
                 localStorage.setItem("cminewar_connected_server_ip", "demo");
@@ -1366,16 +1366,20 @@ export default function App() {
                 return;
               }
 
-              // Prohibit any connections to virtual simulators/loopback
+              // Prohibit any connections to virtual simulators, loopback interfaces or local simulation/private IPs
               const isSimulator = 
-                ipVal === "127.0.0.1" || 
                 ipVal.toLowerCase() === "localhost" || 
+                ipVal.toLowerCase().includes("localhost") ||
+                ipVal === "127.0.0.1" || 
+                ipVal.startsWith("127.") || 
+                ipVal === "0.0.0.0" || 
+                ipVal === "::1" ||
                 ipVal.startsWith("10.0.2.") || 
                 ipVal === "10.0.2.2" || 
                 ipVal === "10.0.2.15";
 
               if (isSimulator) {
-                setConnError("CONEXIÓN DE SIMULADOR RECHAZADA. Las directrices de producción prohíben la vinculación con emuladores o entornos simulados.");
+                setConnError("CONEXIÓN DE SIMULADOR RECHAZADA. Las directrices de producción prohíben estrictamente la vinculación con emuladores, interfaces de bucle local (loopback) o entornos simulados.");
                 return;
               }
 
@@ -1408,7 +1412,7 @@ export default function App() {
                 })
                 .catch((err) => {
                   clearTimeout(timeoutId);
-                  console.error("Real connection handshake failed:", err);
+                  console.warn("Real connection handshake failed (this is expected if the IP is inaccessible or local):", err);
                   setConnError("NODO INACCESIBLE. Asegúrese de que el servidor CMineWar OS esté encendido, conectado a la misma red y que el puerto 3000 esté activo.");
                 })
                 .finally(() => {

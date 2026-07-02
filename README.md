@@ -9,17 +9,21 @@ El sistema está presidido por el majestuoso logotipo del **Dragón de CMineWar*
 ## 🚀 Características Principales
 
 ### 1. Sistema de Arranque Dual e Interfaces de Enlace
-*   **Enlace de Producción Exclusivo**: El panel de bienvenida requiere una dirección IP real del nodo físico para su vinculación (por ejemplo, `192.168.1.100`), denegando de forma estricta las conexiones procedentes de entornos locales simulados, emuladores o interfaces de bucle de retorno (`127.0.0.1`, `localhost`, `10.0.2.*`).
-*   **Cargador de Arranque Avanzado (Bootloader)**: Simula de forma interactiva y ejecuta la secuencia real de carga del kernel. Permite la reparación de sectores corruptos mediante el **Modo Seguro (Safe Mode)**.
+*   **Enlace de Producción Exclusivo**: El panel de bienvenida requiere una dirección IP real del nodo físico para su vinculación (por ejemplo, `192.168.1.100`). Se bloquean de forma estricta las conexiones procedentes de interfaces de bucle de retorno, emuladores o entornos locales simulados (`localhost`, `127.0.0.1`, interfaces `127.*`, `0.0.0.0`, `::1` y direccionamientos privados `10.0.2.*`), previniendo fugas operacionales.
+*   **Modo Demostración (Bypass "demo")**: Al ingresar la palabra clave `demo` en el campo de IP de conexión, el sistema habilita un entorno sandbox local instantáneo. Esto simula todo el flujo de carga del sistema, telemetrías ricas y respuestas simuladas de los servicios Debian de producción sin necesidad de un host real, ideal para pruebas de concepto, depuración y exploración interactiva.
+*   **Cargador de Arranque Avanzado (Bootloader)**: Simula de forma interactiva y ejecuta la secuencia real de carga del kernel. Permite la reparación de sectores corruptos mediante el **Modo Seguro (Safe Mode)** y adapta sus mensajes del pipeline en tiempo real al detectar el modo demostración (`demo`).
 *   **Panel de Diagnóstico Técnico**: Permite filtrar y examinar en tiempo real los registros detallados de inicialización de los controladores de hardware, firmware y el estado de montaje del sistema de archivos virtual (VFS).
 
-### 2. Integración Física con Servidores Debian ("Bare-Metal")
+### 2. Capa Unificada de Comunicación (CminewarFetch API)
+*   **Interceptación de Peticiones centralizada (`src/utils/api.ts`)**: Todas las aplicaciones e interfaces consumen recursos a través de un envoltorio seguro (`cminewarFetch`). Esta capa reescribe dinámicamente las rutas relativas (`/api/cminewar/*`) para apuntar al servidor real conectado si se ha configurado un host de producción en el puerto `3000`, abstrayendo la red real del navegador o iFrame y evitando fallas de resolución por políticas de CORS.
+
+### 3. Integración Física con Servidores Debian ("Bare-Metal")
 CMineWar OS incluye un conjunto de servicios de fondo y utilidades en Python que se ejecutan directamente en la máquina anfitriona para ofrecer telemetría y control real:
 *   **Compañero de Sistema (`cminewar-companion.py` / `cminewar-desktop-app.py`)**: Aplicaciones nativas de escritorio basadas en Tkinter que monitorizan la temperatura real del procesador, el uso de memoria, la carga del sistema y la actividad de los servicios de systemd.
 *   **Gestor de Servicios e Invocación Remota**: Permite arrancar, detener y reiniciar servicios críticos del sistema (como el propio servidor de CMineWar o servidores de bases de datos) a través de llamadas de API seguras (`/api/cminewar/services/control`).
-*   **Aislamiento de Red por Cortafuegos (WAN Block)**: Implementa reglas de aislamiento local instantáneo utilizando `iptables`. Permite rechazar todo el tráfico hacia Internet (WAN) manteniendo la conectividad intacta con redes locales (LAN: `192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`) para garantizar la privacidad física y la soberanía de los datos.
+*   **Aislamiento de Red por Cortafuegos (WAN Block)**: Implementa reglas de aislamiento local instantáneo utilizando `iptables`. Permite de forma transparente y asíncrona rechazar todo el tráfico hacia Internet (WAN) manteniendo la conectividad intacta con redes locales (LAN: `192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`) para garantizar la privacidad física y la soberanía de los datos.
 
-### 3. Suite de Aplicaciones Incorporadas
+### 4. Suite de Aplicaciones Incorporadas
 *   **Terminal de Consola**: Soporta la simulación de comandos UNIX estándar (`neofetch`, `ls`, `cat`, `iptables`, `systemctl`) con respuestas del núcleo inteligente y soporte de enlace interactivo con nodos remotos mediante SSH.
 *   **Explorador de Archivos (FileManager)**: Gestor visual completo integrado con un Sistema de Archivos Virtual (VFS) persistente en el navegador y con capacidad de sincronización con el almacenamiento real de producción de Debian.
 *   **Editor de Código y Texto (TextEditor)**: Editor con resaltado de sintaxis, gestión de múltiples pestañas activas y guardado directo en el VFS.
@@ -33,8 +37,10 @@ CMineWar OS incluye un conjunto de servicios de fondo y utilidades en Python que
 *   **Beini (Auditor de Redes)**: Herramienta de análisis e ingeniería de seguridad para auditar la robustez de los protocolos inalámbricos (WPA/WPA2) y realizar pruebas de estrés de red legítimas.
 *   **GitHub Updater & Pipeline de Compilación**: Descarga actualizaciones OTA comparando el hash de la rama de producción e interactúa de forma visual con las herramientas de compilación de Android (Gradle) para la generación de archivos binarios `.apk` optimizados.
 
-### 4. Compilación Móvil Nativa (Android)
+### 5. Compilación Móvil Nativa (Android) y Configuración del Lanzador
 *   **Capacitor & Gradle**: Integración total para el despliegue del sistema táctil en dispositivos móviles, soportando rotación fluida acelerada por hardware y pantallas de carga adaptadas con el logotipo oficial.
+*   **Icono Adaptativo del Lanzador y XML**: Configuración robusta en el manifiesto `AndroidManifest.xml` apuntando a recursos de iconos adaptativos en `mipmap-anydpi-v26/ic_launcher.xml` e `ic_launcher_round.xml`.
+*   **Colores de Marca Integrados**: Se ha configurado una tabla de color nativa (`colors.xml` e `ic_launcher_background.xml`) que define el color primario de marca (#020617), previniendo cualquier error de compilación de Gradle o recursos ausentes en los pipelines de CI/CD de Android.
 
 ---
 
