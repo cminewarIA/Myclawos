@@ -351,7 +351,7 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=/usr/bin/cminewar-companion
-          Icon=cminewar-companion
+          Icon=/usr/share/pixmaps/cminewar-companion.png
           Terminal=false
           Categories=Utility;System;
           EOF

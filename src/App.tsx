@@ -82,6 +82,8 @@ export default function App() {
   });
   const [connError, setConnError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [detectedNodes, setDetectedNodes] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
   
   // Safe Mode Trigger flag direct from localStorage
   const isSafeModeActive = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
@@ -143,6 +145,73 @@ export default function App() {
       if (timerId) clearInterval(timerId);
     };
   }, []);
+
+  // Escaneo automático de nodos activos en red local al entrar al Gateway
+  useEffect(() => {
+    if (bootLifecycle !== "gateway") return;
+
+    const scanNodes = async () => {
+      setIsScanning(true);
+      const candidates = Array.from(new Set([
+        typeof window !== "undefined" ? window.location.hostname : "",
+        typeof window !== "undefined" ? window.location.host : "",
+        "localhost",
+        "127.0.0.1",
+        "192.168.1.100",
+        "192.168.1.135",
+        "production",
+        "server"
+      ].filter(Boolean)));
+
+      const activeNodes: string[] = [];
+
+      const checks = candidates.map(async (ip) => {
+        const isRelative = ip === "production" || ip === "server" || ip === (typeof window !== "undefined" ? window.location.hostname : "") || ip === (typeof window !== "undefined" ? window.location.host : "");
+        const urls: string[] = [];
+        
+        if (isRelative) {
+          urls.push("/api/cminewar/system-status");
+        } else {
+          urls.push(`http://${ip}:3000/api/cminewar/system-status`);
+          urls.push(`http://${ip}/api/cminewar/system-status`);
+        }
+
+        for (const checkUrl of urls) {
+          try {
+            const controller = new AbortController();
+            const tId = setTimeout(() => controller.abort(), 1200);
+            const res = await fetch(checkUrl, { signal: controller.signal });
+            clearTimeout(tId);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.uptime !== undefined) {
+                activeNodes.push(ip);
+                break;
+              }
+            }
+          } catch (e) {
+            // Ignorar errores de red para IPs que no responden
+          }
+        }
+      });
+
+      await Promise.all(checks);
+      const uniqueActive = Array.from(new Set(activeNodes));
+      setDetectedNodes(uniqueActive);
+      setIsScanning(false);
+
+      if (uniqueActive.length === 1) {
+        // Si detecta un único nodo activo, inicia sesión automáticamente
+        const autoIp = uniqueActive[0];
+        console.log(`[AUTOCONNECT] Detectado un único nodo activo (${autoIp}). Iniciando sesión automáticamente...`);
+        localStorage.setItem("cminewar_connected_server_ip", autoIp);
+        setConnectedServerIp(autoIp);
+        setBootLifecycle("bootloader");
+      }
+    };
+
+    scanNodes();
+  }, [bootLifecycle]);
 
   // Touchscreen / Tactile mode state (Auto-detected and dynamic)
   const [touchMode, setTouchMode] = useState<boolean>(() => {
@@ -1426,6 +1495,41 @@ export default function App() {
                 Tip: Escribe <span className="text-red-400 font-mono font-bold">demo</span> para iniciar la demostración sin un servidor remoto.
               </p>
             </div>
+
+            {isScanning && (
+              <div className="text-[10px] text-slate-400 flex items-center justify-center space-x-2 bg-slate-900/30 py-2.5 rounded-lg border border-slate-800/50">
+                <span className="h-3 w-3 rounded-full border-2 border-dashed border-red-500 animate-spin"></span>
+                <span className="tracking-widest uppercase">Escaneando red local...</span>
+              </div>
+            )}
+
+            {detectedNodes.length > 1 && (
+              <div className="bg-[#020617] border border-emerald-900/40 p-4 rounded-lg space-y-2">
+                <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Múltiples Nodos Detectados
+                </p>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Haz clic en cualquiera de los nodos encontrados para iniciar sesión automáticamente:
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {detectedNodes.map((nodeIp) => (
+                    <button
+                      key={nodeIp}
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem("cminewar_connected_server_ip", nodeIp);
+                        setConnectedServerIp(nodeIp);
+                        setBootLifecycle("bootloader");
+                      }}
+                      className="px-2 py-1.5 bg-emerald-950/40 border border-emerald-800/40 hover:border-emerald-500 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 rounded-md text-[11px] font-mono transition cursor-pointer text-center truncate uppercase"
+                    >
+                      {nodeIp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {connError && (
               <div className="w-full p-3 bg-red-950/40 border border-red-900/55 text-red-400 rounded-lg text-[11px] font-mono leading-relaxed text-center shadow-lg">

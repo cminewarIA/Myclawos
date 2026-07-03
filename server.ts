@@ -333,7 +333,7 @@ app.post("/api/cminewar/services/control", (req, res) => {
 
     const isNotFound = details.includes("not found") || details.includes("no encontrado") || details.includes("not-found") || details.includes("no existe");
     if (action === "start" && isNotFound) {
-      // Intentar auto-instalación automática
+      // Intentar auto-instalación automática en segundo plano para evitar timeouts (timeout cliente = 3.5s)
       let packageName = "";
       if (serviceId === "nginx") {
         packageName = "nginx";
@@ -344,27 +344,21 @@ app.post("/api/cminewar/services/control", (req, res) => {
       }
 
       if (packageName) {
-        try {
-          console.log(`[AUTOPACKAGE] El servicio ${serviceId} no está instalado. Intentando auto-instalar el paquete '${packageName}' via apt-get...`);
-          execFileSync("sudo", ["apt-get", "update", "-y"]);
-          execFileSync("sudo", ["apt-get", "install", "-y", packageName]);
-          console.log(`[AUTOPACKAGE] Paquete '${packageName}' instalado con éxito. Reintentando activar el servicio...`);
-          execFileSync("sudo", ["systemctl", action, sysSrvName]);
-          return res.json({
-            success: true,
-            message: `El servicio ${serviceId} no estaba instalado. Lo hemos instalado y activado automáticamente.`
-          });
-        } catch (installErr: any) {
-          let installDetails = installErr.message;
-          if (installErr.stderr) {
-            installDetails = installErr.stderr.toString().trim();
+        console.log(`[AUTOPACKAGE] El servicio ${serviceId} no está instalado. Iniciando auto-instalación en segundo plano para el paquete '${packageName}'...`);
+        const cmd = `sudo apt-get update -y && sudo apt-get install -y ${packageName} && sudo systemctl ${action} ${sysSrvName}`;
+        
+        exec(cmd, (err, stdout, stderr) => {
+          if (err) {
+            console.error(`[AUTOPACKAGE ERROR] Falló la instalación de ${packageName}:`, err.message);
+          } else {
+            console.log(`[AUTOPACKAGE SUCCESS] El paquete ${packageName} se instaló y el servicio ${serviceId} se activó en segundo plano.`);
           }
-          return res.json({
-            success: false,
-            error: `Fallo de auto-instalación para ${serviceId}: ${installDetails}`,
-            message: `El servicio ${serviceId} no estaba instalado y falló la instalación automática: ${installDetails}`
-          });
-        }
+        });
+
+        return res.json({
+          success: true,
+          message: `El servicio ${serviceId} no estaba instalado. Hemos iniciado su instalación ('${packageName}') y activación automática en segundo plano.`
+        });
       }
     }
 
