@@ -444,6 +444,100 @@ app.get("/api/cminewar/install-status", (req, res) => {
   });
 });
 
+// CMineWar - Real bootable ISO compilation endpoint
+app.post("/api/cminewar/build-iso", (req, res) => {
+  const { omitStandardUser, disableSleep, defaultBrowserChromium } = req.body;
+  
+  const progressFile = "/tmp/cminewar_iso_progress.txt";
+  const logFile = "/tmp/cminewar_iso_log.txt";
+  
+  try {
+    fs.writeFileSync(progressFile, "10");
+    fs.writeFileSync(logFile, "[+] Iniciando compilador real de ISO de CMineWar OS...\n");
+    
+    // Paso 1: compilar boot.asm
+    fs.appendFileSync(logFile, "[+] Compilando cargador MBR (boot.asm) con NASM...\n");
+    execSync("nasm -f bin bare-metal/boot.asm -o /tmp/boot.bin");
+    fs.writeFileSync(progressFile, "30");
+    
+    // Paso 2: compilar uefi_loader.c
+    fs.appendFileSync(logFile, "[+] Compilando cargador UEFI (uefi_loader.c) con MinGW GCC...\n");
+    execSync("x86_64-w64-mingw32-gcc -fshort-wchar -nostdlib -shared -Wl,-dll -Wl,--subsystem,10 -e efi_main -o /tmp/BOOTX64.EFI bare-metal/uefi_loader.c");
+    fs.writeFileSync(progressFile, "50");
+    
+    // Paso 3: crear efi.img
+    fs.appendFileSync(logFile, "[+] Creando imagen de arranque UEFI (efi.img)...\n");
+    execSync("dd if=/dev/zero of=/tmp/efi.img bs=1024 count=1440");
+    execSync("mkfs.vfat -I -F 12 /tmp/efi.img || /sbin/mkfs.vfat -I -F 12 /tmp/efi.img || /usr/sbin/mkfs.vfat -I -F 12 /tmp/efi.img");
+    execSync("mmd -i /tmp/efi.img ::/EFI || true");
+    execSync("mmd -i /tmp/efi.img ::/EFI/BOOT || true");
+    execSync("mcopy -o -i /tmp/efi.img /tmp/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI");
+    fs.writeFileSync(progressFile, "70");
+    
+    // Paso 4: Rellenar boot.bin con ceros hasta completar 2048 bytes para El Torito (sin emulación)
+    fs.appendFileSync(logFile, "[+] Creando sector de arranque El Torito (boot2048.bin)...\n");
+    execSync("dd if=/dev/zero of=/tmp/boot2048.bin bs=1 count=2048");
+    execSync("dd if=/tmp/boot.bin of=/tmp/boot2048.bin conv=notrunc");
+    
+    // Paso 5: Copiar archivos del sistema a la estructura de la ISO
+    fs.appendFileSync(logFile, "[+] Copiando archivos de la interfaz y recursos a iso_root...\n");
+    execSync("rm -rf /tmp/iso_root && mkdir -p /tmp/iso_root/bare-metal");
+    if (fs.existsSync("dist")) {
+      execSync("cp -r dist /tmp/iso_root/");
+    }
+    execSync("cp package.json package-lock.json /tmp/iso_root/ || true");
+    execSync("cp -r bare-metal/* /tmp/iso_root/bare-metal/");
+    execSync("cp /tmp/boot2048.bin /tmp/iso_root/boot.bin");
+    execSync("cp /tmp/efi.img /tmp/iso_root/efi.img");
+    
+    // Paso 6: Compilar la ISO híbrida dual-boot usando xorriso con soporte completo UEFI y BIOS El Torito
+    fs.appendFileSync(logFile, "[+] Empaquetando ISO híbrida dual-boot (BIOS + UEFI) con xorriso...\n");
+    execSync(`xorriso -as mkisofs -V "cminewarOS" -o /tmp/cminewarOS-live.iso -b boot.bin -c boot.catalog -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e efi.img -no-emul-boot /tmp/iso_root/`);
+    
+    fs.writeFileSync(progressFile, "100");
+    fs.appendFileSync(logFile, "[✓] ¡Compilación e ISO creadas con éxito de forma 100% REAL!\n");
+    
+    res.json({
+      success: true,
+      message: "ISO compilada de forma real con éxito.",
+      downloadUrl: "/api/cminewar/download-iso"
+    });
+  } catch (error: any) {
+    console.error("Error compilando ISO real:", error);
+    fs.appendFileSync(logFile, `[❌] ERROR CRÍTICO: ${error.message}\n`);
+    fs.writeFileSync(progressFile, "FAILED");
+    res.status(500).json({ error: `Fallo al compilar la ISO: ${error.message}` });
+  }
+});
+
+// CMineWar - Retrieve dynamic status of real ISO compilation
+app.get("/api/cminewar/iso-status", (req, res) => {
+  const progressFile = "/tmp/cminewar_iso_progress.txt";
+  const logFile = "/tmp/cminewar_iso_log.txt";
+  
+  let progress = "0";
+  let logs: string[] = [];
+  
+  if (fs.existsSync(progressFile)) {
+    progress = fs.readFileSync(progressFile, "utf-8").trim();
+  }
+  if (fs.existsSync(logFile)) {
+    logs = fs.readFileSync(logFile, "utf-8").split("\n").filter(l => l.trim() !== "");
+  }
+  
+  res.json({ progress, logs });
+});
+
+// CMineWar - Real ISO binary download proxy
+app.get("/api/cminewar/download-iso", (req, res) => {
+  const isoPath = "/tmp/cminewarOS-live.iso";
+  if (fs.existsSync(isoPath)) {
+    res.download(isoPath, "cminewaros-v1.1.2-live.iso");
+  } else {
+    res.status(404).json({ error: "La imagen ISO no está lista o no existe." });
+  }
+});
+
 // CMineWar - Start full system and GRUB update background service execution
 app.post("/api/cminewar/system-update", (req, res) => {
   try {

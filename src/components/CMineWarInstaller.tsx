@@ -132,108 +132,70 @@ export default function ClawInstaller({
   const [isGeneratingIso, setIsGeneratingIso] = useState(false);
   const [isoProgress, setIsoProgress] = useState(0);
 
-  const handleDownloadISO = () => {
+  const handleDownloadISO = async () => {
     if (isGeneratingIso) return;
     setIsGeneratingIso(true);
     setIsoProgress(0);
 
-    const interval = setInterval(() => {
-      setIsoProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsGeneratingIso(false);
-
-          // Generate detailed retro-structured boot text layout replicating a virtual CD-ROM
-          const vfsJson = JSON.stringify(vfs, null, 2);
-          const isoDataContent = `========================================================================
-CMINEWAR OS LINUX COGNITIVE SYSTEM v1.1.2 ISO-9660 DEPLOYMENT ARCHIVE
-========================================================================
-Volume Label:  CMINEWAR_LIVE_V112
-Publisher:     CMineWar OS Foundation
-Architecture:  x86_amd64 / Intel Virtualization Cores
-Build Date:    2026-05-28 21:00 UTC
-Virtual Size:  142.6 MB
-
-[ BAKED KERNEL PARAMETERS - SELECTED INTEGRATED DIRECTIVES ]
-------------------------------------------------------------------------
-● AUTOLOGIN TARGET:    ${omitStandardUser ? "Superuser 'root' Direct Mode (No Passwords)" : "Standard User 'user_cminewar_developer'"}
-● ACPI POWER SUSPEND:  ${disableSleep ? "DISABLED PERMANENTLY (acpi=off sleep.allow=no)" : "ENABLED STANDARD POLICIES"}
-● CORE WEB SUITE:      ${defaultBrowserChromium ? "Chromium Web Browser Defaulting" : "Generic Web Host Controller"}
-------------------------------------------------------------------------
-
-* GRUB BOOTLOADER DESCRIPTOR & HARDWARE INVOCATOR *
-------------------------------------------------------------------------
-cat << 'GRUB_CONFIG'
-# /boot/grub/grub.cfg
-set default="0"
-set timeout=5
-
-menuentry "CMineWar OS - Modo Omarchy (Consola Interactiva TUI/CLI Nativas x86)" {
-    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-omarchy-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-x86_64-direct.img
-}
-
-menuentry "CMineWar OS - Modo Kiosco (Entorno Gráfico GUI x86 Nativas)" {
-    search --no-floppy --fs-uuid --set=root e8f2cb38-cc82-411a-8292
-    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 quiet intel_iommu=on init=/bin/cminewar-kiosk-init ${disableSleep ? "acpi=off sleep.allow=no" : ""}
-    initrd /boot/initramfs-cminewar-x86_64-direct.img
-}
-
-menuentry "CMineWar OS - Modo de Recuperación (System Safe Mode x86)" {
-    linux /boot/vmlinuz-cminewar-x86_64 root=UUID=e8f2cb38-cc82-411a-8292 console=tty1 console=ttyS0 single quiet init=/bin/cminewar-recovery-init
-    initrd /boot/initramfs-cminewar-x86_64-direct.img
-}
-GRUB_CONFIG
-
-------------------------------------------------------------------------
-* RECREATING THE WORKSPACE LOCAL COGNITIVE STRUCTURE (JSON SNAPSHOT) *
-------------------------------------------------------------------------
-This snapshot matches your current virtual disk environment precisely.
-You can import or paste this VFS dump into CMineWar OS back-restores:
-
-VFS_SNAPSHOT_BEGIN
-${vfsJson}
-VFS_SNAPSHOT_END
-
-------------------------------------------------------------------------
-* BASH BOOTSTRAP DEPLOYMENT SCRIPT (install.sh) *
-------------------------------------------------------------------------
-#!/usr/bin/env bash
-# CMineWar OS Virtual deployment script
-echo "=== CMINEWAR OS DEPLOYMENT INITIALIZER ==="
-echo "Montando estructura virtual..."
-mkdir -p /mnt/cminewar_root
-mount -t ext4 /dev/sda3 /mnt/cminewar_root
-
-echo "Escribiendo configuraciones del kernel..."
-echo "${omitStandardUser ? "ROOT_AUTOLOGIN=yes" : "STANDARD_USER=yes"}" > /mnt/cminewar_root/etc/cminewar/auth.conf
-echo "${disableSleep ? "ALLOW_SUSPEND=no" : "ALLOW_SUSPEND=yes"}" > /mnt/cminewar_root/etc/systemd/sleep.conf
-
-echo "Iniciando descarga de modulos cognitivos..."
-curl -fsSL https://openclaw.ai/install.sh | bash
-
-echo "Sincronizando volumen de archivos del usuario..."
-sync
-echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
-`;
-
-          const blob = new Blob([isoDataContent], { type: "application/octet-stream" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `cminewaros-v${VERSION}-live-${omitStandardUser ? "root" : "user"}.iso`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-
-          triggerNotification("¡Imagen ISO de CMineWar OS generada y descargada con éxito!", "success");
-          return 100;
-        }
-        return prev + 10;
+    try {
+      // Iniciar la compilación de la ISO real en el backend
+      const startRes = await cminewarFetch("/api/cminewar/build-iso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          omitStandardUser,
+          disableSleep,
+          defaultBrowserChromium
+        })
       });
-    }, 150);
+
+      if (!startRes.ok) {
+        throw new Error("No se pudo iniciar la compilación en el servidor.");
+      }
+
+      // Intervalo para consultar el progreso en tiempo real
+      const interval = setInterval(async () => {
+        try {
+          const statusRes = await cminewarFetch("/api/cminewar/iso-status");
+          if (!statusRes.ok) return;
+
+          const data = await statusRes.json();
+          const progressVal = parseInt(data.progress, 10);
+
+          if (data.progress === "FAILED") {
+            clearInterval(interval);
+            setIsGeneratingIso(false);
+            triggerNotification("Error al compilar la ISO real en el servidor.", "info");
+            return;
+          }
+
+          if (isNaN(progressVal)) return;
+
+          setIsoProgress(progressVal);
+
+          if (progressVal >= 100) {
+            clearInterval(interval);
+            setIsGeneratingIso(false);
+
+            // Descargar el archivo binario real de la ISO compilada
+            const link = document.createElement("a");
+            link.href = "/api/cminewar/download-iso";
+            link.download = `cminewaros-v${VERSION}-live-${omitStandardUser ? "root" : "user"}.iso`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            triggerNotification("¡Imagen ISO real de CMineWar OS compilada y descargada con éxito!", "success");
+          }
+        } catch (err) {
+          console.error("Error consultando estado de la ISO:", err);
+        }
+      }, 800);
+    } catch (error: any) {
+      console.error(error);
+      setIsGeneratingIso(false);
+      triggerNotification(`Fallo al compilar la ISO: ${error.message}`, "info");
+    }
   };
 
   // Auto-scroll simulation logs
