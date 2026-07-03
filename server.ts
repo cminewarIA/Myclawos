@@ -164,13 +164,29 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
     { id: "network-manager", name: "Network Manager", description: "Gestor principal de interfaces y WiFi", status: "inactive" }
   ];
 
-  if (isLinux) {
+  const hasSystemctl = (() => {
+    if (process.platform !== "linux") return false;
+    try {
+      execFileSync("which", ["systemctl"], { stdio: "ignore" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (hasSystemctl) {
     services = services.map(srv => {
       try {
         const sysSrvName = srv.id === "cminewar-service" ? "cminewar" : (srv.id === "network-manager" ? "NetworkManager" : srv.id);
         let state = "inactive";
         try {
-          state = execFileSync("systemctl", ["is-active", sysSrvName], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+          // Check if installed first using systemctl show
+          const showResult = execFileSync("systemctl", ["show", "-p", "LoadState", sysSrvName], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+          if (showResult.includes("LoadState=not-found")) {
+            state = "not-installed";
+          } else {
+            state = execFileSync("systemctl", ["is-active", sysSrvName], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+          }
         } catch (err: any) {
           if (err && err.stdout) {
             state = err.stdout.toString().trim();
@@ -178,7 +194,7 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
         }
         return {
           ...srv,
-          status: state === "active" ? "active" : "inactive"
+          status: state === "active" ? "active" : (state === "not-installed" ? "not-installed" : "inactive")
         };
       } catch (e) {
         return srv;
@@ -225,7 +241,17 @@ app.post("/api/cminewar/firewall/toggle", (req, res) => {
     return res.status(400).json({ error: "Acción requerida: block o allow" });
   }
 
-  if (process.platform !== "linux") {
+  const hasFirewallCmd = (() => {
+    if (process.platform !== "linux") return false;
+    try {
+      execFileSync("which", ["cminewar-firewall"], { stdio: "ignore" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (!hasFirewallCmd) {
     return res.json({
       success: true,
       simulated: true,
@@ -271,7 +297,17 @@ app.post("/api/cminewar/services/control", (req, res) => {
     return res.status(400).json({ error: "ID de servicio inválido o malformado" });
   }
 
-  if (process.platform !== "linux") {
+  const hasSystemctl = (() => {
+    if (process.platform !== "linux") return false;
+    try {
+      execFileSync("which", ["systemctl"], { stdio: "ignore" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (!hasSystemctl) {
     return res.json({
       success: true,
       simulated: true,
@@ -279,8 +315,9 @@ app.post("/api/cminewar/services/control", (req, res) => {
     });
   }
 
+  const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : (serviceId === "network-manager" ? "NetworkManager" : serviceId);
+
   try {
-    const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : (serviceId === "network-manager" ? "NetworkManager" : serviceId);
     console.log(`[SISTEMA] Ejecutando control de servicio: sudo systemctl ${action} ${sysSrvName}`);
     execFileSync("sudo", ["systemctl", action, sysSrvName]);
     res.json({
@@ -293,6 +330,44 @@ app.post("/api/cminewar/services/control", (req, res) => {
     if (error.stderr) {
       details = error.stderr.toString().trim();
     }
+
+    const isNotFound = details.includes("not found") || details.includes("no encontrado") || details.includes("not-found") || details.includes("no existe");
+    if (action === "start" && isNotFound) {
+      // Intentar auto-instalación automática
+      let packageName = "";
+      if (serviceId === "nginx") {
+        packageName = "nginx";
+      } else if (serviceId === "ssh" || serviceId === "sshd") {
+        packageName = "openssh-server";
+      } else if (serviceId === "network-manager") {
+        packageName = "network-manager";
+      }
+
+      if (packageName) {
+        try {
+          console.log(`[AUTOPACKAGE] El servicio ${serviceId} no está instalado. Intentando auto-instalar el paquete '${packageName}' via apt-get...`);
+          execFileSync("sudo", ["apt-get", "update", "-y"]);
+          execFileSync("sudo", ["apt-get", "install", "-y", packageName]);
+          console.log(`[AUTOPACKAGE] Paquete '${packageName}' instalado con éxito. Reintentando activar el servicio...`);
+          execFileSync("sudo", ["systemctl", action, sysSrvName]);
+          return res.json({
+            success: true,
+            message: `El servicio ${serviceId} no estaba instalado. Lo hemos instalado y activado automáticamente.`
+          });
+        } catch (installErr: any) {
+          let installDetails = installErr.message;
+          if (installErr.stderr) {
+            installDetails = installErr.stderr.toString().trim();
+          }
+          return res.json({
+            success: false,
+            error: `Fallo de auto-instalación para ${serviceId}: ${installDetails}`,
+            message: `El servicio ${serviceId} no estaba instalado y falló la instalación automática: ${installDetails}`
+          });
+        }
+      }
+    }
+
     res.json({
       success: false,
       error: `Fallo de systemd: ${details}`,
@@ -308,7 +383,17 @@ app.post("/api/cminewar/system/power", (req, res) => {
     return res.status(400).json({ error: "Acción requerida: reboot o shutdown" });
   }
 
-  if (process.platform !== "linux") {
+  const hasSystemctl = (() => {
+    if (process.platform !== "linux") return false;
+    try {
+      execFileSync("which", ["systemctl"], { stdio: "ignore" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (!hasSystemctl) {
     return res.json({
       success: true,
       simulated: true,
