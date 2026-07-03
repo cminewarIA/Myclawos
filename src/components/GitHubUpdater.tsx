@@ -2235,7 +2235,7 @@ echo "========================================================================="
                 <ul className="list-disc pl-4 text-[9.5px] text-slate-400 space-y-1">
                   <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_APK</strong>: Fichero <code className="text-slate-200">cminewar-remote-control.apk</code> listo para instalar en cualquier teléfono móvil Android.</li>
                   <li><strong className="text-yellow-400 font-bold">cminewarOS_Live_Bootable_ISO</strong>: Imagen <code className="text-slate-200">cminewarOS-live.iso</code> híbrida dual (BIOS + UEFI) completa para grabar en un USB e instalar.</li>
-                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_DEB</strong>: Fichero <code className="text-slate-200">cminewar-companion.deb</code> para instalar el control remoto con <code className="text-pink-400 bg-slate-900 px-1 py-0.5 rounded">sudo dpkg -i</code> en otro equipo con Debian/Ubuntu.</li>
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_DEB</strong>: Fichero <code className="text-slate-200">cminewar-companion.deb</code> para instalar el control remoto con <code className="text-pink-400 bg-slate-900 px-1 py-0.5 rounded">sudo dpkg -i</code> en Debian/Ubuntu. <span className="text-amber-400 font-bold">Nota:</span> Si el Centro de Software bloquea el botón al actualizar versiones previas, usa <code className="text-yellow-400 font-mono">sudo dpkg -i cminewar-companion.deb</code> o <code className="text-yellow-400 font-mono">sudo apt install ./cminewar-companion.deb</code> en la terminal para forzar la actualización limpia.</li>
                 </ul>
               </div>
 

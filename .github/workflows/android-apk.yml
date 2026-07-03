@@ -325,12 +325,16 @@ jobs:
           cp package.json cminewar-package/usr/share/cminewar/backend/
           
           # Copiar el logotipo de CMineWar para que sirva de icono de sistema en Debian
+          mkdir -p cminewar-package/usr/share/icons/hicolor/48x48/apps
           if [ -f assets/logo.png ]; then
             cp assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+            cp assets/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
           elif [ -f src/assets/logo.png ]; then
             cp src/assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+            cp src/assets/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
           elif [ -f public/assets/branding/logo.png ]; then
             cp public/assets/branding/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
+            cp public/assets/branding/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
           fi
           
           # Crear script lanzador cminewar-companion
@@ -347,7 +351,7 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=/usr/bin/cminewar-companion
-          Icon=/usr/share/pixmaps/cminewar-companion.png
+          Icon=cminewar-companion
           Terminal=false
           Categories=Utility;System;
           EOF
@@ -472,6 +476,8 @@ jobs:
           Priority: optional
           Architecture: all
           Depends: python3, python3-tk, nodejs, iptables
+          Replaces: cminewar-companion (<< $APP_VERSION)
+          Breaks: cminewar-companion (<< $APP_VERSION)
           Maintainer: CMineWar OS Team <CMineWar1.5@gmail.com>
           Description: Cliente de control remoto para la administracion de CMineWar OS.
            Una herramienta liviana en Python y Tkinter para controlar remotamente
@@ -499,6 +505,18 @@ jobs:
           if [ -f "$DESKTOP_FILE" ]; then
               echo "[+] Configurando permisos 644 para acceso de escritorio..."
               chmod 644 "$DESKTOP_FILE"
+          fi
+
+          # 2.1 Actualizar base de datos de accesos directos y caché de iconos
+          echo "[+] Actualizando base de datos de escritorio y cachés de iconos..."
+          if command -v update-desktop-database >/dev/null 2>&1; then
+              update-desktop-database -q || true
+          fi
+          if command -v update-icon-caches >/dev/null 2>&1; then
+              update-icon-caches /usr/share/icons/hicolor || true
+          fi
+          if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+              gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
           fi
 
           # 3. Recargar e iniciar servicios de fondo mediante systemd usando rutas absolutas verificadas

@@ -167,7 +167,7 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
   if (isLinux) {
     services = services.map(srv => {
       try {
-        const sysSrvName = srv.id === "cminewar-service" ? "cminewar" : srv.id;
+        const sysSrvName = srv.id === "cminewar-service" ? "cminewar" : (srv.id === "network-manager" ? "NetworkManager" : srv.id);
         let state = "inactive";
         try {
           state = execFileSync("systemctl", ["is-active", sysSrvName], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
@@ -243,7 +243,15 @@ app.post("/api/cminewar/firewall/toggle", (req, res) => {
     });
   } catch (error: any) {
     console.error("Error controlando cortafuegos con iptables:", error);
-    res.status(500).json({ error: `Fallo al ejecutar cortafuegos: ${error.message}. ¿Tiene permisos de sudo sin contraseña?` });
+    let details = error.message;
+    if (error.stderr) {
+      details = error.stderr.toString().trim();
+    }
+    res.json({
+      success: false,
+      error: `Fallo al ejecutar cortafuegos: ${details}. ¿Tiene permisos de sudo sin contraseña?`,
+      message: `Fallo al ejecutar cortafuegos: ${details}`
+    });
   }
 });
 
@@ -272,7 +280,7 @@ app.post("/api/cminewar/services/control", (req, res) => {
   }
 
   try {
-    const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : serviceId;
+    const sysSrvName = serviceId === "cminewar-service" ? "cminewar" : (serviceId === "network-manager" ? "NetworkManager" : serviceId);
     console.log(`[SISTEMA] Ejecutando control de servicio: sudo systemctl ${action} ${sysSrvName}`);
     execFileSync("sudo", ["systemctl", action, sysSrvName]);
     res.json({
@@ -281,7 +289,15 @@ app.post("/api/cminewar/services/control", (req, res) => {
     });
   } catch (error: any) {
     console.error("Error controlando servicio:", String(serviceId));
-    res.status(500).json({ error: `Fallo de systemd: ${error.message}` });
+    let details = error.message;
+    if (error.stderr) {
+      details = error.stderr.toString().trim();
+    }
+    res.json({
+      success: false,
+      error: `Fallo de systemd: ${details}`,
+      message: `Fallo de systemd al aplicar ${action.toUpperCase()} a ${serviceId}: ${details}`
+    });
   }
 });
 
@@ -312,7 +328,15 @@ app.post("/api/cminewar/system/power", (req, res) => {
       message: `Orden de ${action.toUpperCase()} transmitida con éxito al kernel.`
     });
   } catch (error: any) {
-    res.status(500).json({ error: `Fallo de alimentación: ${error.message}` });
+    let details = error.message;
+    if (error.stderr) {
+      details = error.stderr.toString().trim();
+    }
+    res.json({
+      success: false,
+      error: `Fallo de alimentación: ${details}`,
+      message: `Fallo de alimentación: ${details}`
+    });
   }
 });
 

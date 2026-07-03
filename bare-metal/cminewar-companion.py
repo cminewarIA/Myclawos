@@ -583,7 +583,8 @@ class CMineWarCompanionApp:
             # Polling other local services
             other_services = ["nginx", "ssh", "network-manager"]
             for srv in other_services:
-                status_res = subprocess.run(["systemctl", "is-active", srv], capture_output=True, text=True)
+                sys_srv = "NetworkManager" if srv == "network-manager" else srv
+                status_res = subprocess.run(["systemctl", "is-active", sys_srv], capture_output=True, text=True)
                 is_ok = status_res.stdout.strip() == "active"
                 if srv in self.srv_badge_vars:
                     self.srv_badge_vars[srv].set("ACTIVO (OK)" if is_ok else "INACTIVO")
@@ -752,9 +753,25 @@ class CMineWarCompanionApp:
             )
             with urllib.request.urlopen(req, timeout=3.5) as res:
                 res_data = json.loads(res.read().decode("utf-8"))
-                msg = res_data.get("message", success_msg)
-                self.write_log(f"[✓] API del Nodo responde: {msg}")
-                messagebox.showinfo("Servidor", msg)
+                if not res_data.get("success", True):
+                    msg = res_data.get("message", res_data.get("error", "Fallo desconocido"))
+                    self.write_log(f"[❌] Falló en el Nodo: {msg}")
+                    messagebox.showerror("Error de Servicio", msg)
+                else:
+                    msg = res_data.get("message", success_msg)
+                    self.write_log(f"[✓] API del Nodo responde: {msg}")
+                    messagebox.showinfo("Servidor", msg)
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read().decode("utf-8")
+                res_data = json.loads(body)
+                msg = res_data.get("error", res_data.get("message", str(e)))
+                self.write_log(f"[❌] Error en llamada API a '{url}': {msg}")
+                messagebox.showerror("Error de Servidor", f"El servidor respondió con un error:\n{msg}")
+            except Exception:
+                err_str = str(e)
+                self.write_log(f"[❌] Error en llamada API a '{url}': {err_str}")
+                messagebox.showerror("Fallo de Red API", f"No se pudo completar la llamada al nodo remoto.\nDetalle: {err_str}")
         except Exception as e:
             err_str = str(e)
             self.write_log(f"[❌] Error en llamada API a '{url}': {err_str}")
@@ -771,6 +788,8 @@ class CMineWarCompanionApp:
         else:
             # Local Sudo Debugging
             sys_srv_name = "cminewar" if service_id == "cminewar-service" else service_id
+            if sys_srv_name == "network-manager":
+                sys_srv_name = "NetworkManager"
             cmd = ["sudo", "systemctl", action, sys_srv_name]
             self.run_local_admin_command(cmd, f"Servicio local '{sys_srv_name}' cambiado a '{action}' con éxito.")
 

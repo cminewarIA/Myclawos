@@ -43,7 +43,7 @@ echo "[+] Actualizando repositorios e instalando herramientas de compilación...
 apt-get update -y
 
 echo "[+] Instalando herramientas del sistema y suite Omarchy de terminal (Consola y TUI pura)..."
-apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils tmux neovim btop htop fzf zoxide jq || true
+apt-get install -y curl build-essential git iptables iptables-persistent xorriso squashfs-tools mtools syslinux-utils tmux neovim btop htop fzf zoxide jq nginx openssh-server network-manager || true
 
 echo "[+] Nota: Modo Omarchy activo. Se prioriza y ejecuta el espacio de trabajo de consola interactiva pura directamente en TTY (sin Openbox)."
 BROWSER_INSTALLED=false

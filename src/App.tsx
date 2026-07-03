@@ -1367,22 +1367,8 @@ export default function App() {
                 return;
               }
 
-              // Prohibit any connections to virtual simulators, loopback interfaces or local simulation/private IPs
-              const isSimulator = 
-                ipVal.toLowerCase() === "localhost" || 
-                ipVal.toLowerCase().includes("localhost") ||
-                ipVal === "127.0.0.1" || 
-                ipVal.startsWith("127.") || 
-                ipVal === "0.0.0.0" || 
-                ipVal === "::1" ||
-                ipVal.startsWith("10.0.2.") || 
-                ipVal === "10.0.2.2" || 
-                ipVal === "10.0.2.15";
-
-              if (isSimulator) {
-                setConnError("CONEXIÓN DE SIMULADOR RECHAZADA. Las directrices de producción prohíben estrictamente la vinculación con emuladores, interfaces de bucle local (loopback) o entornos simulados.");
-                return;
-              }
+              // Permite todas las conexiones para facilitar depuración y uso en emuladores/VirtualBox/redes locales
+              const isSimulator = false;
 
               setIsConnecting(true);
               setConnError("Estableciendo enlace de red de producción...");

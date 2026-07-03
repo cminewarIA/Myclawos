@@ -1,0 +1,12 @@
+Package: cminewar-companion
+Version: 1.2.37
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-tk, nodejs, iptables
+Replaces: cminewar-companion (<< 1.2.37)
+Breaks: cminewar-companion (<< 1.2.37)
+Maintainer: CMineWar OS Team <CMineWar1.5@gmail.com>
+Description: Cliente de control remoto para la administracion de CMineWar OS.
+ Una herramienta liviana en Python y Tkinter para controlar remotamente
+ cortafuegos, servicios, actualizaciones de sistema y GRUB, y diagnosticos.

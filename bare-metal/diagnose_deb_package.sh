@@ -154,10 +154,12 @@ if [ -f "$DESKTOP_FILE" ]; then
     fi
 
     # Validar campo Icon
-    if grep -q "^Icon=/usr/share/pixmaps/cminewar-companion.png" "$DESKTOP_FILE"; then
-        echo "  [✓] Campo 'Icon' configurado correctamente con la ruta absoluta: /usr/share/pixmaps/cminewar-companion.png"
+    if grep -q "^Icon=cminewar-companion" "$DESKTOP_FILE"; then
+        echo "  [✓] Campo 'Icon' configurado correctamente con el nombre estandar: cminewar-companion"
+    elif grep -q "^Icon=/usr/share/pixmaps/cminewar-companion.png" "$DESKTOP_FILE"; then
+        echo "  [✓] Campo 'Icon' configurado con la ruta absoluta: /usr/share/pixmaps/cminewar-companion.png"
     else
-        echo "  [❌ ERROR] El campo 'Icon' del archivo .desktop no apunta a la ruta del icono consistente en /usr/share/pixmaps/."
+        echo "  [❌ ERROR] El campo 'Icon' del archivo .desktop no apunta al nombre de icono estandar (cminewar-companion)."
         ERRORS=$((ERRORS + 1))
     fi
 
