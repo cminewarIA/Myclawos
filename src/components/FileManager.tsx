@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { VFSNode } from "../types";
+import { cminewarFetch } from "../utils/api";
 import { getNodeByPath, setNodeAtPath, deleteNodeAtPath } from "../vfs";
 import { 
   Folder, 
@@ -140,7 +141,50 @@ export default function FileManager({
   const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
   const [selectedRemoteFile, setSelectedRemoteFile] = useState<RemoteFile | null>(null);
 
-  // Get current local node details
+  // States for real physical filesystem exploration
+  const [realFiles, setRealFiles] = useState<any[]>([]);
+  const [isLoadingRealFiles, setIsLoadingRealFiles] = useState(false);
+  const [realFileError, setRealFileError] = useState<string | null>(null);
+
+  // Helper to construct the true absolute path string
+  const getAbsolutePathString = () => {
+    if (currentPath.length === 0) return "/";
+    return "/" + currentPath.join("/");
+  };
+
+  // Function to fetch files from real host filesystem root
+  const fetchRealFiles = async () => {
+    setIsLoadingRealFiles(true);
+    setRealFileError(null);
+    try {
+      const realPath = getAbsolutePathString();
+      const res = await cminewarFetch(`/api/cminewar/files/list?path=${encodeURIComponent(realPath)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.files) {
+          setRealFiles(data.files);
+        } else {
+          setRealFileError(data.error || "Error al obtener archivos.");
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setRealFileError(errData.error || `Error HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      setRealFileError(err.message || "Error de red al conectar.");
+    } finally {
+      setIsLoadingRealFiles(false);
+    }
+  };
+
+  // Auto load whenever path or location changes
+  useEffect(() => {
+    if (activeLocation === "local") {
+      fetchRealFiles();
+    }
+  }, [currentPath, activeLocation]);
+
+  // Get current local node details (fall back to empty)
   const currentDirectoryNode = getNodeByPath(vfs, currentPath);
 
   // Local navigation back
@@ -158,68 +202,101 @@ export default function FileManager({
     setSelectedItemName(null);
   };
 
-  const handleLocalItemClick = (node: VFSNode) => {
+  const handleLocalItemClick = async (node: any) => {
     setSelectedItemName(node.name);
     
     if (node.type === "dir") {
       setCurrentPath([...currentPath, node.name]);
       setSelectedItemName(null);
     } else {
-      onOpenFileInEditor([...currentPath], node.name, node.content || "");
-      openWindow("text_editor");
+      // It is a real file! Let's fetch its physical content
+      try {
+        const filePath = getAbsolutePathString() === "/" ? `/${node.name}` : `${getAbsolutePathString()}/${node.name}`;
+        const res = await cminewarFetch(`/api/cminewar/files/read?path=${encodeURIComponent(filePath)}`);
+        if (res.ok) {
+          const data = await res.json();
+          onOpenFileInEditor([...currentPath], node.name, data.content || "");
+          openWindow("text_editor");
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(`No se pudo leer el archivo físico: ${errData.error || "Permiso denegado / Archivo binario"}`);
+        }
+      } catch (err: any) {
+        alert(`Error al leer archivo físico: ${err.message}`);
+      }
     }
   };
 
   // Add standard file
-  const handleCreateFile = () => {
+  const handleCreateFile = async () => {
     const filename = prompt("Ingrese nombre del nuevo archivo (ej. notas.txt):");
     if (!filename) return;
 
-    if (currentDirectoryNode?.children && currentDirectoryNode.children[filename]) {
-      alert("Ya existe un archivo o carpeta con ese nombre.");
-      return;
+    try {
+      const parentPath = getAbsolutePathString();
+      const res = await cminewarFetch("/api/cminewar/files/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: parentPath, name: filename, type: "file" })
+      });
+      if (res.ok) {
+        fetchRealFiles();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Error al crear archivo: ${data.error || "No se pudo crear"}`);
+      }
+    } catch (err: any) {
+      alert(`Error de conexión: ${err.message}`);
     }
-
-    const newFile: VFSNode = {
-      name: filename,
-      type: "file",
-      content: `Nuevo archivo local creado el ${new Date().toLocaleDateString()} vía explorador gráfico.`,
-    };
-
-    const updatedVfs = setNodeAtPath(vfs, currentPath, filename, newFile);
-    setVfs(updatedVfs);
   };
 
   // Add standard folder
-  const handleCreateDirectory = () => {
+  const handleCreateDirectory = async () => {
     const dirname = prompt("Ingrese nombre de la nueva carpeta:");
     if (!dirname) return;
 
-    if (currentDirectoryNode?.children && currentDirectoryNode.children[dirname]) {
-      alert("Ya existe un archivo o carpeta con ese nombre.");
-      return;
+    try {
+      const parentPath = getAbsolutePathString();
+      const res = await cminewarFetch("/api/cminewar/files/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: parentPath, name: dirname, type: "dir" })
+      });
+      if (res.ok) {
+        fetchRealFiles();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Error al crear directorio: ${data.error || "No se pudo crear"}`);
+      }
+    } catch (err: any) {
+      alert(`Error de conexión: ${err.message}`);
     }
-
-    const newDir: VFSNode = {
-      name: dirname,
-      type: "dir",
-      children: {},
-    };
-
-    const updatedVfs = setNodeAtPath(vfs, currentPath, dirname, newDir);
-    setVfs(updatedVfs);
   };
 
   // Delete local item
-  const handleDeleteItem = (itemName: string, e: React.MouseEvent) => {
+  const handleDeleteItem = async (itemName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`¿Está seguro de que desea eliminar permanentemente '${itemName}'?`)) {
       return;
     }
 
-    const updatedVfs = deleteNodeAtPath(vfs, currentPath, itemName);
-    setVfs(updatedVfs);
-    setSelectedItemName(null);
+    try {
+      const realPath = getAbsolutePathString() === "/" ? `/${itemName}` : `${getAbsolutePathString()}/${itemName}`;
+      const res = await cminewarFetch("/api/cminewar/files/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: realPath })
+      });
+      if (res.ok) {
+        fetchRealFiles();
+        setSelectedItemName(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Error al eliminar: ${data.error || "Permiso denegado / Directorio no vacío"}`);
+      }
+    } catch (err: any) {
+      alert(`Error de conexión: ${err.message}`);
+    }
   };
 
   // Selection trigger of sidebar location
@@ -448,7 +525,9 @@ export default function FileManager({
     alert(`¡Archivo '${fileNode.name}' subido con éxito vía ${activeLocation.type} al servidor remoto!`);
   };
 
-  const nodeChildren = currentDirectoryNode?.children ? Object.values(currentDirectoryNode.children) : [];
+  const nodeChildren = activeLocation === "local"
+    ? realFiles
+    : (currentDirectoryNode?.children ? Object.values(currentDirectoryNode.children) : []);
 
   return (
     <div className="flex-1 flex bg-slate-900 border-t border-slate-800 h-full overflow-hidden" id="file-manager-wrapper">
@@ -793,10 +872,30 @@ export default function FileManager({
 
             {/* Grid view of nodes */}
             <div className="flex-1 p-4 overflow-y-auto" id="file-manager-grid">
-              {nodeChildren.length === 0 ? (
+              {isLoadingRealFiles ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 py-12 select-none animate-pulse">
+                  <span className="h-6 w-6 rounded-full border-2 border-dashed border-emerald-500 animate-spin mb-3"></span>
+                  <p className="text-sm font-mono text-emerald-400">Escaneando sistema de archivos real...</p>
+                  <p className="text-xs text-slate-600 mt-1">Negociando descriptores i-nodos en el host raíz</p>
+                </div>
+              ) : realFileError ? (
+                <div className="flex flex-col items-center justify-center h-full text-red-400 py-12 select-none">
+                  <AlertTriangle size={48} className="text-red-500/80 mb-2" />
+                  <p className="text-sm font-bold uppercase tracking-wider font-mono">Error de Acceso</p>
+                  <p className="text-xs text-slate-500 mt-2 max-w-sm text-center leading-relaxed">
+                    {realFileError}
+                  </p>
+                  <button
+                    onClick={fetchRealFiles}
+                    className="mt-4 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded text-xs font-mono transition"
+                  >
+                    Reintentar Escaneo
+                  </button>
+                </div>
+              ) : nodeChildren.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-500 py-12 select-none">
                   <Folder size={48} className="text-slate-700 mb-2 stroke-[1.5]" />
-                  <p className="text-sm">Directorio vacío</p>
+                  <p className="text-sm">Directorio vacío o inaccesible</p>
                   <p className="text-xs text-slate-600 mt-1">Crea un archivo o carpeta arriba.</p>
                 </div>
               ) : (

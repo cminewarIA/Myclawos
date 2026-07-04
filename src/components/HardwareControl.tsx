@@ -370,36 +370,82 @@ export default function HardwareControl({
                 <Server size={12} className="text-indigo-400" />
                 <span>Simulador Multi-Host (Portable SSD)</span>
               </h3>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                El sistema CMineWar OS funciona como una unidad live portable SSD. Al iniciar en un equipo diferente, realizará una nueva detección de hardware y autodescargará sus controladores sin alterar los de otras computadoras.
-              </p>
-
-              <div className="space-y-2">
-                {HOSTS_DATABASE.map(h => (
-                  <button
-                    key={h.id}
-                    onClick={() => handleHostSwitch(h.id)}
-                    className={`w-full text-left p-2.5 rounded border text-xs font-mono transition-all flex justify-between items-center ${
-                      h.id === currentHostId
-                        ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300"
-                        : "bg-slate-900 border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/60 text-slate-300"
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-bold">{h.name}</span>
-                      <span className="text-[9.5px] text-slate-500">{h.brand} {h.model}</span>
+              
+              {(() => {
+                const connectedServerIp = localStorage.getItem("cminewar_connected_server_ip") || "";
+                const isRealNode = connectedServerIp && connectedServerIp !== "demo";
+                
+                if (isRealNode) {
+                  return (
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="p-3 bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 rounded-lg text-xs font-mono space-y-1.5">
+                        <span className="font-bold text-[10px] uppercase tracking-wider block text-indigo-400">⚡ Hardware Físico Activo:</span>
+                        <p className="leading-relaxed">
+                          Conectado directamente al nodo host real en <span className="font-bold text-white bg-indigo-900/50 px-1 py-0.5 rounded">{connectedServerIp}</span>.
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Cada nodo de producción de CMineWar OS emite un único entorno de hardware físico a la vez por restricciones de bus de hardware y seguridad del núcleo.
+                        </p>
+                      </div>
+                      <div className="opacity-50 pointer-events-none space-y-2">
+                        {HOSTS_DATABASE.map(h => (
+                          <div
+                            key={h.id}
+                            className={`w-full text-left p-2.5 rounded border text-xs font-mono flex justify-between items-center ${
+                              h.id === currentHostId
+                                ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300"
+                                : "bg-slate-900 border-slate-800/80 text-slate-300"
+                            }`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold">{h.name}</span>
+                              <span className="text-[9.5px] text-slate-500">{h.brand} {h.model}</span>
+                            </div>
+                            {h.id === currentHostId && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-sans uppercase">Activo</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {h.id === currentHostId && (
-                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-sans uppercase">Activo</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+                  );
+                }
 
-              <div className="p-2.5 rounded bg-amber-500/5 border border-amber-500/20 text-[10.5px] text-amber-300 flex items-start space-x-2">
-                <Info size={14} className="shrink-0 mt-0.5" />
-                <span>Al cambiar de Host, el OS simulará un apagado y ejecutará la secuencia de boot BIOS analizando el hardware correspondiente.</span>
-              </div>
+                return (
+                  <>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      El sistema CMineWar OS funciona como una unidad live portable SSD. Al iniciar en un equipo diferente, realizará una nueva detección de hardware y autodescargará sus controladores sin alterar los de otras computadoras.
+                    </p>
+
+                    <div className="space-y-2">
+                      {HOSTS_DATABASE.map(h => (
+                        <button
+                          key={h.id}
+                          onClick={() => handleHostSwitch(h.id)}
+                          className={`w-full text-left p-2.5 rounded border text-xs font-mono transition-all flex justify-between items-center ${
+                            h.id === currentHostId
+                              ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300"
+                              : "bg-slate-900 border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/60 text-slate-300"
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-bold">{h.name}</span>
+                            <span className="text-[9.5px] text-slate-500">{h.brand} {h.model}</span>
+                          </div>
+                          {h.id === currentHostId && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-sans uppercase">Activo</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="p-2.5 rounded bg-amber-500/5 border border-amber-500/20 text-[10.5px] text-amber-300 flex items-start space-x-2">
+                      <Info size={14} className="shrink-0 mt-0.5" />
+                      <span>Al cambiar de Host, el OS simulará un apagado y ejecutará la secuencia de boot BIOS analizando el hardware correspondiente.</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         ) : activeTab === "database" ? (

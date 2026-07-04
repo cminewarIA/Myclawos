@@ -424,6 +424,54 @@ echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMin
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Poll real Wi-Fi, Bluetooth and Ethernet hardware status
+  useEffect(() => {
+    if (activeTab !== "wifi" && activeTab !== "bluetooth" && activeTab !== "ethernet") return;
+
+    let isMounted = true;
+    const fetchHardwareStatus = async () => {
+      try {
+        if (activeTab === "wifi") {
+          const res = await cminewarFetch("/api/cminewar/hardware/wifi");
+          if (res.ok && isMounted) {
+            const data = await res.json();
+            if (data.success && data.list) {
+              setWifiList(data.list);
+            }
+          }
+        } else if (activeTab === "bluetooth") {
+          const res = await cminewarFetch("/api/cminewar/hardware/bluetooth");
+          if (res.ok && isMounted) {
+            const data = await res.json();
+            if (data.success && data.list) {
+              setDevicesList(data.list);
+            }
+          }
+        } else if (activeTab === "ethernet") {
+          const res = await cminewarFetch("/api/cminewar/hardware/ethernet");
+          if (res.ok && isMounted) {
+            const data = await res.json();
+            if (data.success && data.list && data.list.length > 0) {
+              const eth = data.list[0];
+              setEthIp(eth.ip || "192.168.1.135");
+              setEthMask(eth.netmask || "255.255.255.0");
+              setEthGateway(eth.gateway || "192.168.1.1");
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[HARDWARE SENSING] Fallo de conexión sutil (modo offline/simulación):", err);
+      }
+    };
+
+    fetchHardwareStatus();
+    const interval = setInterval(fetchHardwareStatus, 6000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeTab]);
+
   // Package installation manager states
   const [installedPackages, setInstalledPackages] = useState<string[]>(() => {
     const saved = localStorage.getItem("cminewar_installed_packages");
