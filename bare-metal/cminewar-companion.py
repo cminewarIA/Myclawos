@@ -176,12 +176,14 @@ class CMineWarCompanionApp:
         self.tab_monitor = tk.Frame(self.notebook, bg=self.bg_color)
         self.tab_firewall = tk.Frame(self.notebook, bg=self.bg_color)
         self.tab_services = tk.Frame(self.notebook, bg=self.bg_color)
+        self.tab_usb = tk.Frame(self.notebook, bg=self.bg_color)
         self.tab_processes = tk.Frame(self.notebook, bg=self.bg_color)
         self.tab_power = tk.Frame(self.notebook, bg=self.bg_color)
         
         self.notebook.add(self.tab_monitor, text="  🔗 CONEXIÓN Y MONITOR  ")
         self.notebook.add(self.tab_firewall, text="  🛡️ CORTAFUEGOS WAN  ")
         self.notebook.add(self.tab_services, text="  ⚙️ DAEMONS Y SERVICIOS  ")
+        self.notebook.add(self.tab_usb, text="  💾 DISPOSITIVOS USB  ")
         self.notebook.add(self.tab_processes, text="  📋 PROCESOS Y LOGS  ")
         self.notebook.add(self.tab_power, text="  🔌 CONTROLES DE ENERGÍA  ")
         
@@ -189,6 +191,7 @@ class CMineWarCompanionApp:
         self.build_monitor_tab()
         self.build_firewall_tab()
         self.build_services_tab()
+        self.build_usb_tab()
         self.build_processes_tab()
         self.build_power_tab()
 
@@ -424,6 +427,122 @@ class CMineWarCompanionApp:
             command=lambda: self.trigger_power_control("shutdown")
         )
         btn_shutdown.pack(fill="x", padx=30, pady=10)
+
+    # -------------------------------------------------------------------------
+    # TAB 6: GESTIÓN DE MEDIOS EXTRAÍBLES Y USB
+    # -------------------------------------------------------------------------
+    def build_usb_tab(self):
+        self.tab_usb.columnconfigure(0, weight=1)
+        self.tab_usb.rowconfigure(0, weight=1)
+        
+        usb_frame = tk.LabelFrame(self.tab_usb, text=" DISPOSITIVOS DE ALMACENAMIENTO Y PUERTOS USB ", font=self.font_header, fg=self.text_color, bg=self.card_color, bd=1, relief="solid")
+        usb_frame.grid(row=0, column=0, padx=15, pady=15, sticky="nsew")
+        
+        # Upper control bar with Scan Button
+        ctrl_frame = tk.Frame(usb_frame, bg=self.card_color)
+        ctrl_frame.pack(fill="x", padx=15, pady=(15, 5))
+        
+        lbl_info = tk.Label(ctrl_frame, text="Dispositivos detectados en los buses del Nodo:", font=self.font_body, fg=self.text_dim, bg=self.card_color)
+        lbl_info.pack(side="left", pady=5)
+        
+        btn_scan = tk.Button(
+            ctrl_frame, text="🔎 ESCANEAR EN TIEMPO REAL", font=self.font_body,
+            bg="#0f172a", fg=self.emerald_color, activebackground=self.emerald_color, activeforeground="#000",
+            bd=1, relief="solid", cursor="hand2", command=self.scan_usb_devices
+        )
+        btn_scan.pack(side="right", padx=5)
+        
+        # Scrolled Text Box for displaying detected USB disks
+        self.usb_box = scrolledtext.ScrolledText(usb_frame, bg="#030712", fg="#38bdf8", font=("Courier", 10), bd=0)
+        self.usb_box.pack(fill="both", expand=True, padx=15, pady=15)
+        self.usb_box.insert(tk.END, "Presione 'ESCANEAR EN TIEMPO REAL' o espere el sondeo automático para listar medios USB...")
+
+    def scan_usb_devices(self):
+        """ Forzar el escaneo de dispositivos USB tanto local como remotamente """
+        self.write_log("[*] Forzando escaneo de dispositivos de almacenamiento USB y discos...")
+        if self.connection_mode.get() == "remote":
+            node_url = self.get_node_url()
+            url = f"{node_url}/api/cminewar/disks"
+            self.write_log(f"[*] Consultando API remota: {url}")
+            
+            def run():
+                try:
+                    req = urllib.request.Request(url)
+                    with urllib.request.urlopen(req, timeout=2.5) as response:
+                        if response.status == 200:
+                            data = json.loads(response.read().decode("utf-8"))
+                            disks = data.get("disks", [])
+                            self.update_usb_tab_data(disks)
+                            self.write_log(f"[✓] Se detectaron {len(disks)} dispositivos de almacenamiento en el nodo remoto.")
+                except Exception as e:
+                    self.write_log(f"[❌] Error consultando discos remotos: {e}")
+                    self.update_usb_tab_data([])
+            threading.Thread(target=run, daemon=True).start()
+        else:
+            # Local Sudo / Local Machine scanning
+            try:
+                # Intentar usar lsblk en formato JSON
+                res = subprocess.run(["lsblk", "-J", "-d", "-o", "NAME,SIZE,TYPE,TRAN"], capture_output=True, text=True)
+                if res.returncode == 0:
+                    data = json.loads(res.stdout)
+                    disks = []
+                    for dev in data.get("blockdevices", []):
+                        if dev.get("type") == "disk":
+                            disks.append({
+                                "name": dev.get("name"),
+                                "size": dev.get("size", "Genérico"),
+                                "type": dev.get("type"),
+                                "transport": dev.get("tran", "sata")
+                            })
+                    self.update_usb_tab_data(disks)
+                else:
+                    # Fallback raw parsing
+                    raw_res = subprocess.run(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,TRAN", "-r"], capture_output=True, text=True)
+                    lines = raw_res.stdout.strip().split("\n")
+                    disks = []
+                    for l in lines[1:]:
+                        parts = l.strip().split()
+                        if len(parts) >= 2:
+                            is_disk = "disk" in parts
+                            if is_disk:
+                                idx = parts.index("disk")
+                                disks.append({
+                                    "name": parts[0],
+                                    "size": parts[1] if idx > 1 else "Genérico",
+                                    "type": "disk",
+                                    "transport": parts[idx+1] if len(parts) > idx+1 else "sata"
+                                })
+                    self.update_usb_tab_data(disks)
+                self.write_log("[✓] Escaneo local de discos completado con éxito.")
+            except Exception as e:
+                self.write_log(f"[❌] Error en escaneo local de discos: {e}")
+                self.update_usb_tab_data([])
+
+    def update_usb_tab_data(self, disks):
+        """ Actualiza la tabla visual de la pestaña USB """
+        self.usb_box.delete("1.0", tk.END)
+        if not disks:
+            self.usb_box.insert(tk.END, "⚠️ No se encontraron dispositivos de almacenamiento físicos conectados.\n")
+            self.usb_box.insert(tk.END, "Asegúrese de insertar su memoria USB en los puertos del equipo servidor.")
+            return
+            
+        header = f"{'DISPOSITIVO':<15} | {'TAMAÑO':<10} | {'TIPO':<10} | {'CONEXIÓN / BUS':<15} | {'ESTADO':<15}\n"
+        divider = "=" * 70 + "\n"
+        body = header + divider
+        
+        for d in disks:
+            name = f"/dev/{d.get('name')}"
+            size = d.get("size", "N/A")
+            dtype = d.get("type", "disk").upper()
+            tran = d.get("transport", "sata").upper()
+            
+            status = "SISTEMA PRINCIPAL" if tran == "SATA" else "MEDIO REMOVIBLE"
+            if tran == "USB":
+                status = "✨ USB CONECTADO"
+                
+            body += f"{name:<15} | {size:<10} | {dtype:<10} | {tran:<15} | {status:<15}\n"
+            
+        self.usb_box.insert(tk.END, body)
 
     # -------------------------------------------------------------------------
     # BUCLE DE SONDEO Y ACTUALIZACIÓN EN SEGUNDO PLANO
@@ -695,8 +814,52 @@ class CMineWarCompanionApp:
                 except Exception as e:
                     self.set_connection_status(False, "DESCONECTADO (Sondeando...)")
                     self.reset_telemetry_fields()
+                
+                # Consultar discos remotos de forma asíncrona sutil para la pestaña USB
+                try:
+                    req_disks = urllib.request.Request(f"{node_url}/api/cminewar/disks")
+                    with urllib.request.urlopen(req_disks, timeout=1.5) as response_disks:
+                        if response_disks.status == 200:
+                            disks_data = json.loads(response_disks.read().decode("utf-8"))
+                            self.update_usb_tab_data(disks_data.get("disks", []))
+                except Exception:
+                    pass
             else:
                 self.poll_local_status()
+                # Consultar discos locales de forma sutil para la pestaña USB
+                try:
+                    res = subprocess.run(["lsblk", "-J", "-d", "-o", "NAME,SIZE,TYPE,TRAN"], capture_output=True, text=True)
+                    if res.returncode == 0:
+                        data = json.loads(res.stdout)
+                        disks = []
+                        for dev in data.get("blockdevices", []):
+                            if dev.get("type") == "disk":
+                                disks.append({
+                                    "name": dev.get("name"),
+                                    "size": dev.get("size", "Genérico"),
+                                    "type": dev.get("type"),
+                                    "transport": dev.get("tran", "sata")
+                                })
+                        self.update_usb_tab_data(disks)
+                    else:
+                        raw_res = subprocess.run(["lsblk", "-d", "-o", "NAME,SIZE,TYPE,TRAN", "-r"], capture_output=True, text=True)
+                        lines = raw_res.stdout.strip().split("\n")
+                        disks = []
+                        for l in lines[1:]:
+                            parts = l.strip().split()
+                            if len(parts) >= 2:
+                                is_disk = "disk" in parts
+                                if is_disk:
+                                    idx = parts.index("disk")
+                                    disks.append({
+                                        "name": parts[0],
+                                        "size": parts[1] if idx > 1 else "Genérico",
+                                        "type": "disk",
+                                        "transport": parts[idx+1] if len(parts) > idx+1 else "sata"
+                                    })
+                        self.update_usb_tab_data(disks)
+                except Exception:
+                    pass
                 
             time.sleep(2.5)
 

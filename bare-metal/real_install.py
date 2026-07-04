@@ -349,64 +349,97 @@ WantedBy=multi-user.target
             f.write(service_content)
         run_cmd(f"{chroot_cmd} systemctl enable cminewar.service", shell=True)
 
-        # 6.4 Configurar autologin o crear usuario
-        if username == "root":
-            run_cmd(f"mkdir -p {mount_point}/etc/systemd/system/getty@tty1.service.d", shell=True)
-            with open(f"{mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf", "w") as f:
-                f.write("[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %I $TERM\n")
-        else:
-            run_cmd(f"{chroot_cmd} useradd -m -s /bin/bash {username}", shell=True)
+        # 6.4 Configurar autologin en TTY1 para el usuario configurado
+        print(f"[+] Configurando inicio de sesión automático TTY1 para el usuario '{username}'...")
+        run_cmd(f"mkdir -p {mount_point}/etc/systemd/system/getty@tty1.service.d", shell=True)
+        with open(f"{mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf", "w") as f:
+            f.write(f"[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin {username} --noclear %I $TERM\n")
+
+        if username != "root":
+            run_cmd(f"{chroot_cmd} useradd -m -s /bin/bash {username} || true", shell=True)
             run_cmd(f"{chroot_cmd} echo '{username}:{password}' | chpasswd", shell=True)
-            run_cmd(f"{chroot_cmd} usermod -aG sudo {username}", shell=True)
+            run_cmd(f"{chroot_cmd} usermod -aG sudo {username} || true", shell=True)
 
-        # 6.5 Configurar autologin gráfico en LightDM para el usuario configurado
-        print(f"[+] Configurando inicio de sesión gráfico automático para el usuario '{username}'...")
-        run_cmd(f"{chroot_cmd} groupadd -r autologin || true", shell=True)
-        run_cmd(f"{chroot_cmd} gpasswd -a {username} autologin || true", shell=True)
-        run_cmd(f"{chroot_cmd} groupadd -r nopasswdlogin || true", shell=True)
-        run_cmd(f"{chroot_cmd} gpasswd -a {username} nopasswdlogin || true", shell=True)
+        # 6.5 Crear script del monitor de consola para el arranque headless
+        print("[+] Creando script del monitor de consola cminewar-console-monitor...")
+        console_monitor_content = """#!/usr/bin/env bash
+# =========================================================================
+#        🐉 CMINEWAR OS - HEADLESS STATION CONSOLE LOG MONITOR 🐉
+# =========================================================================
 
-        run_cmd(f"mkdir -p {mount_point}/etc/lightdm/lightdm.conf.d", shell=True)
-        lightdm_config = f"""[Seat:*]
-autologin-user={username}
-autologin-user-timeout=0
-autologin-session=openbox
+# Limpiar pantalla de arranque
+clear
+
+# Mostrar banner majestuoso de CMineWar OS
+echo -e "\\033[1;32m"
+echo "  ================================================================"
+echo "     🐉  CMINEWAR OS - CONSOLA DE ADMINISTRACIÓN HEADLESS  🐉     "
+echo "  ================================================================"
+echo -e "\\033[0m"
+
+echo -e "  \\033[1;34m[+] Estado de los Servicios:\\033[0m \\033[1;32mACTIVOS (Node.js + Nginx corriendo)\\033[0m"
+echo ""
+echo -e "  \\033[1;33m[+] DIRECCIONES IP LOCALES PARA CONECTARSE DESDE EL NAVEGADOR:\\033[0m"
+echo ""
+
+# Recuperar IPs locales reales
+IPS=$(hostname -I 2>/dev/null || ip route get 1.2.3.4 | awk '{print $7}' 2>/dev/null)
+COUNT=0
+for IP in $IPS; do
+    if [[ ! "$IP" =~ ^127\\. ]]; then
+        echo -e "     \\033[1;36m➜  http://$IP:3000\\033[0m"
+        COUNT=$((COUNT+1))
+    fi
+done
+
+if [ $COUNT -eq 0 ]; then
+    echo -e "     \\033[1;31m⚠️ No se detectó dirección IP local activa. Conecte un cable Ethernet o Wi-Fi.\\033[0m"
+fi
+
+echo ""
+echo "  ----------------------------------------------------------------"
+echo -e "  \\033[1;35m[i] REGISTRO DE EVENTOS EN TIEMPO REAL (Live Logs):\\033[0m"
+echo "  ----------------------------------------------------------------"
+echo ""
+
+# Esperar señal de interrupción para salir limpiamente
+trap 'echo -e "\\n\\nSaliendo del monitor de consola..."; exit 0' INT TERM
+
+# Transmitir logs del sistema en vivo enfocándonos en el servidor Express y el kernel
+if command -v journalctl &>/dev/null; then
+    journalctl -f -u cminewar.service -o short-precise
+else
+    tail -f /var/log/syslog 2>/dev/null || dmesg -w
+fi
 """
-        with open(f"{mount_point}/etc/lightdm/lightdm.conf", "w") as f:
-            f.write(lightdm_config)
-        with open(f"{mount_point}/etc/lightdm/lightdm.conf.d/01_cminewar.conf", "w") as f:
-            f.write(lightdm_config)
+        monitor_path = f"{mount_point}/usr/local/bin/cminewar-console-monitor"
+        with open(monitor_path, "w") as f:
+            f.write(console_monitor_content)
+        run_cmd(f"chmod +x {monitor_path}", shell=True)
 
-        # 6.6 Configurar inicio automático de la aplicación independiente de escritorio nativo de CMineWar OS
-        print("[+] Configurando lanzador del entorno de escritorio de la aplicación nativa...")
-        autostart_dir = f"{mount_point}/etc/xdg/autostart"
-        run_cmd(f"mkdir -p {autostart_dir}", shell=True)
+        # 6.6 Agregar disparador al perfil del usuario para arrancar el monitor automáticamente en TTY1
+        print(f"[+] Configurando auto-arranque del monitor en el perfil de '{username}'...")
+        user_home = f"{mount_point}/root" if username == "root" else f"{mount_point}/home/{username}"
+        run_cmd(f"mkdir -p {user_home}", shell=True)
+        profile_path = f"{user_home}/.profile"
         
-        desktop_entry = """[Desktop Entry]
-Type=Application
-Name=CMineWar OS Desktop
-Exec=sh -c "sleep 4; python3 /opt/cminewar/cminewar-desktop-app.py"
-Terminal=false
-Icon=utilities-terminal
-Comment=Launch CMineWar OS Independent Desktop Panel
+        hook_content = """
+# Auto-arranque del Monitor de Consola de CMineWar OS en TTY1
+if [ "$(tty)" = "/dev/tty1" ]; then
+    # Esperar de forma activa a que el servidor Express local responda en el puerto 3000
+    while ! curl -s http://localhost:3000/api/cminewar/system-status &>/dev/null; do
+        sleep 0.5
+    done
+    exec /usr/local/bin/cminewar-console-monitor
+fi
 """
-        with open(f"{autostart_dir}/cminewar-desktop.desktop", "w") as f:
-            f.write(desktop_entry)
+        with open(profile_path, "a") as f:
+            f.write(hook_content)
 
-        # Configurar inicio ultra-rápido directo para Openbox (sin entornos de escritorio lentos)
-        openbox_autostart_dir = f"{mount_point}/etc/xdg/openbox"
-        run_cmd(f"mkdir -p {openbox_autostart_dir}", shell=True)
-        openbox_autostart_content = """# Desactivar protector de pantalla y suspensión por hardware
-xset s off -dpms &
-# Ejecutar la aplicación de estación de trabajo nativa e independiente CMineWar OS
-python3 /opt/cminewar/cminewar-desktop-app.py &
-"""
-        with open(f"{openbox_autostart_dir}/autostart", "w") as f:
-            f.write(openbox_autostart_content)
-
-        # 6.7 Establecer el objetivo de arranque del sistema en modo Gráfico
-        run_cmd(f"{chroot_cmd} systemctl set-default graphical.target", shell=True)
-        run_cmd(f"{chroot_cmd} systemctl enable lightdm.service", shell=True)
+        # 6.7 Establecer el objetivo de arranque del sistema en Consola pura Headless (multi-user.target)
+        print("[+] Desactivando entornos gráficos y estableciendo arranque en consola pura...")
+        run_cmd(f"{chroot_cmd} systemctl set-default multi-user.target", shell=True)
+        run_cmd(f"{chroot_cmd} systemctl disable lightdm.service || true", shell=True)
 
         # Limpieza de binds (con fallback de desmontaje perezoso 'lazy' en caso de bloqueo)
         run_cmd(f"umount {mount_point}/dev/pts || umount -l {mount_point}/dev/pts", shell=True)

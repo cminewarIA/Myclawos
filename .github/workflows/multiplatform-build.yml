@@ -90,7 +90,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Cache Gradle Packages
         uses: actions/cache@v4
@@ -326,15 +326,30 @@ jobs:
           
           # Copiar el logotipo de CMineWar para que sirva de icono de sistema en Debian
           mkdir -p cminewar-package/usr/share/icons/hicolor/48x48/apps
+          mkdir -p cminewar-package/usr/share/icons/hicolor/64x64/apps
+          mkdir -p cminewar-package/usr/share/icons/hicolor/128x128/apps
+          mkdir -p cminewar-package/usr/share/icons/hicolor/256x256/apps
+          mkdir -p cminewar-package/usr/share/icons/hicolor/512x512/apps
+          mkdir -p cminewar-package/usr/share/icons/hicolor/scalable/apps
+          mkdir -p cminewar-package/usr/share/pixmaps
+
+          LOGO_SRC=""
           if [ -f assets/logo.png ]; then
-            cp assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
-            cp assets/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
+            LOGO_SRC="assets/logo.png"
           elif [ -f src/assets/logo.png ]; then
-            cp src/assets/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
-            cp src/assets/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
+            LOGO_SRC="src/assets/logo.png"
           elif [ -f public/assets/branding/logo.png ]; then
-            cp public/assets/branding/logo.png cminewar-package/usr/share/pixmaps/cminewar-companion.png
-            cp public/assets/branding/logo.png cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
+            LOGO_SRC="public/assets/branding/logo.png"
+          fi
+
+          if [ ! -z "$LOGO_SRC" ]; then
+            cp "$LOGO_SRC" cminewar-package/usr/share/pixmaps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/48x48/apps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/64x64/apps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/128x128/apps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/256x256/apps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/512x512/apps/cminewar-companion.png
+            cp "$LOGO_SRC" cminewar-package/usr/share/icons/hicolor/scalable/apps/cminewar-companion.png
           fi
           
           # Crear script lanzador cminewar-companion
@@ -351,7 +366,7 @@ jobs:
           Name=CMineWar Remote Control
           Comment=Cliente de control remoto para servidores CMineWar OS
           Exec=/usr/bin/cminewar-companion
-          Icon=/usr/share/pixmaps/cminewar-companion.png
+          Icon=cminewar-companion
           Terminal=false
           Categories=Utility;System;
           EOF

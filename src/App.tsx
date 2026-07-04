@@ -54,7 +54,8 @@ import {
   Presentation,
   Chrome,
   FileCode,
-  LogOut
+  LogOut,
+  Bell
 } from "lucide-react";
 
 // Enforce exclusive real connections and intercept all API calls to point to the real remote host IP via helper utility
@@ -1045,6 +1046,7 @@ export default function App() {
 
   // Desktop environment states
   const [startMenuOpen, setStartMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [systemTime, setSystemTime] = useState(new Date());
   const [notifications, setNotifications] = useState<{ id: string; text: string; type: "success" | "info" }[]>([
     {
@@ -1452,7 +1454,7 @@ export default function App() {
                   clearTimeout(timeoutId);
                   if (res.ok) {
                     const data = await res.json();
-                    if (data && data.uptime !== undefined) {
+                    if (data && (data.status === "ok" || data.uptime !== undefined)) {
                       setConnError(null);
                       localStorage.setItem("cminewar_connected_server_ip", ipVal);
                       setConnectedServerIp(ipVal);
@@ -1782,6 +1784,84 @@ export default function App() {
             triggerNotification={triggerNotification}
           />
 
+          {/* Notification Bell Button */}
+          <div className="relative">
+            <button
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className={`flex items-center justify-center p-1.5 rounded-md border transition-all cursor-pointer relative ${
+                notificationsOpen
+                  ? "bg-emerald-950/40 border-emerald-500/50 text-emerald-300"
+                  : "bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+              }`}
+              title="Notificaciones y Registro del Sistema"
+              id="dsm-notifications-toggle"
+            >
+              <Bell size={12} className={notifications.length > 0 ? "animate-bounce" : ""} />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-slate-950 animate-pulse"></span>
+              )}
+            </button>
+
+            {/* DSM 7 style Notification Panel Dropdown */}
+            {notificationsOpen && (
+              <div 
+                className="absolute right-0 mt-2 w-80 bg-slate-950/95 backdrop-blur-xl border border-slate-800/90 shadow-[0_10px_40px_rgba(0,0,0,0.6)] rounded-xl p-4 z-[1000] flex flex-col space-y-3 text-sans select-none animate-fade-in"
+                id="dsm-notifications-dropdown"
+              >
+                <div className="flex items-center justify-between border-b border-slate-900 pb-2.5">
+                  <span className="text-xs font-black tracking-wider text-slate-200 flex items-center space-x-1.5 uppercase font-mono">
+                    <Bell size={11} className="text-emerald-400" />
+                    <span>Notificaciones</span>
+                  </span>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="text-[9px] font-mono text-slate-500 hover:text-emerald-400 hover:underline cursor-pointer uppercase"
+                    >
+                      Borrar Todo
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-2 no-scrollbar min-h-[100px] flex flex-col">
+                  {notifications.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                      <span className="text-[10px] text-slate-500 italic">No hay alertas pendientes. Su NAS está optimizado y funcionando normalmente.</span>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div 
+                        key={n.id} 
+                        className={`p-2.5 rounded-lg border text-[10.5px] leading-relaxed flex items-start space-x-2.5 transition bg-slate-900/40 border-slate-900 ${
+                          n.type === "success" ? "hover:border-emerald-500/20" : "hover:border-cyan-500/20"
+                        }`}
+                      >
+                        <span className="mt-0.5 shrink-0">
+                          {n.type === "success" ? "🟢" : "🔵"}
+                        </span>
+                        <div className="flex-1 text-slate-300">
+                          {n.text}
+                        </div>
+                        <button
+                          onClick={() => removeNotification(n.id)}
+                          className="text-slate-650 hover:text-red-400 transition"
+                          title="Descartar"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="border-t border-slate-900 pt-2.5 flex items-center justify-between text-[8.5px] font-mono text-slate-500">
+                  <span>DISPOSITIVO: cminewar-nas</span>
+                  <span>ESTADO: SALUDABLE</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Toggle Widget Panel Button */}
           <button
             onClick={() => setWidgetsOpen(!widgetsOpen)}
@@ -2028,10 +2108,10 @@ export default function App() {
               /* CMineWar OS PC Widget card (Full detail widget) */
               <>
                 {/* Health Section */}
-                <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                <div className="flex items-center justify-between border-b border-slate-900/80 pb-2">
                   <div className="flex items-center space-x-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-200 font-sans">Monitor de Recursos CMineWar OS</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-200 font-mono">Estado del Sistema</h4>
                   </div>
                   <button 
                     onClick={() => setWidgetsOpen(false)}
@@ -2044,59 +2124,76 @@ export default function App() {
                 </div>
 
                 {/* Health Indicator card */}
-                <div className="flex items-center space-x-3 bg-emerald-950/30 border border-emerald-500/20 p-2.5 rounded-lg">
-                  <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-full shrink-0">
-                    <Activity size={18} className="animate-pulse" />
+                <div className="flex items-start space-x-3 bg-emerald-950/20 border border-emerald-500/20 p-2.5 rounded-xl">
+                  <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-full shrink-0">
+                    <Activity size={16} className="animate-pulse" />
                   </div>
-                  <div>
-                    <h5 className="text-[10px] font-mono uppercase font-bold text-emerald-400">Estado del Sistema</h5>
-                    <p className="text-[11px] font-semibold text-slate-200 font-sans">Su CMineWar-NAS funciona excelente.</p>
+                  <div className="space-y-0.5">
+                    <h5 className="text-[9px] font-mono uppercase font-bold text-emerald-400 tracking-wider">CMineWar-NAS Saludable</h5>
+                    <p className="text-[10.5px] font-medium text-slate-300 font-sans leading-normal">Todos los servicios y deamon lógicos funcionan en excelentes condiciones.</p>
+                  </div>
+                </div>
+
+                {/* Donut Resource gauges side-by-side */}
+                <div className="flex items-center justify-around py-3 bg-slate-900/40 border border-slate-900/60 rounded-xl p-3">
+                  {/* CPU Circular Chart */}
+                  <div className="flex flex-col items-center space-y-1.5">
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="absolute w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="26" stroke="rgba(30, 41, 59, 0.4)" strokeWidth="4" fill="transparent" />
+                        <circle cx="32" cy="32" r="26" stroke="#10b981" strokeWidth="4" fill="transparent"
+                          strokeDasharray={2 * Math.PI * 26}
+                          strokeDashoffset={2 * Math.PI * 26 * (1 - 0.24)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className="text-[11px] font-black text-slate-100 font-mono">24%</span>
+                    </div>
+                    <span className="text-[8.5px] font-mono font-bold text-slate-400 uppercase tracking-widest">CPU</span>
+                  </div>
+
+                  {/* RAM Circular Chart */}
+                  <div className="flex flex-col items-center space-y-1.5">
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="absolute w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="26" stroke="rgba(30, 41, 59, 0.4)" strokeWidth="4" fill="transparent" />
+                        <circle cx="32" cy="32" r="26" stroke="#06b6d4" strokeWidth="4" fill="transparent"
+                          strokeDasharray={2 * Math.PI * 26}
+                          strokeDashoffset={2 * Math.PI * 26 * (1 - 0.38)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className="text-[11px] font-black text-slate-100 font-mono">38%</span>
+                    </div>
+                    <span className="text-[8.5px] font-mono font-bold text-slate-400 uppercase tracking-widest">Memoria</span>
                   </div>
                 </div>
 
                 {/* Resource Stats bars */}
-                <div className="space-y-3.5 pt-1 text-xs font-sans">
-                  {/* CPU Usage */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
-                      <span>Procesamiento (CPU Core)</span>
-                      <span className="text-emerald-400 font-bold">24%</span>
-                    </div>
-                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
-                      <div className="bg-emerald-500 h-full w-[24%] transition-all duration-700"></div>
-                    </div>
-                  </div>
-
-                  {/* RAM Memory Usage */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
-                      <span>Memoria Física (Virtual RAM)</span>
-                      <span className="text-cyan-400 font-bold">38%</span>
-                    </div>
-                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
-                      <div className="bg-cyan-500 h-full w-[38%] transition-all duration-700"></div>
-                    </div>
-                  </div>
-
+                <div className="space-y-3 pt-1 text-xs font-sans">
                   {/* VFS Space Usage */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 font-semibold">
-                      <span>Volumen virtual (VFS /vfs)</span>
-                      <span className="text-pink-400 font-bold">14.6 GB / 32 GB (45%)</span>
+                  <div className="space-y-1 bg-slate-900/20 border border-slate-900/30 p-2.5 rounded-xl">
+                    <div className="flex justify-between items-center text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider">
+                      <span>Volumen Virtual (VFS /vfs)</span>
+                      <span className="text-pink-400 font-bold">45%</span>
                     </div>
-                    <div className="w-full bg-slate-900 h-2 rounded overflow-hidden">
+                    <div className="w-full bg-slate-950 h-1.5 rounded overflow-hidden">
                       <div className="bg-pink-500 h-full w-[45%] transition-all duration-700"></div>
+                    </div>
+                    <div className="flex justify-between text-[8px] text-slate-500 font-mono">
+                      <span>Usado: 14.6 GB</span>
+                      <span>Total: 32 GB</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Synology Services status indicators */}
-                <div className="border-t border-slate-900 pt-3 text-[10px] space-y-1.5 font-mono">
-                  <div className="flex items-center justify-between text-slate-550 flex-wrap">
+                <div className="border-t border-slate-900/80 pt-3 text-[9px] space-y-1.5 font-mono">
+                  <div className="flex items-center justify-between text-slate-400 flex-wrap">
                     <span>IP GATEWAY:</span>
-                    <span className="text-cyan-400">{connectedServerIp || "127.0.0.1 (Local)"}</span>
+                    <span className="text-cyan-400 font-bold">{connectedServerIp || "127.0.0.1 (Local)"}</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-550 flex-wrap">
+                  <div className="flex items-center justify-between text-slate-400 flex-wrap">
                     <span>CONEXIÓN UDEV:</span>
                     <span className="text-emerald-400 font-bold">ACTIVO SHM</span>
                   </div>
@@ -2281,10 +2378,10 @@ export default function App() {
 
       {/* Decorative desktop greeting in the center removed as per user request */}
 
-      {/* App Drawer Fullscreen Overlay (CMineWar OS Style Main Menu) */}
+      {/* App Drawer Overlay (DSM 7 inspired Floating Main Menu) */}
       {appDrawerOpen && (
         <div 
-          className="absolute inset-x-0 top-0 bottom-0 z-[9999] bg-slate-950/90 backdrop-blur-xl animate-fade-in flex flex-col p-6 overflow-hidden text-sans select-none"
+          className="absolute inset-4 md:inset-8 z-[9999] bg-slate-950/85 border border-slate-800/80 shadow-[0_25px_60px_rgba(0,0,0,0.85)] backdrop-blur-3xl animate-fade-in flex flex-col p-6 md:p-8 rounded-3xl overflow-hidden text-sans select-none"
           id="cajon-apps-overlay"
         >
           {/* Header filter & Title bar */}

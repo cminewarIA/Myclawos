@@ -53,7 +53,8 @@ app.get("/api/cminewar/system-status", (req, res) => {
   res.json({
     status: "ok",
     instanceId: SERVER_INSTANCE_ID,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    uptime: Math.round(os.uptime())
   });
 });
 
@@ -442,19 +443,50 @@ app.get("/api/cminewar/disks", (req, res) => {
   // En Linux real, listamos los dispositivos de almacenamiento físico por bus
   if (process.platform === "linux") {
     try {
-      const output = execSync("lsblk -d -o NAME,SIZE,TYPE,TRAN -r").toString();
-      const lines = output.trim().split("\n");
       const disks = [];
+      
+      // Intentar primero formato JSON, que es 100% robusto y no depende del parseo de espacios en blanco
+      try {
+        const jsonOutput = execSync("lsblk -J -d -o NAME,SIZE,TYPE,TRAN").toString();
+        const parsed = JSON.parse(jsonOutput);
+        if (parsed && parsed.blockdevices) {
+          for (const dev of parsed.blockdevices) {
+            if (dev.type === "disk") {
+              disks.push({
+                name: dev.name,
+                size: dev.size || "Generic",
+                type: dev.type,
+                transport: dev.tran || "sata"
+              });
+            }
+          }
+        }
+      } catch (jsonErr) {
+        console.warn("Fallo el comando lsblk -J (JSON). Usando fallback manual por regex...");
+        const output = execSync("lsblk -d -o NAME,SIZE,TYPE,TRAN -r").toString();
+        const lines = output.trim().split("\n");
 
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(" ");
-        if (parts.length >= 2 && parts[2] === "disk") {
-          disks.push({
-            name: parts[0],
-            size: parts[1] || "Generic",
-            type: parts[2],
-            transport: parts[3] || "sata"
-          });
+        for (let i = 1; i < lines.length; i++) {
+          // Dividir por cualquier secuencia de espacios en blanco (robusto frente a múltiples espacios)
+          const parts = lines[i].trim().split(/\s+/);
+          if (parts.length >= 2) {
+            // lsblk -r a veces junta campos o la longitud puede variar si TRAN está vacío.
+            const isDisk = parts.includes("disk");
+            if (isDisk) {
+              const diskIdx = parts.indexOf("disk");
+              const name = parts[0];
+              const size = diskIdx > 1 ? parts[1] : "Generic";
+              // El transporte suele ser el elemento siguiente a "disk" en la salida raw si está disponible
+              const transport = parts[diskIdx + 1] || "sata";
+              
+              disks.push({
+                name,
+                size,
+                type: "disk",
+                transport: transport.toLowerCase() === "usb" ? "usb" : transport
+              });
+            }
+          }
         }
       }
 
