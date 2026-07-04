@@ -452,7 +452,14 @@ export default function Chromium() {
         {/* Chrome Dev Badge */}
         <div className="hidden md:flex items-center space-x-1.5 px-2 py-0.5 bg-blue-950/80 border border-blue-800 text-blue-400 rounded-full text-[9px] font-mono whitespace-nowrap">
           <Chrome size={10} className="text-blue-400 animate-spin" />
-          <span>Chrome Dev v125</span>
+          <span>Chrome Dev {(() => {
+            if (typeof window !== "undefined" && window.navigator) {
+              const ua = window.navigator.userAgent;
+              const match = ua.match(/(?:Chrome|Chromium|CriOS)\/([0-9.]+)/);
+              if (match) return `v${match[1]}`;
+            }
+            return "v125.0.6422.112";
+          })()}</span>
         </div>
       </div>
 

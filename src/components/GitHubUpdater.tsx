@@ -509,6 +509,7 @@ echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMin
   const [activeBootloader, setActiveBootloader] = useState(() => localStorage.getItem("cminewar_bootloader_version") || "CMineWar-GRUB MBR v2.06");
   const [isSafeModeArmed, setIsSafeModeArmed] = useState(() => localStorage.getItem("cminewar_safe_mode") === "true");
   const [forceAndroidSim, setForceAndroidSim] = useState(() => localStorage.getItem("cminewar_force_android") === "true");
+  const [skipBootloader, setSkipBootloader] = useState(() => localStorage.getItem("cminewar_skip_bootloader") === "true");
 
   // Portable SSD Boot & Triple Compatibility (UEFI, Legacy, BIOS antiguas)
   const [ssdPortableMode, setSsdPortableMode] = useState<"hybrid" | "uefi_only" | "legacy_only">(() => {
@@ -568,7 +569,8 @@ echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMin
     localStorage.setItem("cminewar_bootloader_version", activeBootloader);
     localStorage.setItem("cminewar_safe_mode", String(isSafeModeArmed));
     localStorage.setItem("cminewar_force_android", String(forceAndroidSim));
-  }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval, activeKernel, activeBootloader, isSafeModeArmed, forceAndroidSim]);
+    localStorage.setItem("cminewar_skip_bootloader", String(skipBootloader));
+  }, [gitOwner, gitRepo, gitBranch, gitPat, installedSha, installedMessage, installedDate, isDaemonActive, pollInterval, activeKernel, activeBootloader, isSafeModeArmed, forceAndroidSim, skipBootloader]);
 
   useEffect(() => {
     localStorage.setItem("cminewar_installed_packages", JSON.stringify(installedPackages));
@@ -602,31 +604,59 @@ echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMin
 
   // Fallback dynamic database loader inside Control Panel
   const loadSimulatedCommits = () => {
-    const baseCommits: CommitInfo[] = [
-      {
-        sha: "a59e81b3f9dc23d8c1920ac349e1e2d93e1b7fcf",
-        message: "feat: Añadir módulo de sincronización GitHub auto-actualizable y daemon de sondeo",
-        author: gitOwner || "cminewar",
-        date: "28/5/2026, 19:28:15",
-        url: "#"
-      },
-      {
-        sha: "e1029cbb31b7cbd23d8c19a924abdc29009fa5d2",
-        message: "feat: Refactorización total de Ajustes y Control de Hardware + Centro de Paquetes",
-        author: "cortex-developer",
-        date: "28/5/2026, 23:20:00",
-        url: "#"
-      },
-      {
-        sha: "b7c25e89a5dfc37cc19b22e11a12e84cdd3a09fa",
-        message: "refactor: Reestructurar kernel-core y gestores auxiliares de CMineWar OS",
-        author: "admin-cminewar",
-        date: "28/5/2026, 12:44:00",
-        url: "#"
-      }
-    ];
-    setCommits(baseCommits);
-    setLatestSha(baseCommits[0].sha);
+    setIsFetching(true);
+    setFetchError(null);
+    fetch(`https://api.github.com/repos/${gitOwner || "cminewarIA"}/${gitRepo || "MyCMineWarOS"}/commits?sha=${gitBranch || "main"}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Repositorio no encontrado o límite de tasa API excedido");
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const fetchedCommits = data.slice(0, 5).map((c: any) => ({
+            sha: c.sha,
+            message: c.commit.message,
+            author: c.commit?.author?.name || c.author?.login || "cminewar",
+            date: c.commit?.author?.date ? new Date(c.commit.author.date).toLocaleString() : new Date().toLocaleString(),
+            url: c.html_url
+          }));
+          setCommits(fetchedCommits);
+          if (fetchedCommits.length > 0) {
+            setLatestSha(fetchedCommits[0].sha);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Fallo al obtener commits reales de GitHub, usando fallback simulado:", err);
+        const baseCommits: CommitInfo[] = [
+          {
+            sha: "a59e81b3f9dc23d8c1920ac349e1e2d93e1b7fcf",
+            message: "feat: Añadir módulo de sincronización GitHub auto-actualizable y daemon de sondeo",
+            author: gitOwner || "cminewar",
+            date: "28/5/2026, 19:28:15",
+            url: "#"
+          },
+          {
+            sha: "e1029cbb31b7cbd23d8c19a924abdc29009fa5d2",
+            message: "feat: Refactorización total de Ajustes y Control de Hardware + Centro de Paquetes",
+            author: "cortex-developer",
+            date: "28/5/2026, 23:20:00",
+            url: "#"
+          },
+          {
+            sha: "b7c25e89a5dfc37cc19b22e11a12e84cdd3a09fa",
+            message: "refactor: Reestructurar kernel-core y gestores auxiliares de CMineWar OS",
+            author: "admin-cminewar",
+            date: "28/5/2026, 12:44:00",
+            url: "#"
+          }
+        ];
+        setCommits(baseCommits);
+        setLatestSha(baseCommits[0].sha);
+      })
+      .finally(() => {
+        setIsFetching(false);
+      });
   };
 
   useEffect(() => {
@@ -1046,7 +1076,7 @@ echo "========================================================================="
   };
 
   // Original GitHub Sync updater sequence
-  const executeGitSync = (targetSha: string, message: string, author: string, date: string) => {
+  const executeGitSync = async (targetSha: string, message: string, author: string, date: string) => {
     if (updating || rebooting) return;
     setUpdating(true);
     setUpdateProgress(0);
@@ -1056,6 +1086,33 @@ echo "========================================================================="
       `📦 [MANIFEST] Descargando manifiesto de archivos modificado en el commit ${targetSha.substring(0, 7)}...`,
       `📝 [COMMIT REVELADO] "${message}" de ${author}`,
     ]);
+
+    try {
+      const res = await cminewarFetch("/api/cminewar/github-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: gitOwner, repo: gitRepo, branch: gitBranch })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUpdateLogs((old) => [
+          ...old,
+          `📥 [SINC COGNITIVA] Actualización real descargada de GitHub:`,
+          `stdout: ${data.stdout || "Sin salida"}`,
+          `stderr: ${data.stderr || "Sin salida"}`
+        ]);
+      } else {
+        setUpdateLogs((old) => [
+          ...old,
+          `⚠️ [SINC SIMULADA] Sincronización real con GitHub falló o está offline (Se usará fallback local): ${data.message || data.error}`
+        ]);
+      }
+    } catch (e: any) {
+      setUpdateLogs((old) => [
+        ...old,
+        `⚠️ [SINC SIMULADA] No se pudo conectar al backend de actualización, procediendo en modo virtual offline.`
+      ]);
+    }
 
     const syncSteps = [
       "🔍 [STAGE 1] Comparando árboles de archivos lógicos locales contra repos remotos...",
@@ -2979,6 +3036,29 @@ echo "========================================================================="
                   </button>
                 </div>
 
+                {/* 1.5 Skip Bootloader Switch */}
+                <div className="flex justify-between items-center bg-slate-900/30 p-2.5 rounded-lg border border-slate-900">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-slate-300 block">Omitir Cargador GRUB/BIOS</span>
+                    <span className="text-[9px] text-slate-500 block">Salta la simulación de arranque y entra directo al sistema.</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const skip = !skipBootloader;
+                      setSkipBootloader(skip);
+                      localStorage.setItem("cminewar_skip_bootloader", String(skip));
+                      triggerNotification(skip ? "Arranque rápido activado: Cargador GRUB omitido." : "Cargador de arranque GRUB/BIOS re-activado.", "info");
+                    }}
+                    className={`px-3 py-1 text-[10px] font-mono font-bold rounded uppercase transition ${
+                      skipBootloader 
+                        ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400" 
+                        : "bg-slate-800 hover:bg-slate-750 text-slate-400 border border-slate-700"
+                    }`}
+                  >
+                    {skipBootloader ? "OMITIR (ON)" : "MOSTRAR (OFF)"}
+                  </button>
+                </div>
+
                 {/* Emergency manual restart trigger */}
                 {isSafeModeArmed && (
                   <button
@@ -3486,6 +3566,126 @@ echo "========================================================================="
                     Limpiar Caché
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* GRUB & INSTALLATION BOOTLOADER INTEGRATED CONFIGURATION PANEL */}
+          <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-4 text-left select-none">
+            <div className="border-b border-slate-900 pb-2.5">
+              <span className="text-[9px] uppercase tracking-widest font-mono text-orange-500 font-bold block flex items-center">
+                <Cpu size={12} className="mr-1.5 text-orange-400" />
+                <span>⚙️ Configuración del Cargador de Arranque GRUB del Instalador USB</span>
+              </span>
+              <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                Ajusta los parámetros de arranque que se grabarán nativamente en el USB de instalación de Ubuntu. Estos parámetros aseguran la compatibilidad del cargador de arranque con cualquier BIOS, placa base UEFI, o Secure Boot.
+              </p>
+            </div>
+
+            {/* Status info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px] font-mono">
+              <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
+                <span className="text-slate-550 block text-[8px] uppercase font-bold text-slate-400">NÚCLEO INSTALADOR (Kernel):</span>
+                <span className="text-orange-400 font-bold block mt-1 truncate" title={activeKernel}>{activeKernel}</span>
+              </div>
+              <div className="bg-slate-900/55 p-2.5 rounded-lg border border-slate-900">
+                <span className="text-slate-550 block text-[8px] uppercase font-bold text-slate-400">CARGADOR SELECCIONADO (Bootloader):</span>
+                <span className="text-orange-400 font-bold block mt-1 truncate" title={activeBootloader}>{activeBootloader}</span>
+              </div>
+            </div>
+
+            {/* Config select options */}
+            <div className="space-y-3.5 bg-slate-900/40 p-3 rounded-lg border border-slate-900/80">
+              <span className="text-[9px] text-slate-400 uppercase font-mono font-bold tracking-wider block border-b border-slate-800/40 pb-1.5">
+                📁 Parámetros de Arranque e Inyección del Cargador:
+              </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs font-sans">
+                {/* Select System Boot mode */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Modo de Arranque Target:</span>
+                  <select
+                    value={ssdPortableMode}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setSsdPortableMode(val);
+                      localStorage.setItem("cminewar_ssd_portable_mode", val);
+                      window.dispatchEvent(new Event("storage"));
+                      triggerNotification(`Modo de arranque SSD cambiado a: ${val.toUpperCase()}`, "success");
+                    }}
+                    className="bg-slate-950 border border-slate-800 hover:border-orange-500/30 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-orange-500 text-[10px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                  >
+                    <option value="hybrid">📀 Híbrido Total (UEFI GPT + MBR BIOS Legacy)</option>
+                    <option value="uefi_only">🔬 UEFI Nativo (GPT Solo - Sectores UEFI x64/ia32)</option>
+                    <option value="legacy_only">💾 Legacy BIOS / MBR Puro (Para máquinas heredadas)</option>
+                  </select>
+                </div>
+
+                {/* Secure boot SHIM keys toggle */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Secure Boot (Claves Microsoft SHIM):</span>
+                  <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                    <span className="text-[10px] text-slate-400 font-mono">Shim Loader & MOK:</span>
+                    <button
+                      onClick={() => {
+                        const val = !ssdMokEnrolled;
+                        setSsdMokEnrolled(val);
+                        localStorage.setItem("cminewar_ssd_mok_enrolled", String(val));
+                        window.dispatchEvent(new Event("storage"));
+                        triggerNotification(val ? "Firma Shim para Secure Boot habilitada." : "Shim Secure Boot omitido.", "info");
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                        ssdMokEnrolled ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {ssdMokEnrolled ? "FIRMADAS (MOK)" : "PASSTHROUGH"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hardware auto-sensing toggle */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">HW Autodetect (Elastic UDEV):</span>
+                  <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                    <span className="text-[10px] text-slate-400 font-mono">Universal Storage Drivers:</span>
+                    <button
+                      onClick={() => {
+                        const val = !ssdAutoSensingEnabled;
+                        setSsdAutoSensingEnabled(val);
+                        localStorage.setItem("cminewar_ssd_autosensing", String(val));
+                        window.dispatchEvent(new Event("storage"));
+                        triggerNotification(val ? "Autodetección de buses USB-Storage, NVMe, AHCI y UAS activada." : "Autodetección desactivada.", "info");
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                        ssdAutoSensingEnabled ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {ssdAutoSensingEnabled ? "DIVERS ELÁSTICOS" : "ESTÁTICO_CORE"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* CHS limitation for older PCs */}
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-mono font-extrabold tracking-wider">Límite LBA (Ancient BIOS anterior a 2002):</span>
+                  <div className="flex items-center justify-between bg-slate-950 px-2.5 py-1 rounded border border-slate-800 min-h-[30px]">
+                    <span className="text-[10px] text-slate-400 font-mono">Restricción de Cilindros CHS:</span>
+                    <button
+                      onClick={() => {
+                        const val = !ssdLbaLimitEnabled;
+                        setSsdLbaLimitEnabled(val);
+                        localStorage.setItem("cminewar_ssd_lba_limit", String(val));
+                        window.dispatchEvent(new Event("storage"));
+                        triggerNotification(val ? "Restricción CHS activa por debajo de 137 GB para BIOS obsoletas." : "LBA de 48 bits lineal activa.", "info");
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-black transition ${
+                        ssdLbaLimitEnabled ? "bg-rose-500/10 text-rose-450 border border-rose-500/20" : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {ssdLbaLimitEnabled ? "ACTIVADA (<137GB)" : "ILIMITADO (48B)"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

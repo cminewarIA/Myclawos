@@ -70,6 +70,9 @@ export default function App() {
       return "bootloader";
     }
     if (typeof window !== "undefined" && localStorage.getItem("cminewar_connected_server_ip")) {
+      if (localStorage.getItem("cminewar_skip_bootloader") === "true") {
+        return "ready";
+      }
       return "bootloader";
     }
     return "gateway";
@@ -207,7 +210,8 @@ export default function App() {
         console.log(`[AUTOCONNECT] Detectado un único nodo activo (${autoIp}). Iniciando sesión automáticamente...`);
         localStorage.setItem("cminewar_connected_server_ip", autoIp);
         setConnectedServerIp(autoIp);
-        setBootLifecycle("bootloader");
+        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+        setBootLifecycle(nextState);
       }
     };
 
@@ -1432,7 +1436,8 @@ export default function App() {
                 setConnError(null);
                 localStorage.setItem("cminewar_connected_server_ip", "demo");
                 setConnectedServerIp("demo");
-                setBootLifecycle("bootloader");
+                const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                setBootLifecycle(nextState);
                 return;
               }
 
@@ -1458,7 +1463,8 @@ export default function App() {
                       setConnError(null);
                       localStorage.setItem("cminewar_connected_server_ip", ipVal);
                       setConnectedServerIp(ipVal);
-                      setBootLifecycle("bootloader");
+                      const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                      setBootLifecycle(nextState);
                     } else {
                       setConnError("NODO INVÁLIDO. El host respondió pero no tiene el formato de CMineWar OS.");
                     }
@@ -1520,7 +1526,8 @@ export default function App() {
                       onClick={() => {
                         localStorage.setItem("cminewar_connected_server_ip", nodeIp);
                         setConnectedServerIp(nodeIp);
-                        setBootLifecycle("bootloader");
+                        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                        setBootLifecycle(nextState);
                       }}
                       className="px-2 py-1.5 bg-emerald-950/40 border border-emerald-800/40 hover:border-emerald-500 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 rounded-md text-[11px] font-mono transition cursor-pointer text-center truncate uppercase"
                     >

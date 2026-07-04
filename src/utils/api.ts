@@ -13,7 +13,7 @@ export async function cminewarFetch(input: RequestInfo | URL, init?: RequestInit
 
   if (typeof window !== "undefined") {
     const savedIp = localStorage.getItem("cminewar_connected_server_ip");
-    if (savedIp) {
+    if (savedIp && savedIp.toLowerCase() !== "demo") {
       // Rewrite relative /api/cminewar paths or paths containing /api/cminewar
       if ((url.startsWith("/api/cminewar") || url.includes("/api/cminewar")) && !url.includes("/api/cminewar/proxy")) {
         // Only rewrite if it's not already absolute

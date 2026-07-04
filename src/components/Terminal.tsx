@@ -85,6 +85,19 @@ export default function Terminal({
   const [historySearch, setHistorySearch] = useState("");
   const [selectedHistoryIdx, setSelectedHistoryIdx] = useState(0);
 
+  const [systemUser, setSystemUser] = useState("user");
+  const [systemHostname, setSystemHostname] = useState("cminewar");
+
+  useEffect(() => {
+    cminewarFetch("/api/cminewar/terminal-info")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.username) setSystemUser(data.username);
+        if (data && data.hostname) setSystemHostname(data.hostname);
+      })
+      .catch((err) => console.error("Error fetching terminal info:", err));
+  }, []);
+
   // Sync command history to localStorage
   useEffect(() => {
     localStorage.setItem("claw_terminal_history", JSON.stringify(commandHistory));
@@ -141,9 +154,9 @@ export default function Terminal({
 
     // Show input echo line
     const isRoot = localStorage.getItem("claw_is_root") === "true";
-    const promptUser = isRoot ? "root" : "user";
+    const promptUser = isRoot ? "root" : systemUser;
     const promptChar = isRoot ? "#" : "$";
-    const pathPrompt = `${promptUser}@cminewar:${getPathString(currentPath)}${promptChar}`;
+    const pathPrompt = `${promptUser}@${systemHostname}:${getPathString(currentPath)}${promptChar}`;
     addLine(`${pathPrompt} ${trimmed}`, "input");
 
     // Parse command name and arguments
@@ -632,16 +645,41 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           addLine(`Ejecutando script local '${cmd}':`, "info");
           addLine(selfFile.content || "Sin salida estándar.", "output");
         } else {
-          addLine(`clawbash: comando no encontrado: '${cmd}'.`, "error");
-          addLine("Tip: Escribe 'help' para descubrir utilidades.", "info");
-          wasSuccess = false;
-          failureReason = `Comando no encontrado: ${cmd}`;
+          try {
+            const executeRes = await cminewarFetch("/api/cminewar/terminal/execute", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ command: trimmed, cwd: "/" + currentPath.join("/") })
+            });
+            if (executeRes.ok) {
+              const execData = await executeRes.json();
+              if (execData.stdout) {
+                addLine(execData.stdout, "output");
+              }
+              if (execData.stderr) {
+                addLine(execData.stderr, "error");
+              }
+              if (execData.error) {
+                addLine(`Error: ${execData.error}`, "error");
+                wasSuccess = false;
+                failureReason = execData.error;
+              }
+            } else {
+              addLine(`Error al conectar con el motor del terminal del host (Código: ${executeRes.status})`, "error");
+              wasSuccess = false;
+              failureReason = `Estado HTTP: ${executeRes.status}`;
+            }
+          } catch (execErr: any) {
+            addLine(`Fallo en la comunicación con el host: ${execErr.message}`, "error");
+            wasSuccess = false;
+            failureReason = execErr.message;
+          }
         }
         break;
     }
 
     // Guardar registro de auditoría persistente en /var/log/cmd.log
-    const logUser = isRoot ? "root" : "user_claw_developer";
+    const logUser = isRoot ? "root" : systemUser;
     const logTime = new Date().toISOString().replace("T", " ").substring(0, 19);
     const logStatus = wasSuccess ? "SUCCESS" : `FAILED [${failureReason}]`;
     const logEntry = `[${logTime}] User: ${logUser} | Cwd: ${getPathString(currentPath)} | Cmd: "${trimmed}" | Status: ${logStatus}\n`;
@@ -828,7 +866,7 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       {/* Shell interactive command builder */}
       <div className="flex items-center space-x-1.5 border-t border-slate-900/60 pt-3 mt-4 shrink-0">
         <span className={`${colorClasses.text} font-bold shrink-0`}>
-          {localStorage.getItem("claw_is_root") === "true" ? "root" : "user"}@cminewar:{getPathString(currentPath)}{localStorage.getItem("claw_is_root") === "true" ? "#" : "$"}
+          {localStorage.getItem("claw_is_root") === "true" ? "root" : systemUser}@{systemHostname}:{getPathString(currentPath)}{localStorage.getItem("claw_is_root") === "true" ? "#" : "$"}
         </span>
         <div className="flex-1 relative flex items-center">
           <input

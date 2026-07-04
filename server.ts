@@ -58,6 +58,85 @@ app.get("/api/cminewar/system-status", (req, res) => {
   });
 });
 
+// GET /api/cminewar/terminal-info - Real system username and hostname
+app.get("/api/cminewar/terminal-info", (req, res) => {
+  try {
+    const username = os.userInfo().username || "user";
+    const hostname = os.hostname() || "cminewar";
+    res.json({ username, hostname });
+  } catch (err: any) {
+    res.json({ username: "user", hostname: "cminewar", error: err.message });
+  }
+});
+
+// POST /api/cminewar/terminal/execute - Execute real command on the host
+app.post("/api/cminewar/terminal/execute", (req, res) => {
+  const { command, cwd } = req.body;
+  if (!command) {
+    return res.status(400).json({ error: "Falta especificar el comando" });
+  }
+
+  console.log(`[TERMINAL HOST] Ejecutando: ${command} en ${cwd || "root"}`);
+  
+  const { exec } = require("child_process");
+  exec(command, { cwd: process.cwd() }, (error: any, stdout: string, stderr: string) => {
+    res.json({
+      stdout: stdout || "",
+      stderr: stderr || "",
+      error: error ? error.message : null
+    });
+  });
+});
+
+// POST /api/cminewar/github-update - Actualiza de forma real con el código de GitHub
+app.post("/api/cminewar/github-update", (req, res) => {
+  const { owner, repo, branch } = req.body;
+  const safeOwner = owner || "cminewarIA";
+  const safeRepo = repo || "MyCMineWarOS";
+  const safeBranch = branch || "main";
+  
+  console.log(`[GITHUB REAL UPDATE] Sincronizando con ${safeOwner}/${safeRepo}:${safeBranch}`);
+  
+  const { exec } = require("child_process");
+  exec("git pull origin " + safeBranch, (err: any, stdout: string, stderr: string) => {
+    if (err) {
+      const cmdSeq = [
+        "git init",
+        `git remote add origin https://github.com/${safeOwner}/${safeRepo}.git || git remote set-url origin https://github.com/${safeOwner}/${safeRepo}.git`,
+        `git fetch origin ${safeBranch}`,
+        `git reset --hard origin/${safeBranch}`
+      ].join(" && ");
+      
+      console.log("[GITHUB REAL UPDATE] No se detectó repo inicializado. Intentando inicialización completa...");
+      
+      exec(cmdSeq, (initErr: any, initStdout: string, initStderr: string) => {
+        if (initErr) {
+          return res.json({
+            success: false,
+            message: "No se pudo realizar la actualización real (Falta configurar credenciales Git/Internet o el repositorio está vacío).",
+            stdout: initStdout,
+            stderr: initStderr,
+            error: initErr.message
+          });
+        }
+        return res.json({
+          success: true,
+          message: "Sincronización y actualización real completada con éxito desde GitHub.",
+          stdout: initStdout,
+          stderr: initStderr
+        });
+      });
+    } else {
+      res.json({
+        success: true,
+        message: "Sincronizado y actualizado con éxito mediante git pull.",
+        stdout,
+        stderr
+      });
+    }
+  });
+});
+
 // GET /api/cminewar/system-metrics - Real host telemetry (real Debian desktop integration)
 app.get("/api/cminewar/system-metrics", (req, res) => {
   const isLinux = process.platform === "linux";
@@ -1027,7 +1106,8 @@ app.all("/api/cminewar/proxy", async (req, res) => {
   // Build the target remote URL
   const pathStr = String(targetPath);
   const cleanPath = pathStr.startsWith("/") ? pathStr : "/" + pathStr;
-  const targetUrl = `http://${targetIp}:3000${cleanPath}`;
+  const resolvedIp = String(targetIp).toLowerCase() === "demo" ? "127.0.0.1" : targetIp;
+  const targetUrl = `http://${resolvedIp}:3000${cleanPath}`;
 
   try {
     const method = req.method;
