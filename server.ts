@@ -41,6 +41,14 @@ app.use(express.json());
 // Unique runtime instance identifier generated on server startup to track hot rebuilds/reloads
 const SERVER_INSTANCE_ID = Date.now().toString() + "_" + Math.random().toString(36).substring(2, 9);
 
+// Memory storage for simulated service states (when real systemd/systemctl is not available in the container sandbox)
+const simulatedServiceStates: Record<string, string> = {
+  "cminewar-service": "active",
+  "nginx": "inactive",
+  "ssh": "inactive",
+  "network-manager": "inactive"
+};
+
 app.get("/api/cminewar/system-status", (req, res) => {
   res.json({
     status: "ok",
@@ -200,6 +208,14 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
         return srv;
       }
     });
+  } else {
+    // If not on real systemd, retrieve simulated states so UI reflects changes correctly
+    services = services.map(srv => {
+      return {
+        ...srv,
+        status: simulatedServiceStates[srv.id] || "inactive"
+      };
+    });
   }
 
   // 6. Check real Firewall (iptables status)
@@ -308,6 +324,8 @@ app.post("/api/cminewar/services/control", (req, res) => {
   })();
 
   if (!hasSystemctl) {
+    const nextStatus = action === "start" ? "active" : (action === "stop" ? "inactive" : simulatedServiceStates[serviceId]);
+    simulatedServiceStates[serviceId] = nextStatus;
     return res.json({
       success: true,
       simulated: true,

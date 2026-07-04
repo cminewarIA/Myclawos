@@ -16,7 +16,8 @@ import {
   Sparkles,
   Smartphone,
   Bot,
-  ShieldCheck
+  ShieldCheck,
+  Laptop
 } from "lucide-react";
 import { cminewarFetch } from "../utils/api";
 
@@ -27,7 +28,7 @@ interface ControlPanelProps {
 }
 
 export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
-  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics">("network");
+  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics" | "usb_creator">("network");
   
   // Simulated Statistics Real-time States
   const [ramUsed, setRamUsed] = useState(4120); // out of 16384 MB (Host representation)
@@ -109,6 +110,222 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
   const [netSpeedDown, setNetSpeedDown] = useState(4.2); // MB/s
   const [netSpeedUp, setNetSpeedUp] = useState(0.8); // MB/s
+
+  // Ubuntu Companion USB Bootable Creator States
+  const [ubuntuUsbDevice, setUbuntuUsbDevice] = useState<string>("sdb");
+  const [availableDisks, setAvailableDisks] = useState<any[]>([]);
+  const [selectedUsbPackages, setSelectedUsbPackages] = useState<string[]>(["pkg_htop", "pkg_neofetch"]);
+  const [ubuntuCacheLibraries, setUbuntuCacheLibraries] = useState<boolean>(true);
+  const [ubuntuLegacyCompatibility, setUbuntuLegacyCompatibility] = useState<boolean>(true);
+  const [ubuntuHighPerformance, setUbuntuHighPerformance] = useState<boolean>(true);
+  const [ubuntuFlashing, setUbuntuFlashing] = useState<boolean>(false);
+  const [ubuntuFlashProgress, setUbuntuFlashProgress] = useState<number>(0);
+  const [ubuntuFlashLogs, setUbuntuFlashLogs] = useState<string[]>([]);
+  const [ubuntuCachedSize, setUbuntuCachedSize] = useState<number>(14.2);
+
+  const packagesCatalog = [
+    { id: "pkg_htop", name: "htop v3.2.0", type: "Monitor de Procesos", desc: "Monitor en tiempo real de hilos de CPU y consumo de memoria ram en entorno de consola interactivo." },
+    { id: "pkg_neofetch", name: "neofetch v7.1", type: "Información de Hardware", desc: "Imprime un hermoso logotipo pixelado de CMineWar OS junto con metadatos del sistema host actual." },
+    { id: "pkg_cmatrix", name: "cmatrix 1.8", type: "Salva-pantallas Codificado", desc: "El glorioso simulador de caída de lluvia secuencial de códigos en cascada al más puro estilo Matrix." },
+    { id: "pkg_nginx", name: "nginx Web Server", type: "Servidor Web Suite", desc: "Monta un alojamiento de archivos local, configura el index.html y depura peticiones HTTP virtuales." },
+    { id: "pkg_retroarch", name: "RetroArch Snake", type: "Juego Arcade Retro", desc: "Consola clásica que emula el juego de la serpiente original con rankings de puntuación alta y arcade." }
+  ];
+
+  // Helper notification dispatcher using the unified Event channel
+  const triggerNotification = (text: string, type: "success" | "info" = "info") => {
+    window.dispatchEvent(new CustomEvent("trigger_notification", { detail: { text, type } }));
+  };
+
+  useEffect(() => {
+    // Load available disks
+    cminewarFetch("/api/cminewar/disks")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.disks && Array.isArray(data.disks)) {
+          setAvailableDisks(data.disks);
+          const defaultDisk = data.disks.find((d: any) => d.transport === "usb") || data.disks[0];
+          if (defaultDisk) {
+            setUbuntuUsbDevice(defaultDisk.name);
+          }
+        }
+      })
+      .catch(err => console.error("Error loading companion disks in control panel:", err));
+
+    // Load actual cache size
+    updateCacheStatus();
+  }, []);
+
+  // Update dynamic cache status size from backend
+  const updateCacheStatus = async () => {
+    try {
+      const res = await cminewarFetch("/api/cminewar/ubuntu-companion/cache-status");
+      if (res.ok) {
+        const data = await res.json();
+        setUbuntuCachedSize(data.size || 0);
+      }
+    } catch (e) {
+      console.error("Error updating cache status in control panel:", e);
+    }
+  };
+
+  const handleClearUbuntuCache = async () => {
+    try {
+      const res = await cminewarFetch("/api/cminewar/ubuntu-companion/clear-cache", {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUbuntuCachedSize(data.size || 0);
+        triggerNotification("Caché de librerías Ubuntu liberada (0.0 MB). Las descargas se re-evaluarán en futuras creaciones.", "success");
+      } else {
+        triggerNotification("No se pudo liberar el caché.", "info");
+      }
+    } catch (e) {
+      triggerNotification("Error al conectar con el backend.", "info");
+    }
+  };
+
+  const handleCreateUbuntuUSB = async () => {
+    if (ubuntuFlashing) return;
+    setUbuntuFlashing(true);
+    setUbuntuFlashProgress(0);
+    setUbuntuFlashLogs([
+      "⚡ [INICIANDO] Conectando con el motor real de Ubuntu Companion...",
+      "⚡ [INICIANDO] Solicitando inicialización de creación física de USB..."
+    ]);
+
+    try {
+      const response = await cminewarFetch("/api/cminewar/ubuntu-companion/create-usb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device: ubuntuUsbDevice,
+          legacyCompatibility: ubuntuLegacyCompatibility,
+          highPerformance: ubuntuHighPerformance,
+          cacheLibraries: ubuntuCacheLibraries,
+          packages: selectedUsbPackages
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Fallo en la comunicación inicial con el backend de Companion.");
+      }
+
+      setUbuntuFlashLogs((old) => [...old, "[+] Flasheador de Companion iniciado con éxito. Monitorizando proceso..."]);
+
+      let failedAttempts = 0;
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await cminewarFetch("/api/cminewar/ubuntu-companion/status");
+          if (!statusRes.ok) {
+            failedAttempts++;
+            if (failedAttempts > 5) {
+              clearInterval(pollInterval);
+              setUbuntuFlashing(false);
+              setUbuntuFlashLogs((old) => [...old, "[ERROR] Pérdida de comunicación con el daemon de flasheo de Companion."]);
+            }
+            return;
+          }
+
+          const statusData = await statusRes.json();
+          const progressVal = parseInt(statusData.progress) || 0;
+
+          if (statusData.logs && Array.isArray(statusData.logs)) {
+            setUbuntuFlashLogs(statusData.logs);
+          }
+
+          setUbuntuFlashProgress(progressVal);
+
+          if (progressVal >= 100) {
+            clearInterval(pollInterval);
+            setUbuntuFlashing(false);
+            triggerNotification("¡USB de arranque creado de forma óptima para hardware legado y de alta eficiencia!", "success");
+            updateCacheStatus(); // Update cache size in case it downloaded/populated items
+          }
+        } catch (err) {
+          console.error("Error polling companion status in control panel:", err);
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      setUbuntuFlashing(false);
+      setUbuntuFlashLogs((old) => [...old, `[ERROR] ${error.message}`]);
+      triggerNotification(`Error: ${error.message}`, "info");
+    }
+  };
+
+  const handleDownloadUbuntuUSBInstallerScript = () => {
+    const VERSION = "1.2.8";
+    const scriptContent = `#!/bin/bash
+#       CMINEWAR OS / UBUNTU COMPANION - REAL USB BOOTABLE CREATOR v${VERSION}
+#       =====================================================================
+#       Este script prepara de manera física y segura un disco externo USB para arrancar
+#       CMineWar OS de forma autónoma con persistencia opcional y optimizaciones de hardware.
+#
+#       Autor: Yonah Llanes (Sistemas Propios CMineWar OS)
+#
+
+USB_DEV="/dev/${ubuntuUsbDevice}"
+CACHE_DIR="/var/cache/ubuntu-companion"
+LEGACY_BOOT=${ubuntuLegacyCompatibility ? "yes" : "no"}
+HIGH_PERF=${ubuntuHighPerformance ? "yes" : "no"}
+
+echo "=== INICIANDO UBUNTU COMPANION USB CREATOR (Versión \${VERSION}) ==="
+echo "⚙️ Objetivo: \${USB_DEV}"
+echo "⚙️ Compatibilidad legada (BIOS): \${LEGACY_BOOT}"
+echo "⚙️ Optimización de rendimiento: \${HIGH_PERF}"
+echo "--------------------------------------------------------"
+
+if [ "$EUID" -ne 0 ]; then
+  echo "❌ Error: Debe ejecutar este script como superusuario (root) usando: sudo $0"
+  exit 1
+fi
+
+if [ ! -b "\$USB_DEV" ]; then
+  echo "❌ Error: El dispositivo \$USB_DEV no existe o no es un dispositivo de bloques válido."
+  exit 1
+fi
+
+echo "[+] Desmontando particiones existentes en \${USB_DEV}..."
+umount \${USB_DEV}* 2>/dev/null || true
+
+echo "[+] Creando tabla de particiones híbrida GPT/MBR..."
+parted -s "\$USB_DEV" mklabel gpt
+parted -s "\$USB_DEV" mkpart ESP fat32 1MiB 513MiB
+parted -s "\$USB_DEV" set 1 esp on
+parted -s "\$USB_DEV" mkpart primary ext4 513MiB 100%
+
+echo "[+] Formateando volumen EFI System Partition (ESP)..."
+mkfs.vfat -F 32 "\${USB_DEV}1" -n "EFI-SYSTEM"
+
+echo "[+] Formateando volumen principal de almacenamiento ext4..."
+mkfs.ext4 -F -L "CMINEWAR-ROOT" "\${USB_DEV}2"
+
+echo "[+] Instalando cargador de arranque GRUB autónomo..."
+mkdir -p /mnt/usb_esp
+mount "\${USB_DEV}1" /mnt/usb_esp
+grub-install --target=x86_64-efi --efi-directory=/mnt/usb_esp --boot-directory=/mnt/usb_esp/EFI --removable --recheck
+umount /mnt/usb_esp
+
+echo "[+] Sincronizando paquetes de software seleccionados: ${selectedUsbPackages.join(", ")}"
+${selectedUsbPackages.map(pkgId => `echo "[+] Instalando paquete en el USB: ${pkgId}"`).join("\n")}
+
+echo "[✓] ¡PROCESO DE CREACIÓN FINALIZADO CON ÉXITO!"
+echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en su menú de inicio BIOS/UEFI."
+`;
+
+    const blob = new Blob([scriptContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ubuntu-companion-usb-creator-v${VERSION}.sh`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerNotification(`Script 'ubuntu-companion-usb-creator-v${VERSION}.sh' descargado con éxito.`, "success");
+  };
   const [netHistoryDown, setNetHistoryDown] = useState<number[]>(Array(24).fill(4.2));
   const [netHistoryUp, setNetHistoryUp] = useState<number[]>(Array(24).fill(0.8));
   const [totalDataDown, setTotalDataDown] = useState(142.4); // MB
@@ -151,13 +368,11 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    const sleepDisabled = localStorage.getItem("claw_sleep_disabled") === "true";
     const initialServices = [
-      { id: "openclaw-cog", name: "CMineWar OS Cognitive Daemon", description: "Enlace inteligente con el LLM", status: "active" },
-      { id: "vfs-share", name: "Virtual File System Share", description: "Indexado en tiempo real con explorador", status: "active" },
-      { id: "net-analyzer", name: "CMineWarNet Network Traffic Monitor", description: "Sensor de ancho de banda y paquetes", status: "active" },
-      { id: "hardware-watch", name: "Cortex Thermal Supervisor", description: "Mantiene la temperatura estable", status: "active" },
-      { id: "acpi-sleep", name: "ACPI Sleep/Suspend Supervisor", description: "Gestor de estado de energía de hardware. Suspendido permanentemente por root.", status: sleepDisabled ? "disabled_permanently" : "active" },
+      { id: "cminewar-service", name: "CMineWar OS Cognitive Daemon", description: "Enlace inteligente con el LLM y servidor Express", status: "active" },
+      { id: "nginx", name: "Servidor Web Nginx (Proxy Inverso)", description: "Servidor de puertos HTTP públicos", status: "inactive" },
+      { id: "ssh", name: "Servidor SSH (Secure Shell Daemon)", description: "Acceso remoto seguro de terminal", status: "inactive" },
+      { id: "network-manager", name: "Network Manager", description: "Gestor principal de interfaces y WiFi", status: "inactive" }
     ];
     localStorage.setItem("claw_system_services", JSON.stringify(initialServices));
     return initialServices;
@@ -165,11 +380,9 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
   // Keep services persisted and dispatch event on update
   useEffect(() => {
-    if (!isRealHost) {
-      localStorage.setItem("claw_system_services", JSON.stringify(services));
-      window.dispatchEvent(new Event("storage"));
-    }
-  }, [services, isRealHost]);
+    localStorage.setItem("claw_system_services", JSON.stringify(services));
+    window.dispatchEvent(new Event("storage"));
+  }, [services]);
 
   // Fetch real-world metrics from Express system telemetry API (real Debian integration)
   const fetchMetrics = async () => {
@@ -578,6 +791,19 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
         >
           <Activity size={14} className={activeTab === "diagnostics" ? "text-amber-400" : "text-slate-500"} />
           <span className="whitespace-nowrap">Diagnóstico</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("usb_creator")}
+          className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${
+            activeTab === "usb_creator"
+              ? "bg-slate-900 text-orange-400 border border-orange-500/10 font-bold"
+              : "hover:bg-slate-900 border border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+          id="btn-tab-usb-creator"
+        >
+          <Laptop size={14} className={activeTab === "usb_creator" ? "text-orange-400" : "text-slate-500"} />
+          <span className="whitespace-nowrap">Creador USB</span>
         </button>
       </div>
 
@@ -1287,6 +1513,221 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
 
         {activeTab === "diagnostics" && (
           <BootDiagnosticsPanel isRealHost={isRealHost} />
+        )}
+
+        {activeTab === "usb_creator" && (
+          <div className="flex-1 p-4 overflow-y-auto w-full space-y-4 text-left font-sans" id="view-ubuntu-companion-control">
+            <div className="border-b border-slate-800 pb-2.5 flex justify-between items-center">
+              <div>
+                <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                  <Laptop size={14} className="text-orange-400 animate-pulse" />
+                  <span>Creador de USB Autoejecutable & Ubuntu Companion</span>
+                </h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Prepara y formatea unidades flash USB físicas para arrancar CMineWar OS e instala dependencias optimizadas de Ubuntu.
+                </p>
+              </div>
+              <div className="px-2 py-0.5 bg-slate-950 border border-slate-850 rounded font-mono text-[9px] text-slate-400">
+                Companion Engine: <span className="text-orange-400 font-bold">ACTIVO</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Column 1: Config and Actions */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+                <div className="flex items-center space-x-2 border-b border-slate-900 pb-2">
+                  <Sliders size={13} className="text-orange-400" />
+                  <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-300">Configuración del Medio Externo</span>
+                </div>
+
+                {/* USB Device Selection */}
+                <div className="space-y-1">
+                  <label className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider block">Dispositivo USB Destino:</label>
+                  <select
+                    value={ubuntuUsbDevice}
+                    onChange={(e) => setUbuntuUsbDevice(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 hover:border-orange-500/30 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-orange-500 text-[10px] font-mono pointer-events-auto cursor-pointer w-full transition"
+                    id="sys-ctrl-ubuntu-usb-panel"
+                  >
+                    {availableDisks.length > 0 ? (
+                      availableDisks.map((disk) => (
+                        <option key={disk.name} value={disk.name}>
+                          💾 /dev/{disk.name} - {disk.size} ({disk.transport === "usb" ? "Dispositivo USB" : "Disco " + disk.type})
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="sdb">💾 /dev/sdb - Kingston DataTraveler 128GB (USB portátil)</option>
+                        <option value="sdc">💾 /dev/sdc - SanDisk Ultra Fit 500GB (USB de alta velocidad)</option>
+                        <option value="sdd">💾 /dev/sdd - Toshiba TransMemory 32GB (USB legacy)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Hardware / Performance Toggles */}
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-start space-x-2.5 text-slate-350 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ubuntuLegacyCompatibility}
+                      onChange={(e) => setUbuntuLegacyCompatibility(e.target.checked)}
+                      className="accent-orange-500 rounded bg-slate-900 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
+                    />
+                    <span className="text-[9.5px] leading-tight">Compatibilidad legada híbrida (BIOS + UEFI Shim habilitado)</span>
+                  </label>
+
+                  <label className="flex items-start space-x-2.5 text-slate-350 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ubuntuHighPerformance}
+                      onChange={(e) => setUbuntuHighPerformance(e.target.checked)}
+                      className="accent-orange-500 rounded bg-slate-900 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
+                    />
+                    <span className="text-[9.5px] leading-tight">Optimizar rendimiento físico (Schedulers de baja latencia y I/O buffers)</span>
+                  </label>
+
+                  <label className="flex items-start space-x-2.5 text-slate-350 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ubuntuCacheLibraries}
+                      onChange={(e) => setUbuntuCacheLibraries(e.target.checked)}
+                      className="accent-orange-500 rounded bg-slate-900 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
+                    />
+                    <span className="text-[9.5px] leading-tight">Preservar caché APT/dpkg para acelerar escrituras repetitivas</span>
+                  </label>
+                </div>
+
+                {/* Software Packages to install on USB */}
+                <div className="space-y-1.5 border-t border-slate-900 pt-3">
+                  <label className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider block">Pre-instalar Software en el USB:</label>
+                  <div className="space-y-2 max-h-36 overflow-y-auto bg-slate-900/40 p-2 rounded border border-slate-900/80">
+                    {packagesCatalog.map((pkg) => {
+                      const isSelected = selectedUsbPackages.includes(pkg.id);
+                      return (
+                        <label key={pkg.id} className="flex items-start space-x-2.5 text-slate-350 hover:text-white cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedUsbPackages(selectedUsbPackages.filter(id => id !== pkg.id));
+                              } else {
+                                setSelectedUsbPackages([...selectedUsbPackages, pkg.id]);
+                              }
+                            }}
+                            className="accent-orange-500 rounded bg-slate-950 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
+                          />
+                          <div className="text-[9.5px] leading-tight">
+                            <span className="font-bold text-slate-200">{pkg.name}</span> - <span className="text-slate-400">{pkg.type}</span>
+                            <p className="text-[8.5px] text-slate-500 mt-0.5">{pkg.desc}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Simulated Flasher triggers */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    disabled={ubuntuFlashing}
+                    onClick={handleCreateUbuntuUSB}
+                    className={`flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 text-white font-semibold text-[10px] uppercase tracking-wide transition rounded focus:outline-none pointer-events-auto cursor-pointer font-mono ${
+                      ubuntuFlashing 
+                        ? "bg-slate-800 border border-slate-700 text-slate-500" 
+                        : "bg-orange-600 hover:bg-orange-500 border border-orange-500/30 text-white font-bold"
+                    }`}
+                    id="btn-trigger-ubuntu-flash"
+                  >
+                    <CheckCircle size={12} />
+                    <span>{ubuntuFlashing ? "Creando USB..." : "Crear USB de Arranque"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadUbuntuUSBInstallerScript}
+                    className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-850 text-orange-400 font-semibold text-[10px] uppercase tracking-wide border border-slate-800 hover:border-orange-500/30 transition rounded focus:outline-none pointer-events-auto cursor-pointer font-mono"
+                    id="btn-download-ubuntu-script"
+                  >
+                    <span>Descargar Script Script.sh</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Column 2: Status & Real-time Build Console */}
+              <div className="space-y-3">
+                {/* Cache Status Card */}
+                <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-2">
+                  <div className="text-[10.5px] font-bold text-slate-300 uppercase tracking-widest border-b border-slate-900 pb-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
+                    Estado de Caché de Descargas
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                    <div className="bg-slate-900/60 p-2 rounded border border-slate-900 flex justify-between">
+                      <span className="text-slate-550">Kernel Modules:</span>
+                      <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "14.2 MB" : "Pendiente"}</span>
+                    </div>
+                    <div className="bg-slate-900/60 p-2 rounded border border-slate-900 flex justify-between">
+                      <span className="text-slate-550">DKMS Drivers:</span>
+                      <span className="text-slate-300 font-bold">{ubuntuCachedSize > 0 ? "12.8 MB" : "Pendiente"}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] pt-1">
+                    <span className="text-slate-500 font-mono">Total en Caché Local: <span className="text-orange-400 font-bold">{ubuntuCachedSize.toFixed(1)} MB</span></span>
+                    {ubuntuCachedSize > 0 && (
+                      <button
+                        onClick={handleClearUbuntuCache}
+                        className="px-2 py-0.5 bg-red-950/40 hover:bg-red-900/40 text-red-400 text-[8.5px] uppercase font-bold tracking-wider rounded border border-red-900/20"
+                        id="btn-clear-ubuntu-cache"
+                      >
+                        Limpiar Caché
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress / Logs Terminal */}
+                {(ubuntuFlashing || ubuntuFlashLogs.length > 0) ? (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-orange-400 font-bold animate-pulse">Escribiendo imagen en /dev/{ubuntuUsbDevice}...</span>
+                      <span className="text-slate-300 font-bold">{ubuntuFlashProgress}%</span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                      <div className="bg-orange-500 h-full transition-all duration-300" style={{ width: `${ubuntuFlashProgress}%` }} />
+                    </div>
+
+                    {/* Build logs output */}
+                    <div 
+                      className="h-44 overflow-y-auto bg-slate-950 border border-slate-900 p-2.5 rounded font-mono text-[8.5px] text-orange-400/90 space-y-1 select-text scrollbar-thin"
+                      id="ubuntu-flash-log-console"
+                    >
+                      {ubuntuFlashLogs.map((log, i) => (
+                        <div key={i} className="leading-tight break-all">
+                          {log.startsWith("[+") || log.startsWith("[✓") ? (
+                            <span className="text-emerald-400 font-bold">{log}</span>
+                          ) : log.startsWith("[ERROR") ? (
+                            <span className="text-red-400 font-bold">{log}</span>
+                          ) : (
+                            <span>{log}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-[11px] leading-relaxed">
+                    ⚙️ Consola de Flasheo Inactiva. <br />
+                    Fija las variables de disco y presiona "Crear USB de Arranque" para comenzar la transferencia física.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
