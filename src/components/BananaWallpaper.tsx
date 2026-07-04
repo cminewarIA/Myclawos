@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Sliders, Sun, Moon, Sparkles, RefreshCw, Zap, Bot, Laptop } from "lucide-react";
 import DragonLogo from "./DragonLogo";
+import { cminewarFetch } from "../utils/api";
 
 interface ServiceItem {
   id: string;
@@ -23,6 +24,26 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     if (!saved || saved === "real") return null;
     return parseInt(saved, 10);
   });
+
+  // Real-time host processes to show on the wallpaper
+  const [realProcesses, setRealProcesses] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRealProcesses = () => {
+      cminewarFetch("/api/cminewar/system-metrics")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.processes) {
+            setRealProcesses(data.processes);
+          }
+        })
+        .catch((err) => console.error("Error fetching wallpaper processes:", err));
+    };
+    
+    fetchRealProcesses();
+    const interval = setInterval(fetchRealProcesses, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Dynamic customization settings states
   const [nanoBananaSize, setNanoBananaSize] = useState<"nano" | "estandar" | "maxi">(() => {
@@ -198,12 +219,24 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
     coreScale = viewportScaleRef * 1.35;
   }
 
-  // Let's list the core services to display
-  // Include standard service list & make sure they have layout positions
-  const displayServices = [
-    { id: "cminewar-brain", name: "CMineWar AI Brain System", status: "active", isCore: true },
-    ...services.map(s => ({ ...s, isCore: false }))
-  ];
+  // Let's list the real-world resource-consuming processes to display on the wallpaper
+  const displayServices = realProcesses.length > 0
+    ? realProcesses.slice(0, 6).map((p, idx) => ({
+        id: String(p.pid),
+        name: p.name,
+        status: "active",
+        cpu: p.cpu,
+        ram: p.ram,
+        isCore: idx === 0,
+      }))
+    : [
+        { id: "1", name: "systemd", status: "active", cpu: 0.1, ram: 15, isCore: false },
+        { id: "42", name: "antigravity-kernel-core", status: "active", cpu: 3.2, ram: 420, isCore: true },
+        { id: "50", name: "antigravitybash-shell", status: "active", cpu: 0.1, ram: 22, isCore: false },
+        { id: "210", name: "network-analyzer-daemon", status: "active", cpu: 1.8, ram: 85, isCore: false },
+        { id: "301", name: "tmux-server", status: "active", cpu: 1.2, ram: 45, isCore: false },
+        { id: "405", name: "google-gemini-channel", status: "active", cpu: 0.1, ram: 310, isCore: false }
+      ];
 
   const nodes = displayServices.map((svc, idx) => {
     // Distribute services evenly around the circle
@@ -440,7 +473,7 @@ export default function BananaWallpaper({ services }: BananaWallpaperProps) {
                   letterSpacing="0.5"
                   className="font-bold uppercase"
                 >
-                  {node.isCore ? "ACTIVE" : node.status.toUpperCase()} • {isActive ? "LOAD: 8.4MW" : "STDBY"}
+                  {`PID ${node.id} • CPU: ${node.cpu || 0}% • RAM: ${node.ram || 0}MB`}
                 </text>
               </g>
             </g>

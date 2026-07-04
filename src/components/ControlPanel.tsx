@@ -118,6 +118,7 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
   const [ubuntuCacheLibraries, setUbuntuCacheLibraries] = useState<boolean>(true);
   const [ubuntuLegacyCompatibility, setUbuntuLegacyCompatibility] = useState<boolean>(true);
   const [ubuntuHighPerformance, setUbuntuHighPerformance] = useState<boolean>(true);
+  const [ubuntuDownloadFromNetwork, setUbuntuDownloadFromNetwork] = useState<boolean>(true);
   const [ubuntuFlashing, setUbuntuFlashing] = useState<boolean>(false);
   const [ubuntuFlashProgress, setUbuntuFlashProgress] = useState<number>(0);
   const [ubuntuFlashLogs, setUbuntuFlashLogs] = useState<string[]>([]);
@@ -203,7 +204,8 @@ export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
           legacyCompatibility: ubuntuLegacyCompatibility,
           highPerformance: ubuntuHighPerformance,
           cacheLibraries: ubuntuCacheLibraries,
-          packages: selectedUsbPackages
+          packages: selectedUsbPackages,
+          downloadFromNetwork: ubuntuDownloadFromNetwork
         })
       });
 
@@ -1595,6 +1597,16 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
                       className="accent-orange-500 rounded bg-slate-900 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
                     />
                     <span className="text-[9.5px] leading-tight">Preservar caché APT/dpkg para acelerar escrituras repetitivas</span>
+                  </label>
+
+                  <label className="flex items-start space-x-2.5 text-slate-350 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ubuntuDownloadFromNetwork}
+                      onChange={(e) => setUbuntuDownloadFromNetwork(e.target.checked)}
+                      className="accent-orange-500 rounded bg-slate-900 border-slate-800 mt-0.5 focus:ring-0 shrink-0"
+                    />
+                    <span className="text-[9.5px] leading-tight text-orange-400 font-medium">📥 Descargar sistema operativo y dependencias de GitHub y la Red (Instalación limpia)</span>
                   </label>
                 </div>
 
