@@ -59,11 +59,18 @@ export default function Terminal({
         }
       );
     } else {
-      baseLines.push({
-        id: "init-2",
-        text: "Kernel con núcleo de inteligencia central: CMineWar OS Core ONLINE.",
-        type: "success",
-      });
+      baseLines.push(
+        {
+          id: "init-2",
+          text: "Kernel con núcleo de inteligencia central: CMineWar OS Core ONLINE.",
+          type: "success",
+        },
+        {
+          id: "init-user-info",
+          text: "Sesión de terminal iniciada bajo el usuario real de ejecución del servicio.",
+          type: "info",
+        }
+      );
     }
     baseLines.push({
       id: "init-3",
@@ -87,6 +94,7 @@ export default function Terminal({
 
   const [systemUser, setSystemUser] = useState("user");
   const [systemHostname, setSystemHostname] = useState("cminewar");
+  const [metrics, setMetrics] = useState<any>(null);
 
   useEffect(() => {
     cminewarFetch("/api/cminewar/terminal-info")
@@ -96,6 +104,20 @@ export default function Terminal({
         if (data && data.hostname) setSystemHostname(data.hostname);
       })
       .catch((err) => console.error("Error fetching terminal info:", err));
+  }, []);
+
+  useEffect(() => {
+    const fetchMetrics = () => {
+      cminewarFetch("/api/cminewar/system-metrics")
+        .then((res) => res.json())
+        .then((data) => {
+          setMetrics(data);
+        })
+        .catch((err) => console.error("Error fetching terminal metrics:", err));
+    };
+    fetchMetrics();
+    const metricsPoll = setInterval(fetchMetrics, 5000);
+    return () => clearInterval(metricsPoll);
   }, []);
 
   // Sync command history to localStorage
@@ -375,27 +397,53 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
       case "neofetch":
         {
           const isRoot = localStorage.getItem("claw_is_root") === "true";
-          addLine(`       /\\_/\\       ${isRoot ? "root" : "user"}@cminewar.linux.os`, "success");
+          const userStr = isRoot ? "root" : systemUser;
+          const hostStr = systemHostname;
+          addLine(`       /\\_/\\       ${userStr}@${hostStr}`, "success");
           addLine(`      ( o.o )      ----------------------------`, "success");
-          addLine(`       > ^ <       SO: CMineWar OS Linux v${VERSION} (Compilación #${BUILD_NUMBER})`, "success");
-          addLine(`      /     \\      Kernel: 5.16.0-cminewar-${isRoot ? "direct-root" : "generic"}`, "success");
-          addLine(`     |       |     Tiempo encendido: 1 hora, 42 minutos`, "success");
+          addLine(`       > ^ <       SO: CMineWar OS (Host: ${metrics?.platform || "Linux"}) v${VERSION}`, "success");
+          addLine(`      /     \\      Kernel: 5.16.0-cminewar-${metrics?.arch || "x64"}`, "success");
+
+          let uptimeStr = "Desconocido";
+          if (metrics && metrics.uptime) {
+            const h = Math.floor(metrics.uptime / 3600);
+            const m = Math.floor((metrics.uptime % 3600) / 60);
+            const s = metrics.uptime % 60;
+            uptimeStr = `${h}h ${m}m ${s}s`;
+          } else {
+            uptimeStr = "1 hora, 42 minutos";
+          }
+          addLine(`     |       |     Tiempo de actividad: ${uptimeStr}`, "success");
           addLine(`    (_______)      Consola: CMineWarBash 3.2`, "success");
-          addLine(`                   Tema: CMineWarDE (Oscuro Moderno)`, "success");
-          addLine(`                   CPU: Emulador de Núcleo Cuántico Cortex (4 Núcleos)`, "success");
-          addLine(`                   Memoria: 4096MB / 16384MB (32%)`, "success");
-          addLine(`                   Motor de IA Núcleo CMineWar OS: EN LÍNEA (Activo)`, "success");
+          addLine(`                   Tema de Color: Terminal ${themeColor.toUpperCase()}`, "success");
+
+          const cpuVal = metrics ? `${metrics.cpu}%` : "12%";
+          addLine(`                   Carga de CPU: ${cpuVal}`, "success");
+
+          const memVal = metrics ? `${metrics.memory.used}MB / ${metrics.memory.total}MB (${metrics.memory.percent}%)` : "4096MB / 16384MB (32%)";
+          addLine(`                   Memoria RAM: ${memVal}`, "success");
+          addLine(`                   Motor de IA Núcleo: EN LÍNEA (Conexión Estable)`, "success");
         }
         break;
 
       case "top":
-        addLine("ID de Proceso (PID)  | NOMBRE               | CPU % | MEM % | ESTADO", "info");
-        addLine("  1                  | systemd              | 0.0   | 0.1   | S (sleep)", "output");
-        addLine("  42                 | cminewar-kernel-core | 1.8   | 8.4   | R (running)", "success");
-        addLine("  50                 | cminewarbash-shell   | 0.2   | 1.2   | R (running)", "output");
-        addLine("  120                | agetty-tty1          | 0.1   | 0.2   | S (sleep)", "output");
-        addLine("  204                | code-editor-daemon   | 0.0   | 2.1   | S (sleep)", "output");
-        addLine("  301                | tmux-server          | 1.2   | 1.4   | R (running)", "output");
+        addLine("PID        | NOMBRE               | CPU % | MEM (MB) | ESTADO", "info");
+        if (metrics && metrics.processes && metrics.processes.length > 0) {
+          metrics.processes.forEach((p: any) => {
+            const pidStr = String(p.pid).padEnd(10, " ");
+            const nameStr = p.name.substring(0, 20).padEnd(20, " ");
+            const cpuStr = String(p.cpu).padEnd(7, " ");
+            const ramStr = String(p.ram).padEnd(10, " ");
+            const statusStr = p.status || "running";
+            addLine(`${pidStr} | ${nameStr} | ${cpuStr} | ${ramStr} | ${statusStr.toUpperCase()}`, "output");
+          });
+        } else {
+          addLine("  1        | systemd              | 0.0   | 15       | SLEEPING", "output");
+          addLine("  42       | cminewar-kernel-core | 1.8   | 420      | RUNNING", "success");
+          addLine("  50       | cminewarbash-shell   | 0.2   | 22       | RUNNING", "output");
+          addLine("  120      | agetty-tty1          | 0.1   | 10       | SLEEPING", "output");
+          addLine("  301      | tmux-server          | 1.2   | 45       | RUNNING", "output");
+        }
         break;
 
       case "pwd":

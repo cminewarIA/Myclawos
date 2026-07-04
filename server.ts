@@ -140,7 +140,7 @@ app.post("/api/cminewar/github-update", (req, res) => {
 // GET /api/cminewar/system-metrics - Real host telemetry (real Debian desktop integration)
 app.get("/api/cminewar/system-metrics", (req, res) => {
   const isLinux = process.platform === "linux";
-  let isRealHost = false;
+  let isRealHost = true;
   
   // 1. Get real memory metrics
   let totalMem = os.totalmem();

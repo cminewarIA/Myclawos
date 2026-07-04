@@ -291,9 +291,9 @@ export default function App() {
     };
   }, []);
 
-  // Force claw_is_root to true permanently to prevent any permission hurdles
+  // Initialize claw_is_root to false so that we start as the actual service user, not root
   if (typeof window !== "undefined") {
-    localStorage.setItem("claw_is_root", "true");
+    localStorage.setItem("claw_is_root", "false");
   }
 
   // Virtual File System State

@@ -1,5 +1,5 @@
-export const VERSION = "1.2.31";
-export const BUILD_NUMBER = 31;
-export const LAST_UPDATED = "2026-07-04T02:06:21.473Z";
+export const VERSION = "1.21.90";
+export const BUILD_NUMBER = 90;
+export const LAST_UPDATED = "2026-07-04T02:20:00.000Z";
 
 // Proyecto propiedad de Yonah Llanes
