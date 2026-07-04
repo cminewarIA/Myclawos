@@ -785,7 +785,7 @@ app.post("/api/cminewar/ubuntu-companion/clear-cache", (req, res) => {
 
 // POST /api/cminewar/ubuntu-companion/create-usb - Real background physical action trigger
 app.post("/api/cminewar/ubuntu-companion/create-usb", (req, res) => {
-  const { device, legacyCompatibility, highPerformance, cacheLibraries } = req.body;
+  const { device, legacyCompatibility, highPerformance, cacheLibraries, packages } = req.body;
   
   if (!device) {
     return res.status(400).json({ error: "Dispositivo de destino requerido." });
@@ -796,6 +796,7 @@ app.post("/api/cminewar/ubuntu-companion/create-usb", (req, res) => {
   const safeLegacy = legacyCompatibility ? "true" : "false";
   const safePerf = highPerformance ? "true" : "false";
   const safeCache = cacheLibraries ? "true" : "false";
+  const safePackages = Array.isArray(packages) ? packages.map(p => String(p).replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "";
 
   try {
     const scriptPath = path.join(process.cwd(), "bare-metal", "create_companion_usb.py");
@@ -813,8 +814,8 @@ app.post("/api/cminewar/ubuntu-companion/create-usb", (req, res) => {
       console.error("Error writing init logs:", err);
     }
 
-    console.log(`[COMPANION] Lanzando creador de USB real para: /dev/${safeDevice}`);
-    const child = spawn("python3", ["-u", scriptPath, safeDevice, safeLegacy, safePerf, safeCache]);
+    console.log(`[COMPANION] Lanzando creador de USB real para: /dev/${safeDevice} con paquetes: ${safePackages}`);
+    const child = spawn("python3", ["-u", scriptPath, safeDevice, safeLegacy, safePerf, safeCache, safePackages]);
 
     child.stdout?.on("data", (data) => {
       try {

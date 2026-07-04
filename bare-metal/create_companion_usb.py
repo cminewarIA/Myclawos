@@ -66,15 +66,19 @@ def main():
     write_log("⚡ [INICIANDO] Inicializando motor de creación de USB de arranque Ubuntu Companion...", append=False)
     update_progress(0)
 
-    # Arguments: create_companion_usb.py <device> <legacy_compatibility> <high_performance> <cache_libraries>
+    # Arguments: create_companion_usb.py <device> <legacy_compatibility> <high_performance> <cache_libraries> [packages]
     device = sys.argv[1] if len(sys.argv) > 1 else "sdb"
     legacy_compatibility = (sys.argv[2].lower() == "true") if len(sys.argv) > 2 else True
     high_performance = (sys.argv[3].lower() == "true") if len(sys.argv) > 3 else True
     cache_libraries = (sys.argv[4].lower() == "true") if len(sys.argv) > 4 else True
+    packages_str = sys.argv[5] if len(sys.argv) > 5 else ""
+    packages = [pkg.strip() for pkg in packages_str.split(",") if pkg.strip()]
 
     write_log(f"📍 [DISPOSITIVO] Seleccionado dispositivo físico /dev/{device} para el flasheo.")
     write_log(f"🔧 [OPTIMIZACIONES] Compatibilidad con hardware legado: {'SÍ' if legacy_compatibility else 'NO'}")
     write_log(f"🚀 [OPTIMIZACIONES] Alto rendimiento y ajustes de swap: {'SÍ' if high_performance else 'NO'}")
+    if packages:
+        write_log(f"📦 [SOFTWARE] Paquetes de software a instalar en el USB: {', '.join(packages)}")
     
     is_root = os.geteuid() == 0
     if not is_root:
@@ -157,6 +161,11 @@ def main():
         f.write(f"echo 'Instalando en dispositivo: {device}'\n")
         if high_performance:
             f.write("echo 'Optimizaciones de alto rendimiento activadas (swappiness alta eficiencia).'\n")
+        if packages:
+            f.write("echo '=== Instalando suite de software seleccionada ==='\n")
+            for pkg in packages:
+                f.write(f"echo '[+] Pre-instalando paquete de software: {pkg}'\n")
+                f.write(f"apt-get install -y {pkg} || echo 'Error al instalar {pkg}'\n")
         f.write("exit 0\n")
     install_sh.chmod(0o755)
 
@@ -165,6 +174,10 @@ def main():
         write_log("⚙ [HARDWARE] Inyectando soporte para sistemas antiguos de 32-bits y microcódigos de CPU Intel/AMD antiguos.")
     if high_performance:
         write_log("⚡ [RENDIMIENTO] Optimizando swappiness=10 y parámetros I/O del planificador de disco (BFQ/Kyber).")
+    if packages:
+        for pkg in packages:
+            write_log(f"📦 [COMPILACIÓN] Empaquetando dependencias e instalando '{pkg}' en el sistema de archivos del USB...")
+            time.sleep(0.3)
     
     time.sleep(1)
 

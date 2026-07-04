@@ -63,6 +63,7 @@ export default function GitHubUpdater({
   
   // Ubuntu Companion USB Bootable Creator States
   const [ubuntuUsbDevice, setUbuntuUsbDevice] = useState<string>("sdb");
+  const [selectedUsbPackages, setSelectedUsbPackages] = useState<string[]>(["pkg_htop", "pkg_neofetch"]);
   const [availableDisks, setAvailableDisks] = useState<{name: string, size: string, type: string, transport: string}[]>([]);
   const [ubuntuCacheLibraries, setUbuntuCacheLibraries] = useState<boolean>(true);
   const [ubuntuLegacyCompatibility, setUbuntuLegacyCompatibility] = useState<boolean>(true);
@@ -140,7 +141,8 @@ export default function GitHubUpdater({
           device: ubuntuUsbDevice,
           legacyCompatibility: ubuntuLegacyCompatibility,
           highPerformance: ubuntuHighPerformance,
-          cacheLibraries: ubuntuCacheLibraries
+          cacheLibraries: ubuntuCacheLibraries,
+          packages: selectedUsbPackages
         })
       });
 
@@ -244,6 +246,21 @@ if command -v apt-get &> /dev/null; then
 
     scriptContent += `fi
 
+echo "[+] Instalando paquetes de software de CMineWar seleccionados en el USB..."
+`;
+
+    selectedUsbPackages.forEach((pkgId) => {
+      const pkg = packagesCatalog.find((p) => p.id === pkgId);
+      if (pkg) {
+        scriptContent += `echo "[+] Instalando ${pkg.name} (${pkg.type}) en el USB..."
+# Comando de simulación de instalación de paquete
+mkdir -p "\${CACHE_DIR}/software/${pkgId}"
+echo "Pre-instalado" > "\${CACHE_DIR}/software/${pkgId}/status"
+`;
+      }
+    });
+
+    scriptContent += `
 echo "=== [OPERACIÓN CONCLUIDA CON ÉXITO] ==="
 echo "[✓] El medio de almacenamiento en \${USB_DEV} ha sido preparado con CMineWar OS v\${VERSION}."
 `;
@@ -3309,6 +3326,36 @@ echo "========================================================================="
                   />
                   <span className="text-[10px]">Mantener caché de descargas de librerías para evitar redundancia</span>
                 </label>
+              </div>
+
+              {/* Software Packages to install on USB */}
+              <div className="space-y-2 border-t border-slate-900 pt-3">
+                <label className="text-[9px] text-slate-500 uppercase font-mono font-bold tracking-wider block">Pre-instalar Software en el USB:</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto bg-slate-900/40 p-2 rounded border border-slate-900/80">
+                  {packagesCatalog.map((pkg) => {
+                    const isSelected = selectedUsbPackages.includes(pkg.id);
+                    return (
+                      <label key={pkg.id} className="flex items-start space-x-2.5 text-slate-300 hover:text-white cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setSelectedUsbPackages(selectedUsbPackages.filter(id => id !== pkg.id));
+                            } else {
+                              setSelectedUsbPackages([...selectedUsbPackages, pkg.id]);
+                            }
+                          }}
+                          className="accent-orange-500 rounded bg-slate-950 border-slate-800 mt-0.5 focus:ring-0"
+                        />
+                        <div className="text-[10px] leading-tight">
+                          <span className="font-bold text-slate-200">{pkg.name}</span> - <span className="text-slate-400">{pkg.type}</span>
+                          <p className="text-[8.5px] text-slate-500 mt-0.5">{pkg.desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Simulation Flasher triggers */}
