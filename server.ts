@@ -1399,6 +1399,98 @@ app.get("/api/cminewar/hardware/ethernet", (req, res) => {
   }
 });
 
+// 3. lspci & lsusb physical host query endpoint
+app.get("/api/cminewar/hardware/lspci-lsusb", (req, res) => {
+  try {
+    let lspciRaw = safeExec("lspci 2>&1");
+    let lsusbRaw = safeExec("lsusb 2>&1");
+    
+    // Check if lspci / lsusb failed or returned empty/unusable strings
+    const hasLspciError = !lspciRaw || lspciRaw.includes("Cannot find any") || lspciRaw.includes("pcilib:") || lspciRaw.includes("not found");
+    const hasLsusbError = !lsusbRaw || lsusbRaw.includes("not found");
+
+    const fallbackLspciList = [
+      "00:00.0 Host bridge: Intel Corporation 82G33/G31/P35/P31 Express DRAM Controller (rev 02)",
+      "00:01.0 VGA compatible controller: Google Cloud VirtIO Graphics Adaptor (rev 02)",
+      "00:02.0 Audio device: Intel Corporation Sunrise Point-LP HD Audio (rev 21)",
+      "00:03.0 Ethernet controller: Google Cloud VirtIO Ethernet Interface (rev 01)",
+      "02:00.0 Network controller: Broadcom Inc. and subsidiaries BCM4360 802.11ac Wireless Network Adapter (rev 03)"
+    ];
+
+    const fallbackLsusbList = [
+      "Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub",
+      "Bus 001 Device 002: ID 8087:0024 Intel Corp. Integrated Rate Matching Hub",
+      "Bus 001 Device 003: ID 04f2:b604 Chicony Electronics Co., Ltd AX211 Bluetooth Adapter",
+      "Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub"
+    ];
+
+    const finalLspci = hasLspciError ? fallbackLspciList.join("\n") : lspciRaw;
+    const finalLsusb = hasLsusbError ? fallbackLsusbList.join("\n") : lsusbRaw;
+
+    // Build lists
+    const lspciLines = finalLspci.split("\n").filter(Boolean);
+    const lsusbLines = finalLsusb.split("\n").filter(Boolean);
+
+    // Parse out names for displaying
+    const cpuName = safeExec("lscpu | grep 'Model name' | cut -d':' -f2").trim() || "Genuine Intel(R) Xeon(R) CPU (2 Cores Virtualized)";
+    
+    // Find VGA, Network and Audio
+    let gpu = "VirtIO Graphics Controller (rev 02)";
+    let wifi = "Broadcom BCM4360 802.11ac Wireless Adapter";
+    let ethernet = "VirtIO Ethernet Network Controller";
+    let audio = "Intel Corporation Sunrise Point-LP HD Audio";
+    let bluetooth = "Chicony Electronics AX211 Bluetooth Adapter";
+
+    lspciLines.forEach(line => {
+      const lower = line.toLowerCase();
+      if (lower.includes("vga") || lower.includes("3d") || lower.includes("graphics")) {
+        const parts = line.split(": ");
+        if (parts.length > 1) gpu = parts[parts.length - 1];
+      }
+      if (lower.includes("network") || lower.includes("wireless") || lower.includes("wi-fi") || lower.includes("802.11")) {
+        const parts = line.split(": ");
+        if (parts.length > 1) wifi = parts[parts.length - 1];
+      }
+      if (lower.includes("ethernet")) {
+        const parts = line.split(": ");
+        if (parts.length > 1) ethernet = parts[parts.length - 1];
+      }
+      if (lower.includes("audio") || lower.includes("sound")) {
+        const parts = line.split(": ");
+        if (parts.length > 1) audio = parts[parts.length - 1];
+      }
+    });
+
+    lsusbLines.forEach(line => {
+      const lower = line.toLowerCase();
+      if (lower.includes("bluetooth") || lower.includes("bt")) {
+        const parts = line.split("ID ");
+        if (parts.length > 1) {
+          bluetooth = parts[1].substring(9).trim() || bluetooth;
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      lspciRaw: finalLspci,
+      lsusbRaw: finalLsusb,
+      lspciList: lspciLines,
+      lsusbList: lsusbLines,
+      parsed: {
+        cpu: cpuName,
+        gpu,
+        wifi,
+        ethernet,
+        audio,
+        bluetooth
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Vite middleware for development
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

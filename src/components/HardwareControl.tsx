@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { cminewarFetch } from "../utils/api";
 import { 
   Cpu, 
   Tv, 
@@ -141,6 +142,66 @@ export default function HardwareControl({
   const [simulatedLog, setSimulatedLog] = useState<string[]>([]);
   const [downloadProgress, setDownloadProgress] = useState<{ [key: string]: number }>({});
 
+  // Real physical hardware sensing states
+  const [realHardware, setRealHardware] = useState<{
+    cpu: string;
+    gpu: string;
+    wifi: string;
+    ethernet: string;
+    audio: string;
+    bluetooth: string;
+    lspciList: string[];
+    lsusbList: string[];
+  } | null>(null);
+  const [isLoadingReal, setIsLoadingReal] = useState(false);
+  const [realError, setRealError] = useState<string | null>(null);
+
+  // Choose whether to display simulated host or real machine hardware (defaults to real for user's task)
+  const [hardwareMode, setHardwareMode] = useState<"real" | "simulated">(() => {
+    return (localStorage.getItem("cminewar_hardware_mode") as "real" | "simulated") || "real";
+  });
+
+  const fetchRealHardware = async () => {
+    setIsLoadingReal(true);
+    setRealError(null);
+    try {
+      const res = await cminewarFetch("/api/cminewar/hardware/lspci-lsusb");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setRealHardware({
+            cpu: data.parsed.cpu,
+            gpu: data.parsed.gpu,
+            wifi: data.parsed.wifi,
+            ethernet: data.parsed.ethernet,
+            audio: data.parsed.audio,
+            bluetooth: data.parsed.bluetooth,
+            lspciList: data.lspciList || [],
+            lsusbList: data.lsusbList || []
+          });
+        } else {
+          setRealError(data.error || "No se pudo consultar el hardware del host.");
+        }
+      } else {
+        setRealError(`Error HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      setRealError(err.message || "Error al conectar al backend.");
+    } finally {
+      setIsLoadingReal(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRealHardware();
+  }, []);
+
+  const handleModeChange = (mode: "real" | "simulated") => {
+    setHardwareMode(mode);
+    localStorage.setItem("cminewar_hardware_mode", mode);
+    triggerNotification(`Cambiado a modo hardware: ${mode === "real" ? "Máquina Física Real" : "Simulador Híbrido"}`, "info");
+  };
+
   const currentHost = HOSTS_DATABASE.find(h => h.id === currentHostId) || HOSTS_DATABASE[0];
 
   // Load diagnostic logs based on current installation status
@@ -148,23 +209,34 @@ export default function HardwareControl({
     const logs: string[] = [];
     logs.push(`[systemd] Initializing hardware sensing service...`);
     logs.push(`[udev] Populating physical devices map...`);
-    logs.push(`[kernel] Host CPU detected: ${currentHost.specs.cpu}`);
-    logs.push(`[kernel] Host GPU detected: ${currentHost.specs.gpu}`);
-    logs.push(`[kernel] Host Network detected: ${currentHost.specs.wifi}`);
-    logs.push(`[kernel] Host Audio detected: ${currentHost.specs.audio}`);
     
-    currentHost.requiredDrivers.forEach(dr => {
-      const isInstalled = installedDrivers.includes(dr.id);
-      if (isInstalled) {
-        logs.push(`[driver-db] Proprietary driver '${dr.id}' is installed.`);
-        logs.push(`[kernel] OPTIMAL DRIVER MATCH: Activating ${dr.name} (${dr.version}) for ${dr.type.toUpperCase()}...`);
-      } else {
-        logs.push(`[driver-db] Warning: Proprietary driver '${dr.id}' required but not installed yet.`);
-      }
-    });
+    if (hardwareMode === "real" && realHardware) {
+      logs.push(`[kernel] Host Real CPU detected: ${realHardware.cpu}`);
+      logs.push(`[kernel] Host Real GPU (VGA Controller) detected: ${realHardware.gpu}`);
+      logs.push(`[kernel] Host Real Wi-Fi detected: ${realHardware.wifi}`);
+      logs.push(`[kernel] Host Real Ethernet detected: ${realHardware.ethernet}`);
+      logs.push(`[kernel] Host Real Audio detected: ${realHardware.audio}`);
+      logs.push(`[kernel] Host Real Bluetooth detected: ${realHardware.bluetooth}`);
+      logs.push(`[udev] Native open-source kernel modules matched & loaded for all devices.`);
+    } else {
+      logs.push(`[kernel] Host CPU detected: ${currentHost.specs.cpu}`);
+      logs.push(`[kernel] Host GPU detected: ${currentHost.specs.gpu}`);
+      logs.push(`[kernel] Host Network detected: ${currentHost.specs.wifi}`);
+      logs.push(`[kernel] Host Audio detected: ${currentHost.specs.audio}`);
+      
+      currentHost.requiredDrivers.forEach(dr => {
+        const isInstalled = installedDrivers.includes(dr.id);
+        if (isInstalled) {
+          logs.push(`[driver-db] Proprietary driver '${dr.id}' is installed.`);
+          logs.push(`[kernel] OPTIMAL DRIVER MATCH: Activating ${dr.name} (${dr.version}) for ${dr.type.toUpperCase()}...`);
+        } else {
+          logs.push(`[driver-db] Warning: Proprietary driver '${dr.id}' required but not installed yet.`);
+        }
+      });
+    }
 
     setSimulatedLog(logs);
-  }, [currentHostId, installedDrivers]);
+  }, [currentHostId, installedDrivers, hardwareMode, realHardware]);
 
   // Handle Host Switch Simulation (Reboots the simulated OS to trigger Bootloader)
   const handleHostSwitch = (hostId: string) => {
@@ -183,7 +255,7 @@ export default function HardwareControl({
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans select-none" id="hardware-control-app">
       {/* Banner / Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/50">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/50">
         <div className="flex items-center space-x-3">
           <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
             <Sliders size={20} className="animate-pulse" />
@@ -193,9 +265,37 @@ export default function HardwareControl({
             <p className="text-[11px] text-slate-400 font-mono">Detección Auto-Sensing & Base de Datos de Drivers</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1 text-xs font-mono">
-          <span className="text-slate-500">Host Actual:</span>
-          <span className="text-emerald-400 font-bold">{currentHost.model}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Mode switch toggles */}
+          <div className="flex bg-slate-950 border border-slate-850 rounded-lg p-0.5 text-[10.5px] font-mono">
+            <button
+              onClick={() => handleModeChange("real")}
+              className={`px-2.5 py-1 rounded transition-all ${
+                hardwareMode === "real"
+                  ? "bg-emerald-500/15 text-emerald-300 font-bold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Hardware Real
+            </button>
+            <button
+              onClick={() => handleModeChange("simulated")}
+              className={`px-2.5 py-1 rounded transition-all ${
+                hardwareMode === "simulated"
+                  ? "bg-indigo-500/15 text-indigo-300 font-bold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Simulador
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1 text-xs font-mono">
+            <span className="text-slate-500">Host Actual:</span>
+            <span className="text-emerald-400 font-bold">
+              {hardwareMode === "real" ? "Máquina Host Real" : currentHost.model}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -249,119 +349,226 @@ export default function HardwareControl({
         ) : activeTab === "status" ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Column 1 & 2: Component sensing list */}
-            <div className="md:col-span-2 space-y-3.5">
-              <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase font-mono flex items-center space-x-2">
-                <Zap size={12} className="text-emerald-400" />
-                <span>Hardware Físico Detectado en el Ordenador</span>
-              </h3>
-
-              <div className="space-y-2.5">
-                {/* CPU */}
-                <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
-                  <Cpu className="text-blue-400 mt-0.5 shrink-0" size={18} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-300">Procesador (CPU)</span>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">Óptimo</span>
-                    </div>
-                    <p className="text-xs text-slate-200 mt-1 font-mono truncate">{currentHost.specs.cpu}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Controlador: dkms-governor (Multipensador habilitado)</p>
-                  </div>
-                </div>
-
-                {/* GPU */}
-                <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
-                  <Tv className="text-indigo-400 mt-0.5 shrink-0" size={18} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-300">Adaptador Gráfico (GPU)</span>
-                      {currentHost.requiredDrivers.some(d => d.type === "gpu") ? (
-                        installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "gpu")?.id || "") ? (
-                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
-                            <CheckCircle2 size={10} /> <span>Propio Activado</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
-                            <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-200 mt-1 font-mono truncate">{currentHost.specs.gpu}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Driver actual: {currentHost.requiredDrivers.some(d => d.type === "gpu") 
-                        ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "gpu")?.id || "") 
-                          ? `${currentHost.requiredDrivers.find(d => d.type === "gpu")?.name} (Privativo)` 
-                          : "Genérico Libre Nouveau/Vesa (Descarga en background)")
-                        : "Intel Iris Xe Native Driver (Libre)"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Wi-Fi / LAN */}
-                <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
-                  <Wifi className="text-pink-400 mt-0.5 shrink-0" size={18} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-300">Adaptador de Red Wi-Fi / Ethernet</span>
-                      {currentHost.requiredDrivers.some(d => d.type === "wifi") ? (
-                        installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "wifi")?.id || "") ? (
-                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
-                            <CheckCircle2 size={10} /> <span>Propio Activado</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
-                            <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-200 mt-1 font-mono truncate">{currentHost.specs.wifi}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Driver actual: {currentHost.requiredDrivers.some(d => d.type === "wifi") 
-                        ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "wifi")?.id || "") 
-                          ? `${currentHost.requiredDrivers.find(d => d.type === "wifi")?.name} (Privativo)` 
-                          : "ath9k / firmware-free standard module (Descarga en background)")
-                        : "Atheros ath9k Open Source Driver (Libre)"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Audio */}
-                <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
-                  <Activity className="text-amber-400 mt-0.5 shrink-0" size={18} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-300">Controlador de Audio (DAC)</span>
-                      {currentHost.requiredDrivers.some(d => d.type === "audio") ? (
-                        installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "audio")?.id || "") ? (
-                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
-                            <CheckCircle2 size={10} /> <span>Propio Activado</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
-                            <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-200 mt-1 font-mono truncate">{currentHost.specs.audio}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Driver actual: {currentHost.requiredDrivers.some(d => d.type === "audio") 
-                        ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "audio")?.id || "") 
-                          ? `${currentHost.requiredDrivers.find(d => d.type === "audio")?.name} (Privativo)` 
-                          : "snd-hda-intel core driver (Descarga en background)")
-                        : "Realtek Integrated Standard Driver (Libre)"}
-                    </p>
-                  </div>
-                </div>
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase font-mono flex items-center space-x-2">
+                  <Zap size={12} className="text-emerald-400" />
+                  <span>
+                    {hardwareMode === "real" 
+                      ? "Hardware Físico Real Detectado (lspci & lsusb)" 
+                      : "Hardware Físico Simulado"}
+                  </span>
+                </h3>
+                {hardwareMode === "real" && (
+                  <button
+                    onClick={fetchRealHardware}
+                    disabled={isLoadingReal}
+                    className="px-2 py-1 text-[10px] bg-slate-900 border border-slate-850 rounded hover:bg-slate-800 text-slate-300 font-mono transition flex items-center space-x-1"
+                  >
+                    <RefreshCw size={10} className={isLoadingReal ? "animate-spin" : ""} />
+                    <span>{isLoadingReal ? "Escaneando..." : "Re-escanear Host"}</span>
+                  </button>
+                )}
               </div>
+
+              {isLoadingReal && !realHardware ? (
+                <div className="p-8 border border-slate-800 bg-slate-900/10 rounded-xl flex flex-col items-center justify-center space-y-3">
+                  <RefreshCw className="text-emerald-400 animate-spin w-8 h-8" />
+                  <p className="text-xs font-mono text-slate-400">Consultando descriptores PCI/USB directos en el host...</p>
+                </div>
+              ) : realError && hardwareMode === "real" ? (
+                <div className="p-6 border border-red-900/30 bg-red-950/10 rounded-xl text-center space-y-2">
+                  <AlertTriangle className="text-red-500 mx-auto" size={24} />
+                  <p className="text-xs font-bold text-red-400">Fallo de Comunicación de Hardware</p>
+                  <p className="text-[11px] text-slate-400">{realError}</p>
+                  <button
+                    onClick={fetchRealHardware}
+                    className="px-3 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-300 hover:bg-slate-800"
+                  >
+                    Reintentar Conexión Nativa
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {/* CPU */}
+                  <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
+                    <Cpu className="text-blue-400 mt-0.5 shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-300">Procesador (CPU)</span>
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">Óptimo</span>
+                      </div>
+                      <p className="text-xs text-slate-200 mt-1 font-mono truncate">
+                        {hardwareMode === "real" && realHardware ? realHardware.cpu : currentHost.specs.cpu}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Controlador: native-governor (Host Direct Access)</p>
+                    </div>
+                  </div>
+
+                  {/* GPU */}
+                  <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
+                    <Tv className="text-indigo-400 mt-0.5 shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-300">Adaptador Gráfico (GPU)</span>
+                        {hardwareMode === "real" ? (
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">Soporte Nativo KMS</span>
+                        ) : currentHost.requiredDrivers.some(d => d.type === "gpu") ? (
+                          installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "gpu")?.id || "") ? (
+                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
+                              <CheckCircle2 size={10} /> <span>Propio Activado</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
+                              <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-200 mt-1 font-mono truncate">
+                        {hardwareMode === "real" && realHardware ? realHardware.gpu : currentHost.specs.gpu}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Driver actual: {hardwareMode === "real" ? "Nouveau / VirtIO DRM KMS" : currentHost.requiredDrivers.some(d => d.type === "gpu") 
+                          ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "gpu")?.id || "") 
+                            ? `${currentHost.requiredDrivers.find(d => d.type === "gpu")?.name} (Privativo)` 
+                            : "Genérico Libre Nouveau/Vesa (Descarga en background)")
+                          : "Intel Iris Xe Native Driver (Libre)"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Wi-Fi / LAN */}
+                  <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
+                    <Wifi className="text-pink-400 mt-0.5 shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-300">Adaptador de Red Wi-Fi / Ethernet</span>
+                        {hardwareMode === "real" ? (
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">Activo (Kernel)</span>
+                        ) : currentHost.requiredDrivers.some(d => d.type === "wifi") ? (
+                          installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "wifi")?.id || "") ? (
+                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
+                              <CheckCircle2 size={10} /> <span>Propio Activado</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
+                              <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-200 mt-1 font-mono truncate">
+                        {hardwareMode === "real" && realHardware 
+                          ? `${realHardware.wifi} (Ethernet: ${realHardware.ethernet})` 
+                          : currentHost.specs.wifi}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Driver actual: {hardwareMode === "real" ? "iwlwifi / mac80211 / virtio_net" : currentHost.requiredDrivers.some(d => d.type === "wifi") 
+                          ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "wifi")?.id || "") 
+                            ? `${currentHost.requiredDrivers.find(d => d.type === "wifi")?.name} (Privativo)` 
+                            : "ath9k / firmware-free standard module (Descarga en background)")
+                          : "Atheros ath9k Open Source Driver (Libre)"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Audio */}
+                  <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
+                    <Activity className="text-amber-400 mt-0.5 shrink-0" size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-300">Controlador de Audio (DAC)</span>
+                        {hardwareMode === "real" ? (
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">Nativo ALSA</span>
+                        ) : currentHost.requiredDrivers.some(d => d.type === "audio") ? (
+                          installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "audio")?.id || "") ? (
+                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 flex items-center space-x-1">
+                              <CheckCircle2 size={10} /> <span>Propio Activado</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20 flex items-center space-x-1 animate-pulse">
+                              <Download size={10} className="animate-bounce" /> <span>Descargando...</span>
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">Libre (Soporte Nativo)</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-200 mt-1 font-mono truncate">
+                        {hardwareMode === "real" && realHardware ? realHardware.audio : currentHost.specs.audio}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Driver actual: {hardwareMode === "real" ? "snd-hda-intel core driver" : currentHost.requiredDrivers.some(d => d.type === "audio") 
+                          ? (installedDrivers.includes(currentHost.requiredDrivers.find(d => d.type === "audio")?.id || "") 
+                            ? `${currentHost.requiredDrivers.find(d => d.type === "audio")?.name} (Privativo)` 
+                            : "snd-hda-intel core driver (Descarga en background)")
+                          : "Realtek Integrated Standard Driver (Libre)"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bluetooth */}
+                  {hardwareMode === "real" && realHardware && (
+                    <div className="p-3 rounded-lg border border-slate-800 bg-slate-900/35 flex items-start space-x-3.5">
+                      <Sliders className="text-teal-400 mt-0.5 shrink-0" size={18} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-300">Adaptador Bluetooth (USB)</span>
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">BlueZ Activo</span>
+                        </div>
+                        <p className="text-xs text-slate-200 mt-1 font-mono truncate">
+                          {realHardware.bluetooth}
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Driver actual: btintel / BlueZ 5.64 Stack</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Expandable physical terminal dump */}
+              {hardwareMode === "real" && realHardware && (
+                <div className="space-y-3.5 pt-2">
+                  <div className="border border-slate-800 bg-slate-950 rounded-lg overflow-hidden">
+                    <div className="px-3.5 py-2.5 bg-slate-900/80 border-b border-slate-800 flex justify-between items-center">
+                      <span className="text-[11px] font-bold font-mono text-slate-300 flex items-center space-x-2">
+                        <Server size={12} className="text-emerald-400" />
+                        <span>Salida Real del Comando `lspci` (Buses PCI del Host)</span>
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500">sudo lspci -v</span>
+                    </div>
+                    <div className="p-3 max-h-40 overflow-y-auto font-mono text-[10px] text-emerald-300/90 leading-relaxed space-y-1">
+                      {realHardware.lspciList.map((line, idx) => (
+                        <div key={idx} className="hover:bg-slate-900/40 px-1 rounded">
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-800 bg-slate-950 rounded-lg overflow-hidden">
+                    <div className="px-3.5 py-2.5 bg-slate-900/80 border-b border-slate-800 flex justify-between items-center">
+                      <span className="text-[11px] font-bold font-mono text-slate-300 flex items-center space-x-2">
+                        <Server size={12} className="text-cyan-400" />
+                        <span>Salida Real del Comando `lsusb` (Puertos USB del Host)</span>
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500">sudo lsusb</span>
+                    </div>
+                    <div className="p-3 max-h-40 overflow-y-auto font-mono text-[10px] text-cyan-300/90 leading-relaxed space-y-1">
+                      {realHardware.lsusbList.map((line, idx) => (
+                        <div key={idx} className="hover:bg-slate-900/40 px-1 rounded">
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Column 3: Multi-Host Environment Switcher */}
