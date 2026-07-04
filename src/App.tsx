@@ -1805,7 +1805,7 @@ export default function App() {
             {/* DSM 7 style Notification Panel Dropdown */}
             {notificationsOpen && (
               <div 
-                className="absolute right-0 mt-2 w-80 bg-slate-950/95 backdrop-blur-xl border border-slate-800/90 shadow-[0_10px_40px_rgba(0,0,0,0.6)] rounded-xl p-4 z-[1000] flex flex-col space-y-3 text-sans select-none animate-fade-in"
+                className="absolute right-0 mt-2 w-80 bg-slate-950/75 backdrop-blur-xl border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.65)] rounded-2xl p-4 z-[1000] flex flex-col space-y-3 text-sans select-none animate-fade-in"
                 id="dsm-notifications-dropdown"
               >
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2.5">
@@ -2048,7 +2048,7 @@ export default function App() {
         {/* Custom CMineWar OS style Desktop Widget Panel */}
         {widgetsOpen && (
           <div 
-            className={`bg-slate-950/90 border border-slate-800/80 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md rounded-xl p-4 font-sans z-[90] pointer-events-auto transition-all ${
+            className={`bg-slate-950/75 border border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.65)] backdrop-blur-xl rounded-2xl p-4 font-sans z-[90] pointer-events-auto transition-all ${
               touchMode 
                 ? "absolute inset-x-4 bottom-2 flex flex-row gap-4 items-center justify-between overflow-x-auto shadow-emerald-950/10 border-emerald-500/20 max-h-[140px]" 
                 : "absolute right-6 top-6 w-76 flex flex-col space-y-3.5"
@@ -2236,7 +2236,7 @@ export default function App() {
       {startMenuOpen && (
         <div
           id="claw-start-menu"
-          className="absolute bottom-14 left-4 z-[999] w-72 bg-slate-950/95 border border-slate-800 rounded-lg shadow-2xl p-4 flex flex-col space-y-4 animate-fade-in text-xs font-sans border-b-slate-700 select-none"
+          className="absolute bottom-14 left-4 z-[999] w-72 bg-slate-950/75 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.65)] p-4 flex flex-col space-y-4 animate-fade-in text-xs font-sans select-none"
         >
           {/* Header profiles */}
           <div className="flex items-center space-x-3 pb-3 border-b border-slate-800/80">
@@ -2381,7 +2381,7 @@ export default function App() {
       {/* App Drawer Overlay (DSM 7 inspired Floating Main Menu) */}
       {appDrawerOpen && (
         <div 
-          className="absolute inset-4 md:inset-8 z-[9999] bg-slate-950/85 border border-slate-800/80 shadow-[0_25px_60px_rgba(0,0,0,0.85)] backdrop-blur-3xl animate-fade-in flex flex-col p-6 md:p-8 rounded-3xl overflow-hidden text-sans select-none"
+          className="absolute inset-4 md:inset-8 z-[9999] bg-slate-950/75 border border-slate-800/80 shadow-[0_30px_80px_rgba(0,0,0,0.8)] backdrop-blur-3xl animate-fade-in flex flex-col p-6 md:p-8 rounded-3xl overflow-hidden text-sans select-none"
           id="cajon-apps-overlay"
         >
           {/* Header filter & Title bar */}

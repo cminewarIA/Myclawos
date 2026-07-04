@@ -725,9 +725,9 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
   };
 
   return (
-    <div className="h-full w-full overflow-hidden flex-1 flex flex-col bg-slate-900 md:flex-row text-slate-300 antialiased min-h-0 select-none">
+    <div className="h-full w-full overflow-hidden flex-1 flex flex-col bg-transparent md:flex-row text-slate-300 antialiased min-h-0 select-none">
       {/* Sidebar selection tabs */}
-      <div className="w-full md:w-48 bg-slate-950 p-3 flex md:flex-col space-y-0 md:space-y-1.5 md:space-x-0 border-r border-slate-800 shrink-0 select-none gap-2 shrink-0 overflow-x-auto md:overflow-x-visible">
+      <div className="w-full md:w-48 bg-slate-950/45 p-3 flex md:flex-col space-y-0 md:space-y-1.5 md:space-x-0 border-r border-slate-900/60 shrink-0 select-none gap-2 shrink-0 overflow-x-auto md:overflow-x-visible">
         <button
           onClick={() => setActiveTab("network")}
           className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${

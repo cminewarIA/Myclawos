@@ -127,20 +127,20 @@ export default function WindowFrame({
       style={style}
       onClick={onFocus}
       id={`win-${win.id}`}
-      className="flex flex-col bg-slate-900 border border-slate-700/60 rounded-lg shadow-2xl overflow-hidden select-none"
+      className="flex flex-col bg-slate-950/75 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.7)] overflow-hidden select-none"
     >
       {/* Titlebar with touch-none to prevent browser scroll during touch dragging */}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className={`flex items-center justify-between px-3 bg-slate-950 border-b border-slate-800 cursor-move text-slate-300 font-medium select-none touch-none ${
+        className={`flex items-center justify-between px-3 bg-slate-950/40 border-b border-slate-900/60 backdrop-blur-sm cursor-move text-slate-300 font-medium select-none touch-none ${
           touchMode ? "py-3.5 text-base" : "py-2 text-sm"
         }`}
       >
         <div className="flex items-center space-x-2 truncate">
           {/* Logo representation of OpenClaw OS */}
-          <span className={`text-emerald-400 font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 border border-emerald-500/30 ${
+          <span className={`text-emerald-400 font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900/50 border border-emerald-500/30 ${
             touchMode ? "text-sm scale-105" : "text-xs"
           }`}>
             🦞 Core
@@ -156,7 +156,7 @@ export default function WindowFrame({
               onMinimize();
             }}
             id={`btn-minimize-${win.id}`}
-            className={`rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center ${
+            className={`rounded hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center ${
               touchMode ? "p-2 min-w-[32px] min-h-[32px]" : "p-1"
             }`}
             title="Minimizar"
@@ -169,7 +169,7 @@ export default function WindowFrame({
               onMaximize();
             }}
             id={`btn-maximize-${win.id}`}
-            className={`rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center ${
+            className={`rounded hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center ${
               touchMode ? "p-2 min-w-[32px] min-h-[32px]" : "p-1"
             }`}
             title={win.isMaximized ? "Restaurar" : "Maximizar"}
@@ -193,7 +193,7 @@ export default function WindowFrame({
       </div>
 
       {/* Content wrapper */}
-      <div className="flex-1 min-h-0 text-slate-100 flex flex-col bg-slate-900 relative">
+      <div className="flex-1 min-h-0 text-slate-100 flex flex-col bg-slate-900/40 backdrop-blur-md relative">
         {children}
       </div>
 

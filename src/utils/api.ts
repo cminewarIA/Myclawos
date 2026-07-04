@@ -15,15 +15,16 @@ export async function cminewarFetch(input: RequestInfo | URL, init?: RequestInit
     const savedIp = localStorage.getItem("cminewar_connected_server_ip");
     if (savedIp) {
       // Rewrite relative /api/cminewar paths or paths containing /api/cminewar
-      if (url.startsWith("/api/cminewar") || url.includes("/api/cminewar")) {
+      if ((url.startsWith("/api/cminewar") || url.includes("/api/cminewar")) && !url.includes("/api/cminewar/proxy")) {
         // Only rewrite if it's not already absolute
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          const formattedUrl = `http://${savedIp}:3000${url.startsWith("/") ? url : "/" + url}`;
+          const relativePath = url.startsWith("/") ? url : "/" + url;
+          const formattedUrl = `/api/cminewar/proxy?ip=${encodeURIComponent(savedIp)}&path=${encodeURIComponent(relativePath)}`;
           hasRewritten = true;
           if (typeof input === "string") {
             input = formattedUrl;
           } else if (input instanceof URL) {
-            input = new URL(formattedUrl);
+            input = new URL(window.location.origin + formattedUrl);
           } else if (input instanceof Request) {
             const requestInit: RequestInit = {
               method: input.method,
@@ -46,11 +47,18 @@ export async function cminewarFetch(input: RequestInfo | URL, init?: RequestInit
   }
 
   try {
-    return await fetch(input, init);
+    const response = await fetch(input, init);
+    // If we proxied the request and the remote host returned an error status (e.g. 502 Bad Gateway)
+    // then fall back gracefully to the local simulated API endpoints!
+    if (!response.ok && hasRewritten) {
+      console.warn("Fallo de conexión al host remoto (HTTP error). Reintentando con el servidor local...");
+      return await fetch(originalInput, init);
+    }
+    return response;
   } catch (err) {
     if (hasRewritten) {
       console.warn("Fallo de conexión al host remoto. Reintentando con el servidor local...", err);
-      return fetch(originalInput, init);
+      return await fetch(originalInput, init);
     }
     throw err;
   }

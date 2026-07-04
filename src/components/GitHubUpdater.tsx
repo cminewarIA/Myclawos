@@ -1186,7 +1186,7 @@ echo "========================================================================="
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 text-slate-300 min-h-0 select-none relative font-sans h-full">
+    <div className="flex-1 flex flex-col bg-transparent text-slate-300 min-h-0 select-none relative font-sans h-full">
       
       {/* Visual Reboot Overlay */}
       {rebooting && (
@@ -1206,7 +1206,7 @@ echo "========================================================================="
       )}
 
       {/* Header Bar */}
-      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+      <div className="bg-slate-950/40 p-4 border-b border-slate-900/60 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2.5">
           <div className="w-9 h-9 rounded-lg bg-pink-500/10 border border-pink-500/30 flex items-center justify-center shadow-lg shadow-pink-500/5">
             <Settings className="text-pink-400 w-5 h-5 animate-spin" style={{ animationDuration: '40s' }} />
@@ -1227,7 +1227,7 @@ echo "========================================================================="
       {/* Main split view representing settings sidebar + content area */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
         {/* Left Sidebar coherent with Control Panel design */}
-        <div className="w-full md:w-52 bg-slate-950 p-3 flex md:flex-col space-y-0 md:space-y-1 md:space-x-0 gap-1.5 border-r border-slate-800 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
+        <div className="w-full md:w-52 bg-slate-950/45 p-3 flex md:flex-col space-y-0 md:space-y-1 md:space-x-0 gap-1.5 border-r border-slate-900/60 shrink-0 select-none overflow-x-auto md:overflow-x-visible">
           {/* Index Button */}
           <button
             onClick={() => setActiveTab("index")}
@@ -1387,7 +1387,7 @@ echo "========================================================================="
         </div>
 
         {/* Right Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-900 relative">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-transparent relative">
 
           {/* Primary Categories Grid (Old Windows Control Panel Style in right content area) */}
           {activeTab === "index" ? (

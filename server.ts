@@ -1009,6 +1009,55 @@ Jun 29 05:01:15 cminewar-virtual-mainframe node[1205]: [DB] Connected to persist
   res.json({ success: true, isReal: false, content: mockContent });
 });
 
+// CMineWar - Client-to-Remote-Node Server-Side Secure CORS & HTTPS Proxy
+app.all("/api/cminewar/proxy", async (req, res) => {
+  const targetIp = req.query.ip || req.body.ip;
+  const targetPath = req.query.path || req.body.path;
+
+  if (!targetIp || !targetPath) {
+    return res.status(400).json({ error: "Faltan parámetros requeridos de proxy: ip y path" });
+  }
+
+  // Ensure targetIp matches a safe pattern (IP address or hostname)
+  const ipPattern = /^[a-zA-Z0-9.-]+$/;
+  if (!ipPattern.test(String(targetIp))) {
+    return res.status(400).json({ error: "Dirección IP o Hostname del nodo inválido" });
+  }
+
+  // Build the target remote URL
+  const pathStr = String(targetPath);
+  const cleanPath = pathStr.startsWith("/") ? pathStr : "/" + pathStr;
+  const targetUrl = `http://${targetIp}:3000${cleanPath}`;
+
+  try {
+    const method = req.method;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json"
+    };
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers
+    };
+
+    if (method !== "GET" && method !== "HEAD") {
+      // For POST requests, construct the request body
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (err: any) {
+    console.warn(`[PROXY WARNING] Fallo sutil al conectar con el nodo remoto http://${targetIp}:3000:`, err.message);
+    return res.status(502).json({
+      success: false,
+      error: `Error de Proxy: No se pudo conectar con el nodo de CMineWar OS en ${targetIp}.`,
+      details: err.message
+    });
+  }
+});
+
 // CMineWar Cognitive Central Core Chat Endpoint
 app.post("/api/cminewar/chat", async (req, res) => {
   const { message } = req.body;
