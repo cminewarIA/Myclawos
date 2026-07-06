@@ -648,7 +648,7 @@ export default function HardwareControl({
 
                     <div className="p-2.5 rounded bg-amber-500/5 border border-amber-500/20 text-[10.5px] text-amber-300 flex items-start space-x-2">
                       <Info size={14} className="shrink-0 mt-0.5" />
-                      <span>Al cambiar de Host, el OS simulará un apagado y ejecutará la secuencia de boot BIOS analizando el hardware correspondiente.</span>
+                      <span>Al cambiar de Host, el OS simulará un apagado y ejecutará la secuencia de boot cargando el hardware correspondiente.</span>
                     </div>
                   </>
                 );

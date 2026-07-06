@@ -177,11 +177,11 @@ export default function SystemMonitor() {
           <div className="space-y-2.5">
             <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Núcleo / Engine:</span>
-              <span className="text-emerald-400">Python 3.11.2 (100% Funcional)</span>
+              <span className="text-emerald-400">Rust v1.78 + C/ASM (100% Nativo)</span>
             </div>
             <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Firmware Host:</span>
-              <span className="text-blue-400">UEFI Secure Boot / BIOS Legacy Híbrido</span>
+              <span className="text-blue-400">UEFI Secure Boot / Cargador Híbrido Multiboot</span>
             </div>
             <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Puente IP Local:</span>

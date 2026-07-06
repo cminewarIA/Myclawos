@@ -6,6 +6,11 @@ import { exec, execSync, execFileSync, spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import { rateLimit } from "express-rate-limit";
+import { db } from "./src/db/index.ts";
+import { users, commands, settings } from "./src/db/schema.ts";
+import { getOrCreateUser } from "./src/db/users.ts";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { eq } from "drizzle-orm";
 
 dotenv.config();
 
@@ -66,6 +71,165 @@ app.get("/api/cminewar/terminal-info", (req, res) => {
     res.json({ username, hostname });
   } catch (err: any) {
     res.json({ username: "user", hostname: "cminewar", error: err.message });
+  }
+});
+
+// --- CLOUD SQL PERSISTENT ENDPOINTS ---
+
+// Sync Firebase User to PostgreSQL
+app.post("/api/cminewar/db/sync-user", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { email } = req.user;
+    const uid = req.user.uid;
+    const dbUser = await getOrCreateUser(uid, email || "no-email@cminewar.os");
+
+    // Capture the reachable host of this server from the client's request
+    const reqHost = req.get('host') || req.headers.host || "";
+    const hostNameOnly = reqHost.split(":")[0];
+
+    // Attempt to safely retrieve the public external IP address of this node
+    let publicIp = hostNameOnly;
+    try {
+      const controller = new AbortController();
+      const tId = setTimeout(() => controller.abort(), 1200);
+      const ipRes = await fetch("https://api.ipify.org?format=json", { signal: controller.signal });
+      clearTimeout(tId);
+      if (ipRes.ok) {
+        const ipData = await ipRes.json();
+        if (ipData && ipData.ip) {
+          publicIp = ipData.ip;
+        }
+      }
+    } catch (e) {
+      // Ignored: fallback to host name
+    }
+
+    // Save active node host and IP under settings for this user
+    const saveSetting = async (key: string, val: string) => {
+      const existing = await db.select().from(settings).where(eq(settings.userId, dbUser.id));
+      const target = existing.find(s => s.key === key);
+      if (target) {
+        await db.update(settings).set({ value: val, updatedAt: new Date() }).where(eq(settings.id, target.id));
+      } else {
+        await db.insert(settings).values({ userId: dbUser.id, key, value: val });
+      }
+    };
+
+    if (reqHost) {
+      await saveSetting("active_node_host", reqHost);
+    }
+    if (publicIp) {
+      await saveSetting("active_node_ip", publicIp);
+    }
+
+    res.json({ success: true, user: dbUser, host: reqHost, ip: publicIp });
+  } catch (error: any) {
+    console.error("Failed to sync user:", error);
+    res.status(500).json({ error: error.message || "Failed to sync user" });
+  }
+});
+
+// Get user settings
+app.get("/api/cminewar/db/settings", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user.uid;
+    const dbUser = await db.select().from(users).where(eq(users.uid, uid));
+    if (dbUser.length === 0) {
+      return res.status(404).json({ error: "User not synchronized in database" });
+    }
+    const userSettings = await db.select().from(settings).where(eq(settings.userId, dbUser[0].id));
+    res.json(userSettings);
+  } catch (error: any) {
+    console.error("Failed to retrieve settings:", error);
+    res.status(500).json({ error: "Failed to retrieve settings" });
+  }
+});
+
+// Update or set user setting
+app.post("/api/cminewar/db/settings", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user.uid;
+    const { key, value } = req.body;
+    if (!key || value === undefined) {
+      return res.status(400).json({ error: "Missing key or value" });
+    }
+
+    const dbUser = await db.select().from(users).where(eq(users.uid, uid));
+    if (dbUser.length === 0) {
+      return res.status(404).json({ error: "User not synchronized in database" });
+    }
+
+    // Since we don't have secondary filtering natively defined without multiple queries or direct and conditions,
+    // let's fetch all settings of this user first, filter or do a targeted query using drizzle dynamic constraints
+    const userSettings = await db.select().from(settings).where(eq(settings.userId, dbUser[0].id));
+    const targetSetting = userSettings.find((s) => s.key === key);
+
+    if (targetSetting) {
+      await db.update(settings)
+        .set({ value: String(value), updatedAt: new Date() })
+        .where(eq(settings.id, targetSetting.id));
+    } else {
+      await db.insert(settings)
+        .values({
+          userId: dbUser[0].id,
+          key,
+          value: String(value),
+        });
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Failed to update setting:", error);
+    res.status(500).json({ error: "Failed to update setting" });
+  }
+});
+
+// Get terminal command history
+app.get("/api/cminewar/db/commands", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user.uid;
+    const dbUser = await db.select().from(users).where(eq(users.uid, uid));
+    if (dbUser.length === 0) {
+      return res.status(404).json({ error: "User not synchronized in database" });
+    }
+
+    const userCommands = await db.select()
+      .from(commands)
+      .where(eq(commands.userId, dbUser[0].id));
+
+    res.json(userCommands);
+  } catch (error: any) {
+    console.error("Failed to retrieve commands:", error);
+    res.status(500).json({ error: "Failed to retrieve commands" });
+  }
+});
+
+// Save terminal command execution
+app.post("/api/cminewar/db/commands", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user.uid;
+    const { command, output } = req.body;
+    if (!command) {
+      return res.status(400).json({ error: "Missing command" });
+    }
+
+    const dbUser = await db.select().from(users).where(eq(users.uid, uid));
+    if (dbUser.length === 0) {
+      return res.status(404).json({ error: "User not synchronized in database" });
+    }
+
+    const newCommand = await db.insert(commands)
+      .values({
+        userId: dbUser[0].id,
+        command,
+        output: output || "",
+      })
+      .returning();
+
+    res.json({ success: true, command: newCommand[0] });
+  } catch (error: any) {
+    console.error("Failed to log command:", error);
+    res.status(500).json({ error: "Failed to log command" });
   }
 });
 

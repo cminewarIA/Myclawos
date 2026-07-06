@@ -399,10 +399,12 @@ echo "== INSTALACION COMPLETADA CON EXITO - REINICIE SU CORTEX =="
           const isRoot = localStorage.getItem("claw_is_root") === "true";
           const userStr = isRoot ? "root" : systemUser;
           const hostStr = systemHostname;
+          const kLang = localStorage.getItem("cminewar_kernel_engine") || "rust";
+          const kernelSuffix = kLang === "rust" ? "rust-safe" : "c-asm-legacy";
           addLine(`       /\\_/\\       ${userStr}@${hostStr}`, "success");
           addLine(`      ( o.o )      ----------------------------`, "success");
           addLine(`       > ^ <       SO: CMineWar OS (Host: ${metrics?.platform || "Linux"}) v${VERSION}`, "success");
-          addLine(`      /     \\      Kernel: 5.16.0-cminewar-${metrics?.arch || "x64"}`, "success");
+          addLine(`      /     \\      Kernel: 5.16.0-${kernelSuffix}-${metrics?.arch || "x64"}`, "success");
 
           let uptimeStr = "Desconocido";
           if (metrics && metrics.uptime) {

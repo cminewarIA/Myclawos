@@ -28,7 +28,220 @@ interface ControlPanelProps {
 }
 
 export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
-  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics" | "usb_creator">("network");
+  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics" | "usb_creator" | "rust_kernel">("network");
+  
+  // States for interactive C/Assembly vs Rust Kernel compiler
+  const [kernelLanguage, setKernelLanguage] = useState<"c_assembly" | "rust">(() => {
+    return (localStorage.getItem("cminewar_kernel_engine") as any) || "rust";
+  });
+  const [selectedSnippetId, setSelectedSnippetId] = useState<"keyboard" | "allocator" | "scheduler">("keyboard");
+  const [isCompilingKernel, setIsCompilingKernel] = useState(false);
+  const [kernelCompileProgress, setKernelCompileProgress] = useState(0);
+  const [kernelCompileLogs, setKernelCompileLogs] = useState<string[]>([]);
+  const [compileSuccess, setCompileSuccess] = useState<boolean | null>(null);
+
+  const snippetTemplates = {
+    keyboard: {
+      title: "Controlador de Teclado (Keyboard Driver)",
+      c_assembly: `; --- legacy_keyboard.asm ---
+global keyboard_handler
+keyboard_handler:
+    pusha
+    in al, 0x60              ; Leer scancode directo de E/S de hardware
+    mov [0x0009F000], al     ; Escritura insegura a memoria física arbitraria
+    mov al, 0x20             ; Enviar End-of-Interrupt (EOI) a PIC
+    out 0x20, al
+    popa
+    iret
+
+// --- keyboard.c ---
+volatile char* buffer = (char*)0x0009F000;
+void handle_scancode_legacy() {
+    char code = *buffer;
+    if (code > 0) {
+        // Alerta de vulnerabilidad: Desbordamiento de búfer sin verificación de límites
+        input_queue[queue_ptr++] = code; 
+    }
+}`,
+      rust: `// --- keyboard_driver.rs ---
+use core::sync::atomic::{AtomicU8, Ordering};
+use x86_64::instructions::port::Port;
+
+static KEYBOARD_SCANCODE: AtomicU8 = AtomicU8::new(0);
+
+// Firma de interrupción encapsulada de forma segura
+pub extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: InterruptStackFrame
+) {
+    let mut port = Port::new(0x60);
+    // Bloque inseguro restringido al acceso estrictamente tipado de E/S
+    let scancode: u8 = unsafe { port.read() }; 
+
+    // Almacenamiento seguro y atómico para prevenir condiciones de carrera
+    KEYBOARD_SCANCODE.store(scancode, Ordering::SeqCst);
+
+    unsafe {
+        Port::new(0x20).write(0x20 as u8); // EOI seguro
+    }
+}`
+    },
+    allocator: {
+      title: "Asignador de Memoria Heap (Memory Allocator)",
+      c_assembly: `// --- legacy_allocator.c ---
+static char heap_memory[1024 * 1024]; 
+static size_t heap_offset = 0;
+
+// Asignador Bump ultra simplificado sin alineación de memoria
+void* sys_malloc(size_t size) {
+    void* ptr = &heap_memory[heap_offset];
+    heap_offset += size; 
+    return ptr; // Peligro de fugas de memoria y punteros colgantes en free()
+}
+
+void sys_free(void* ptr) {
+    // El C legadono reclama bloques de memoria dinámicamente sin listas complejas.
+    // ¡Riesgo grave de Use-After-Free listo para explotación!
+}`,
+      rust: `// --- safe_allocator.rs ---
+use buddy_alloc::BuddyAlloc;
+use core::alloc::{GlobalAlloc, Layout};
+
+struct SafeAllocator {
+    inner: spin::Mutex<BuddyAlloc>,
+}
+
+unsafe impl GlobalAlloc for SafeAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        // Garantía de exclusión mutua en compilación usando un spinlock
+        self.inner.lock().alloc(layout.size(), layout.align())
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // El patrón RAII de Rust gestiona la deasignación segura automáticamente
+        self.inner.lock().dealloc(ptr, layout.size(), layout.align())
+    }
+}`
+    },
+    scheduler: {
+      title: "Planificador de Tareas Hilos (Thread Scheduler)",
+      c_assembly: `// --- legacy_scheduler.c ---
+struct task {
+    int pid;
+    void* stack_ptr;
+    struct task* next;
+};
+
+struct task* current_task;
+
+void yield_switch_legacy() {
+    // Manipulación manual de registros de CPU con inline Assembly de GCC
+    // Un solo error de alineación de pila provocará un Triple Fault (Kernel Panic)
+    asm volatile(
+        "mov %0, %%esp \\n"
+        "pop %%edi     \\n"
+        "pop %%esi     \\n"
+        : 
+        : "r"(current_task->stack_ptr)
+    );
+}`,
+      rust: `// --- scheduler.rs ---
+use alloc::collections::VecDeque;
+use spin::Mutex;
+
+pub struct Task {
+    id: TaskId,
+    stack: VirtAddr,
+    state: TaskState,
+}
+
+pub struct SafeScheduler {
+    tasks: Mutex<VecDeque<Task>>,
+    current: Mutex<Option<TaskId>>,
+}
+
+impl SafeScheduler {
+    pub fn schedule(&self) {
+        let mut tasks = self.tasks.lock();
+        if let Some(next_task) = tasks.pop_front() {
+            // El validador de préstamos (borrow checker) de Rust 
+            // garantiza la seguridad de hilos en tiempo de compilación.
+            self.context_switch(next_task);
+        }
+    }
+}`
+    }
+  };
+
+  const [kernelCodeSnippet, setKernelCodeSnippet] = useState<string>(
+    snippetTemplates[selectedSnippetId][kernelLanguage]
+  );
+
+  // Update snippet code when selection changes
+  useEffect(() => {
+    setKernelCodeSnippet(snippetTemplates[selectedSnippetId][kernelLanguage]);
+  }, [selectedSnippetId, kernelLanguage]);
+
+  const handleCompileKernel = () => {
+    setIsCompilingKernel(true);
+    setKernelCompileProgress(0);
+    setCompileSuccess(null);
+
+    const baseLogs = [
+      `$ cminewar-kernel-compiler --target=x86_64-cminewar-elf --lang=${kernelLanguage === "rust" ? "rust-1.78.0-nightly" : "gcc-13.2-asm"}`,
+      `[SISTEMA] Leyendo fragmento para módulo de kernel: "${selectedSnippetId}"...`,
+    ];
+    setKernelCompileLogs(baseLogs);
+
+    const compileSteps = kernelLanguage === "rust" ? [
+      `[CARGO] Sincronizando árbol de dependencias con crates.io...`,
+      `[CARGO] Compilando crate principal: 'core' (no_std, no_main habilitados)`,
+      `[CARGO] Compilando crate dependiente: 'spin' v0.9.8`,
+      `[CARGO] Compilando crate dependiente: 'x86_64' v0.14.11`,
+      `[RUSTC] Ejecutando análisis de propiedad y préstamos (Borrow Checker)...`,
+      `[✓ RUSTC] 100% de referencias de memoria validadas estáticamente. Cero violaciones.`,
+      `[RUSTC] Optimizando abstracciones de coste cero (Zero-Cost Abstractions)...`,
+      `[CARGO] Compilando kernel 'cminewar_core' v1.1.2`,
+      `[LLVM] Generando código máquina ELF64 de alta eficiencia...`,
+      `[LINKER] ld.lld --gc-sections --strip-all -T linker.ld -o kernel.bin`,
+      `[SISTEMA] Verificando cabeceras de arranque multiboot2...`,
+      `[✓ ÉXITO] Binario de kernel seguro compilado y firmado: 'cminewar_kernel_rust.bin' (42.8 KB)`
+    ] : [
+      `[NASM] Ensamblando archivo de código de máquina: 'legacy_keyboard.asm' -f elf64...`,
+      `[GCC] Compilando fuente de C: 'keyboard.c' con banderas -m64 -O2 -ffreestanding -fno-stack-protector...`,
+      `[⚠️ ADVERTENCIA] keyboard.c:12: 'input_queue' riesgo potencial de escritura fuera de límites (Buffer Overflow).`,
+      `[⚠️ ADVERTENCIA] allocator.c:8: 'sys_free' no liberado. Pérdida crítica de memoria detectada.`,
+      `[LINKER] ld -n -T linker.ld -o kernel.bin`,
+      `[SISTEMA] Analizando binario generado...`,
+      `[⚠️ DIAGNÓSTICO] Escaneo estático completado: 2 vulnerabilidades críticas encontradas (Memoria insegura).`,
+      `[SISTEMA] Advertencia: El código de C contiene punteros físicos desprotegidos y aritmética manual de punteros.`,
+      `[✓ ÉXITO] Binario de kernel legado compilado: 'cminewar_kernel_legacy.bin' (84.2 KB) (CON ADVERTENCIAS DE SEGURIDAD)`
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      setKernelCompileProgress((prev) => {
+        const next = prev + 10;
+        if (next >= 100) {
+          clearInterval(interval);
+          setIsCompilingKernel(false);
+          setCompileSuccess(true);
+          // Save selected kernel language permanently to simulated OS state
+          localStorage.setItem("cminewar_kernel_engine", kernelLanguage);
+          window.dispatchEvent(new Event("storage")); // Trigger terminal / global update
+          return 100;
+        }
+        
+        const stepsToInsert = Math.floor((next / 100) * compileSteps.length);
+        if (stepsToInsert > currentStep) {
+          const logsToAdd = compileSteps.slice(currentStep, stepsToInsert);
+          setKernelCompileLogs((old) => [...old, ...logsToAdd]);
+          currentStep = stepsToInsert;
+        }
+        
+        return next;
+      });
+    }, 400);
+  };
   
   // Simulated Statistics Real-time States
   const [ramUsed, setRamUsed] = useState(4120); // out of 16384 MB (Host representation)
@@ -806,6 +1019,19 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
         >
           <Laptop size={14} className={activeTab === "usb_creator" ? "text-orange-400" : "text-slate-500"} />
           <span className="whitespace-nowrap">Creador USB</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("rust_kernel")}
+          className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${
+            activeTab === "rust_kernel"
+              ? "bg-slate-900 text-emerald-400 border border-emerald-500/10 font-bold"
+              : "hover:bg-slate-900 border border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+          id="btn-tab-rust-kernel"
+        >
+          <Cpu size={14} className={activeTab === "rust_kernel" ? "text-emerald-400" : "text-slate-500"} />
+          <span className="whitespace-nowrap">Re-escritura Kernel</span>
         </button>
       </div>
 
@@ -1735,6 +1961,198 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
                   <div className="p-8 text-center text-slate-500 select-none bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-[11px] leading-relaxed">
                     ⚙️ Consola de Flasheo Inactiva. <br />
                     Fija las variables de disco y presiona "Crear USB de Arranque" para comenzar la transferencia física.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "rust_kernel" && (
+          <div className="flex-1 p-4 overflow-y-auto w-full space-y-4 text-left font-sans animate-fade-in" id="view-rust-kernel-control">
+            <div className="border-b border-slate-800 pb-2.5 flex justify-between items-center">
+              <div>
+                <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                  <Cpu size={14} className="text-emerald-400 animate-pulse" />
+                  <span>Re-escritura de Kernel Virtual & Compilador Estático</span>
+                </h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Alterna el núcleo del sistema de CMineWar OS entre C/Assembly tradicionales y la seguridad de Rust sin sacrificar rendimiento.
+                </p>
+              </div>
+              <div className="px-2 py-0.5 bg-slate-950 border border-slate-850 rounded font-mono text-[9px] text-slate-400">
+                Core Engine: <span className={kernelLanguage === "rust" ? "text-emerald-400 font-bold" : "text-amber-500 font-bold"}>{kernelLanguage === "rust" ? "RUST (Memory-Safe)" : "C/ASM (Legacy)"}</span>
+              </div>
+            </div>
+
+            {/* Selection bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/40 p-3 rounded-xl border border-slate-900">
+              {/* Language Selector */}
+              <div className="space-y-1">
+                <span className="text-[9px] text-slate-500 uppercase font-mono font-bold block">1. Seleccionar Lenguaje de Arquitectura:</span>
+                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-850">
+                  <button
+                    onClick={() => {
+                      if (!isCompilingKernel) setKernelLanguage("c_assembly");
+                    }}
+                    disabled={isCompilingKernel}
+                    className={`flex-1 py-1.5 px-3 rounded text-[10.5px] font-mono font-bold transition ${
+                      kernelLanguage === "c_assembly"
+                        ? "bg-amber-950/40 border border-amber-800 text-amber-400"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Legacy C + Assembly
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isCompilingKernel) setKernelLanguage("rust");
+                    }}
+                    disabled={isCompilingKernel}
+                    className={`flex-1 py-1.5 px-3 rounded text-[10.5px] font-mono font-bold transition ${
+                      kernelLanguage === "rust"
+                        ? "bg-emerald-950/40 border border-emerald-800 text-emerald-400"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Modern Rust Core
+                  </button>
+                </div>
+              </div>
+
+              {/* Module Snippet Selector */}
+              <div className="space-y-1">
+                <span className="text-[9px] text-slate-500 uppercase font-mono font-bold block">2. Seleccionar Subsistema de Kernel:</span>
+                <select
+                  value={selectedSnippetId}
+                  onChange={(e) => setSelectedSnippetId(e.target.value as any)}
+                  disabled={isCompilingKernel}
+                  className="bg-slate-950 border border-slate-850 hover:border-emerald-500/30 rounded px-2.5 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px] font-mono cursor-pointer w-full transition"
+                >
+                  <option value="keyboard">🎹 Controlador de Teclado (Keyboard Driver)</option>
+                  <option value="allocator">💾 Asignador de Memoria Heap (Buddy Allocator)</option>
+                  <option value="scheduler">⚙️ Planificador de Hilos (Task Scheduler)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Split layout: Editor and Console */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {/* Source Code View */}
+              <div className="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[320px]">
+                <div className="bg-slate-900 px-3 py-2 border-b border-slate-800 flex justify-between items-center shrink-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span className="text-[10px] font-mono text-slate-400 font-bold ml-1">
+                      {kernelLanguage === "rust" ? "src/kernel/driver.rs" : "src/kernel/driver.c"}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono bg-slate-950 border border-slate-850 text-slate-400 px-1.5 py-0.2 rounded uppercase">
+                    {kernelLanguage === "rust" ? "RUST 2021" : "GCC / NASM"}
+                  </span>
+                </div>
+                <textarea
+                  value={kernelCodeSnippet}
+                  onChange={(e) => {
+                    if (!isCompilingKernel) setKernelCodeSnippet(e.target.value);
+                  }}
+                  disabled={isCompilingKernel}
+                  className="flex-1 w-full bg-slate-950 p-3 font-mono text-[9px] text-slate-300 border-none outline-none resize-none overflow-y-auto leading-relaxed select-text"
+                  spellCheck="false"
+                />
+              </div>
+
+              {/* Console & Trigger Column */}
+              <div className="lg:col-span-2 flex flex-col justify-between space-y-3 min-h-[320px]">
+                {/* Actions and Philosophy */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="text-[10px] font-bold text-slate-350 uppercase tracking-widest border-b border-slate-900 pb-1.5 flex items-center gap-1.5">
+                      <ShieldCheck size={12} className="text-emerald-400" />
+                      Análisis de Seguridad de Memoria
+                    </div>
+                    
+                    {kernelLanguage === "rust" ? (
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        Compilar en <strong>Rust</strong> inyecta seguridad de hilos y prevención estática de corrupción de memoria al mainframe virtual. No requiere recolector de basura (garbage collector) ni runtime costoso.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        Compilar en <strong>C/Assembly</strong> ofrece interactividad directa con registros de CPU (<code className="text-amber-500 font-mono">al</code>, <code className="text-amber-500 font-mono">esp</code>) pero traspasa la responsabilidad total de seguridad al programador.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-4 shrink-0">
+                    <button
+                      onClick={handleCompileKernel}
+                      disabled={isCompilingKernel}
+                      className={`w-full py-2.5 px-4 rounded text-[11px] font-mono uppercase tracking-widest font-bold border flex items-center justify-center gap-2 cursor-pointer transition ${
+                        isCompilingKernel
+                          ? "bg-slate-900 border-slate-800 text-slate-500"
+                          : kernelLanguage === "rust"
+                            ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 text-white"
+                            : "bg-amber-600 hover:bg-amber-500 border-amber-500/30 text-white"
+                      }`}
+                    >
+                      <RefreshCw size={12} className={isCompilingKernel ? "animate-spin" : ""} />
+                      <span>{isCompilingKernel ? "Compilando Núcleo..." : `Re-compilar Kernel en ${kernelLanguage === "rust" ? "Rust" : "C/Assembly"}`}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress Logs Panel */}
+                {(isCompilingKernel || kernelCompileLogs.length > 0) && (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 shrink-0">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className={kernelLanguage === "rust" ? "text-emerald-400 font-bold" : "text-amber-500 font-bold"}>
+                        {isCompilingKernel ? "Ejecutando Compilador Virtual..." : "Compilación Terminada"}
+                      </span>
+                      <span className="text-slate-350 font-bold">{kernelCompileProgress}%</span>
+                    </div>
+
+                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                      <div
+                        className={`h-full transition-all duration-300 ${kernelLanguage === "rust" ? "bg-emerald-500" : "bg-amber-500"}`}
+                        style={{ width: `${kernelCompileProgress}%` }}
+                      />
+                    </div>
+
+                    <div className="h-32 overflow-y-auto bg-slate-950 border border-slate-900 p-2 rounded font-mono text-[8px] space-y-0.5 select-text scrollbar-thin">
+                      {kernelCompileLogs.map((log, index) => (
+                        <div key={index} className="leading-tight break-all">
+                          {log.startsWith("[✓") || log.startsWith("[SUCCESS") ? (
+                            <span className="text-emerald-400 font-bold">{log}</span>
+                          ) : log.startsWith("[⚠️") || log.startsWith("[WARNING") ? (
+                            <span className="text-amber-400 font-bold">{log}</span>
+                          ) : (
+                            <span className="text-slate-400">{log}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {compileSuccess && !isCompilingKernel && (
+                      <div className="pt-1.5 border-t border-slate-900">
+                        {kernelLanguage === "rust" ? (
+                          <div className="bg-emerald-950/20 border border-emerald-900/30 rounded p-2 flex items-start gap-2">
+                            <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                            <div className="text-[9.5px] text-emerald-300 leading-normal">
+                              <strong>¡CORTEX ACTUALIZADO CON RUST!</strong> Kernel moderno de CMineWar OS inyectado con éxito. Se habilitó seguridad de memoria y exclusión de hilos garantizada.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-950/20 border border-amber-900/30 rounded p-2 flex items-start gap-2">
+                            <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                            <div className="text-[9.5px] text-amber-300 leading-normal">
+                              <strong>ADVERTENCIA DE SEGURIDAD:</strong> Kernel legado compilado. El sistema funciona de forma óptima pero asume riesgos ante desbordamientos y fugas de recursos.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

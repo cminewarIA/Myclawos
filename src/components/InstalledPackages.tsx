@@ -167,6 +167,18 @@ export function PkgHtop() {
 export function PkgNeofetch() {
   const [fetching, setFetching] = useState(false);
   const [renderedLogs, setRenderedLogs] = useState<string[]>([]);
+  const [username, setUsername] = useState("user");
+  const [hostname, setHostname] = useState("cminewar-workspace");
+
+  useEffect(() => {
+    fetch("/api/cminewar/terminal-info")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.username) setUsername(data.username);
+        if (data && data.hostname) setHostname(data.hostname);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     printStats();
@@ -206,13 +218,13 @@ export function PkgNeofetch() {
 
           {/* Metadata info */}
           <div className="md:col-span-8 space-y-1.5 leading-relaxed">
-            <h3 className="text-emerald-300 font-bold text-sm">user@cminewar-workspace</h3>
+            <h3 className="text-emerald-300 font-bold text-sm">{username}@{hostname}</h3>
             <p className="border-b border-slate-800 pb-1.5 text-slate-550"></p>
             <div><span className="text-emerald-400 font-bold">OS:</span> CMineWar OS Debian-Live v1.2.0 x86_64</div>
-            <div><span className="text-emerald-400 font-bold">Arquitectura:</span> Escrito íntegramente en Python (Core & System Daemons)</div>
-            <div><span className="text-emerald-400 font-bold">Compatibilidad:</span> Firmware UEFI GPT / Legacy BIOS MBR Híbrido</div>
+            <div><span className="text-emerald-400 font-bold">Arquitectura:</span> C + Ensamblador (Core de Hardware) y Rust (Servicios y Daemons)</div>
+            <div><span className="text-emerald-400 font-bold">Compatibilidad:</span> Firmware UEFI GPT / Cargador Multiboot MBR Híbrido</div>
             <div><span className="text-emerald-400 font-bold">Host:</span> AI Studio Debian-Native Sandbox Engine</div>
-            <div><span className="text-emerald-400 font-bold">Kernel:</span> 5.16.0-cminewar-debian-generic (Python-linked)</div>
+            <div><span className="text-emerald-400 font-bold">Kernel:</span> 5.16.0-cminewar-rust-safe-generic (C, Assembly & Rust Native)</div>
             <div><span className="text-emerald-400 font-bold">Uptime:</span> 3 hours, 21 mins</div>
             <div><span className="text-emerald-400 font-bold">Shell:</span> CMineWarBash v1.2.0-secure</div>
             <div><span className="text-emerald-400 font-bold">Resolution:</span> {window.innerWidth}x{window.innerHeight} (Autoscaled)</div>

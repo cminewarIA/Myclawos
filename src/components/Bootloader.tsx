@@ -10,9 +10,15 @@ interface BootloaderProps {
 }
 
 export default function Bootloader({ onComplete, selectedServerIp = null, isSafeModeDefault = false }: BootloaderProps) {
-  const [bootProgress, setBootProgress] = useState(0);
+  const [bootProgress, setBootProgress] = useState(100);
   const [bootLogs, setBootLogs] = useState<string[]>([]);
-  const [bootPhase, setBootPhase] = useState<"grub" | "bios" | "safemode" | "finished">("bios");
+  const [bootPhase, setBootPhase] = useState<"grub" | "bios" | "safemode" | "finished">("finished");
+
+  useEffect(() => {
+    if (bootPhase === "finished") {
+      onComplete();
+    }
+  }, [bootPhase]);
   const [safeModePhase, setSafeModePhase] = useState<"menu" | "repairing" | "repair_done">("menu");
   const [repairLogs, setRepairLogs] = useState<string[]>([]);
   const [repairProgress, setRepairProgress] = useState(0);

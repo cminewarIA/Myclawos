@@ -18,6 +18,8 @@ import DragonLogo from "./components/DragonLogo";
 import Bootloader from "./components/Bootloader";
 import { VERSION, BUILD_NUMBER } from "./version";
 import { cminewarFetch } from "./utils/api";
+import { auth, googleAuthProvider } from "./lib/firebase";
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
 import HardwareControl from "./components/HardwareControl";
@@ -65,12 +67,13 @@ export default function App() {
   // Boot phase / lifecycle state inside Debian virtual mainframe:
   // Starts with Gateway requesting Node IP.
   const [bootLifecycle, setBootLifecycle] = useState<"gateway" | "bootloader" | "ready">(() => {
+    const isSafeMode = typeof window !== "undefined" && localStorage.getItem("cminewar_safe_mode") === "true";
     if (typeof window !== "undefined" && localStorage.getItem("cminewar_force_reboot") === "true") {
       localStorage.removeItem("cminewar_force_reboot");
-      return "bootloader";
+      return isSafeMode ? "bootloader" : "ready";
     }
     if (typeof window !== "undefined" && localStorage.getItem("cminewar_connected_server_ip")) {
-      if (localStorage.getItem("cminewar_skip_bootloader") === "true") {
+      if (localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeMode) {
         return "ready";
       }
       return "bootloader";
@@ -210,7 +213,7 @@ export default function App() {
         console.log(`[AUTOCONNECT] Detectado un único nodo activo (${autoIp}). Iniciando sesión automáticamente...`);
         localStorage.setItem("cminewar_connected_server_ip", autoIp);
         setConnectedServerIp(autoIp);
-        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
         setBootLifecycle(nextState);
       }
     };
@@ -336,6 +339,109 @@ export default function App() {
   }, []);
 
   // Active loaded file in editor
+  const [systemUser, setSystemUser] = useState<string>("user");
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [cloudActiveNode, setCloudActiveNode] = useState<{ ip: string; host: string } | null>(null);
+  const [autoConnectCloud, setAutoConnectCloud] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cminewar_autoconnect_cloud") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        setSystemUser(user.displayName || user.email?.split("@")[0] || "user");
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch("/api/cminewar/db/sync-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (res.ok) {
+            console.log("Firebase user synced with PostgreSQL successfully.");
+            
+            // Fetch saved settings to check if there is an active registered server node IP/host
+            const settingsRes = await fetch("/api/cminewar/db/settings", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (settingsRes.ok) {
+              const settingsData = await settingsRes.json();
+              if (Array.isArray(settingsData)) {
+                const ipSetting = settingsData.find((s: any) => s.key === "active_node_ip");
+                const hostSetting = settingsData.find((s: any) => s.key === "active_node_host");
+                if (ipSetting || hostSetting) {
+                  const nodeData = {
+                    ip: ipSetting ? ipSetting.value : "",
+                    host: hostSetting ? hostSetting.value : "",
+                  };
+                  setCloudActiveNode(nodeData);
+
+                  // Default auto-connect to true for seamless client integrations (Android / Ubuntu)
+                  if (localStorage.getItem("cminewar_autoconnect_cloud") === null) {
+                    localStorage.setItem("cminewar_autoconnect_cloud", "true");
+                    setAutoConnectCloud(true);
+                  }
+
+                  // Automatically connect to the saved node IP/host if we are in the gateway phase
+                  const targetIp = nodeData.host || nodeData.ip;
+                  if (targetIp && targetIp !== "demo" && bootLifecycle === "gateway") {
+                    console.log(`[AUTOCONNECT CLOUD] Auto-connecting to registered cloud node: ${targetIp}`);
+                    localStorage.setItem("cminewar_connected_server_ip", targetIp);
+                    setConnectedServerIp(targetIp);
+                    const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
+                    setBootLifecycle(nextState);
+                    triggerNotification(`☁️ Enlace automático establecido con Nodo Cloud: ${targetIp}`, "success");
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync Firebase user with SQL database:", err);
+        }
+      } else {
+        setSystemUser("user");
+        setCloudActiveNode(null);
+      }
+    });
+    return () => unsubscribe();
+  }, [bootLifecycle]);
+
+  const [kernelEngine, setKernelEngine] = useState<"rust" | "c_assembly">(() => {
+    return (localStorage.getItem("cminewar_kernel_engine") as any) || "rust";
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setKernelEngine((localStorage.getItem("cminewar_kernel_engine") as any) || "rust");
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (bootLifecycle === "ready") {
+      cminewarFetch("/api/cminewar/terminal-info")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.username && !firebaseUser) {
+            setSystemUser(data.username);
+          }
+        })
+        .catch((err) => console.error("Error fetching terminal info in App:", err));
+    }
+  }, [bootLifecycle, firebaseUser]);
+
   const [openFilePath, setOpenFilePath] = useState<string[] | null>(null);
   const [openFileName, setOpenFileName] = useState<string[] | null>(null);
   const [openFileContent, setOpenFileContent] = useState<string | null>(null);
@@ -1436,7 +1542,7 @@ export default function App() {
                 setConnError(null);
                 localStorage.setItem("cminewar_connected_server_ip", "demo");
                 setConnectedServerIp("demo");
-                const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
                 setBootLifecycle(nextState);
                 return;
               }
@@ -1463,7 +1569,7 @@ export default function App() {
                       setConnError(null);
                       localStorage.setItem("cminewar_connected_server_ip", ipVal);
                       setConnectedServerIp(ipVal);
-                      const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                      const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
                       setBootLifecycle(nextState);
                     } else {
                       setConnError("NODO INVÁLIDO. El host respondió pero no tiene el formato de CMineWar OS.");
@@ -1526,7 +1632,7 @@ export default function App() {
                       onClick={() => {
                         localStorage.setItem("cminewar_connected_server_ip", nodeIp);
                         setConnectedServerIp(nodeIp);
-                        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" ? "ready" : "bootloader";
+                        const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
                         setBootLifecycle(nextState);
                       }}
                       className="px-2 py-1.5 bg-emerald-950/40 border border-emerald-800/40 hover:border-emerald-500 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 rounded-md text-[11px] font-mono transition cursor-pointer text-center truncate uppercase"
@@ -1562,6 +1668,136 @@ export default function App() {
               </button>
             </div>
           </form>
+
+          {/* Firebase Authentication & SQL Sync module */}
+          <div className="w-full border-t border-slate-800/80 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                Sincronización Cloud (Firebase)
+              </span>
+              <span className={`h-1.5 w-1.5 rounded-full ${firebaseUser ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}></span>
+            </div>
+
+            {firebaseUser ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-emerald-950/20 border border-emerald-900/35 p-2.5 rounded-lg">
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    {firebaseUser.photoURL ? (
+                      <img 
+                        src={firebaseUser.photoURL} 
+                        alt={firebaseUser.displayName || "User"} 
+                        referrerPolicy="no-referrer"
+                        className="w-7 h-7 rounded-full border border-emerald-500/30"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold font-mono text-[11px]">
+                        {(firebaseUser.displayName || firebaseUser.email || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-bold text-slate-200 truncate font-mono">
+                        {firebaseUser.displayName || "Usuario Cloud"}
+                      </span>
+                      <span className="text-[9px] text-slate-400 truncate font-mono">
+                        {firebaseUser.email}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await signOut(auth);
+                        triggerNotification("Sesión Cloud cerrada.", "info");
+                      } catch (err: any) {
+                        triggerNotification("Error al cerrar sesión: " + err.message, "info");
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-red-950/40 hover:text-red-400 hover:border-red-900/40 border border-slate-700 text-slate-300 rounded text-[9.5px] font-bold uppercase tracking-wider cursor-pointer transition-all duration-200"
+                  >
+                    Salir
+                  </button>
+                </div>
+
+                {cloudActiveNode && (cloudActiveNode.host || cloudActiveNode.ip) ? (
+                  <div className="bg-[#111827]/80 border border-emerald-900/30 p-3 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Nodo Cloud Detectado
+                      </span>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetIp = cloudActiveNode.host || cloudActiveNode.ip;
+                        if (targetIp) {
+                          localStorage.setItem("cminewar_connected_server_ip", targetIp);
+                          setConnectedServerIp(targetIp);
+                          const nextState = localStorage.getItem("cminewar_skip_bootloader") === "true" || !isSafeModeActive ? "ready" : "bootloader";
+                          setBootLifecycle(nextState);
+                          triggerNotification(`☁️ Conectado a Nodo Cloud: ${targetIp}`, "success");
+                        }
+                      }}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 hover:scale-[1.01] active:scale-[0.99] text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-lg cursor-pointer font-mono"
+                    >
+                      Enlazar con {cloudActiveNode.host || cloudActiveNode.ip}
+                    </button>
+
+                    <label className="flex items-center space-x-2 text-[10px] text-slate-400 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={autoConnectCloud}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setAutoConnectCloud(val);
+                          localStorage.setItem("cminewar_autoconnect_cloud", val ? "true" : "false");
+                          triggerNotification(val ? "Conexión automática por Cuenta de Google activada." : "Conexión automática desactivada.", "info");
+                        }}
+                        className="rounded border-slate-800 bg-[#020617] text-emerald-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="font-mono">Auto-conectar al iniciar sesión</span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="text-[9.5px] text-slate-400 bg-slate-950/40 border border-slate-900 p-3 rounded-lg text-center font-mono leading-relaxed">
+                    ⚙️ Sincroniza tu servidor iniciándolo con esta misma cuenta de Google para conectarte automáticamente de forma remota sin escribir la IP.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const result = await signInWithPopup(auth, googleAuthProvider);
+                      triggerNotification(`¡Hola ${result.user.displayName}! Sesión de Firebase iniciada.`, "success");
+                    } catch (err: any) {
+                      console.error("Firebase Login Error:", err);
+                      triggerNotification("Fallo de autenticación: " + err.message, "info");
+                    }
+                  }}
+                  className="w-full py-2.5 bg-[#1a1f36] hover:bg-[#202744] border border-slate-800 text-slate-200 hover:text-white rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.94 5.94 0 0 1 8 12.571a5.94 5.94 0 0 1 5.991-5.943c1.554 0 2.973.57 4.073 1.514l3.14-3.14A10.3 10.3 0 0 0 13.99 1C7.92 1 3 5.92 3 12s4.92 11 11 11c6.51 0 10.59-4.52 10.59-10.714 0-.693-.075-1.343-.2-2H12.24Z" />
+                  </svg>
+                  <span>Iniciar con Google</span>
+                </button>
+                <div className="bg-[#020617]/50 border border-slate-900 rounded-lg p-2.5 space-y-1.5">
+                  <p className="text-[9.5px] text-slate-400 text-center leading-normal font-mono">
+                    ☁️ <span className="text-emerald-500 font-bold">Enlace Cloud Remoto</span>
+                  </p>
+                  <p className="text-[8.5px] text-slate-500 text-center leading-relaxed">
+                    Sincroniza al instante tu <span className="text-slate-300 font-semibold">App de Android</span> y tu aplicación <span className="text-slate-300 font-semibold">.deb de Ubuntu</span>. Al iniciar sesión, te conectarás directamente a tu servidor fuera de tu WiFi local, sin necesidad de escribir la IP.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="w-full flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-800 pt-4 font-mono">
             <span>CONTROLADOR DE MÁQUINA REAL</span>
@@ -1883,10 +2119,20 @@ export default function App() {
             <span className="hidden sm:inline">ESTADO NAS</span>
           </button>
 
+          {/* Active Kernel Engine Badge */}
+          <div className={`hidden md:flex items-center space-x-1 border px-1.5 py-0.5 rounded-lg text-[9px] font-mono select-none font-bold ${
+            kernelEngine === "rust"
+              ? "bg-emerald-950/30 border-emerald-500/20 text-emerald-400"
+              : "bg-amber-950/30 border-amber-500/20 text-amber-400"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${kernelEngine === "rust" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-pulse"}`} />
+            <span>KERNEL: {kernelEngine === "rust" ? "RUST-SAFE" : "C-ASM"}</span>
+          </div>
+
           {/* User profile avatar pill */}
           <div className="hidden sm:flex items-center space-x-1 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded-lg text-[9px] font-mono text-slate-300">
-            <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold font-mono text-[8px]">U</span>
-            <span className="text-slate-450">root</span>
+            <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold font-mono text-[8px]">{systemUser.charAt(0).toUpperCase()}</span>
+            <span className="text-slate-450">{systemUser}</span>
           </div>
 
           {/* System Date & Time */}

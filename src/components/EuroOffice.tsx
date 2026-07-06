@@ -465,9 +465,9 @@ export function EuroCalc({ vfs, setVfs, triggerNotification }: EuroOfficeProps) 
 // 3. EURO SLIDE - Presentation Maker
 // ==========================================
 export function EuroSlide({ vfs, setVfs, triggerNotification }: EuroOfficeProps) {
-  const [presName, setPresName] = useState("Arquitectura_Python.pptx");
+  const [presName, setPresName] = useState("Arquitectura_C_Rust_Assembly.pptx");
   const [slides, setSlides] = useState([
-    { id: 1, title: "CMineWar OS: Núcleo Python", content: "• Desarrollado íntegramente sobre una arquitectura limpia de Python 3.11.\n• Demonios de red de baja sobrecarga para optimización de RAM y CPU.\n• Enlace de kernel elástico y controladores asíncronos para hardware Legacy/UEFI." },
+    { id: 1, title: "CMineWar OS: Núcleo C, Rust & Assembly", content: "• Desarrollado bajo una arquitectura híbrida de C estructurado, Assembly nativo y Rust seguro.\n• Demonios de red compilados de baja sobrecarga para rendimiento extremo de RAM y CPU.\n• Enlaces nativos de kernel y controladores asíncronos para hardware Legacy/UEFI." },
     { id: 2, title: "Compatibilidad UEFI / Legacy BIOS", content: "• Soporte completo para GPT con Secure Boot y Shim firmado de Microsoft.\n• Sector MBR protector y cilindros de arranque alineados de forma adaptativa.\n• Autodetector inteligente de host (Auto-Sense HW) compatible con placas antiguas." },
     { id: 3, title: "Gestor de Paquetes .deb Nativo", content: "• Instalador integrado compatible con binarios compendiados en clúster Debian.\n• Integración directa con el lanzador y barra de tareas instantánea.\n• Despliegue de suites preinstaladas como Euro Office." }
   ]);

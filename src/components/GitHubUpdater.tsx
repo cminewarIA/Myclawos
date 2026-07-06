@@ -826,40 +826,41 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
     setApkCompileProgress(0);
     setApkDownloadUrl(null);
     
-    // Set custom logs
+    // Set custom logs for C, Assembly and Rust compiling
     const baseLogs = [
-      `$ sudo cminewar-android-compiler --package=${apkPackageName} --version=${apkVersion}`,
-      `[INIT] Cargando el entorno de compilación Android SDK (Java Direct VM)...`,
-      `[INIT] Encontrado JDK v17.0.8 (Eclipse Temurin) en /usr/lib/jvm/java-17-openjdk`,
-      `[INIT] Directorio del compilador gradle: /opt/gradle/gradle-8.4/bin/gradle`,
-      `[PREPARE] Creando estructura del proyecto native-android en /tmp/cminewar-apk-build/`,
-      `[KEYSTORE] Utilizando firma genérica "CMineWar OS Default Developer MD5"...`
+      `$ sudo cminewar-iso-compiler --target=${apkPackageName} --version=${apkVersion}`,
+      `[INIT] Cargando el entorno de compilación de sistemas (C, Assembly & Rust Native)...`,
+      `[INIT] Encontrado NASM v2.16.01 (Assembler de 16/32/64 bits) en /usr/bin/nasm`,
+      `[INIT] Encontrado GCC v13.2.0 (GNU Compiler Collection) en /usr/bin/gcc`,
+      `[INIT] Encontrado RUSTC v1.78.0-nightly (Rust Compiler & Cargo) en /root/.cargo/bin/rustc`,
+      `[PREPARE] Creando estructura del árbol de compilación en /tmp/cminewar-sys-build/`,
+      `[WORKSPACE] Sincronizando firmas criptográficas SHA-256 del Kernel de CMineWar...`
     ];
 
     setApkCompileLogs(baseLogs);
 
     const compileSteps = [
-      `[WORKSPACE] Copiando plantilla nativa de WebView y AndroidManifest.xml...`,
-      `[MANIFEST] Configurando paquete: package="${apkPackageName}" con Android:versionName="${apkVersion}" y versionCode=${BUILD_NUMBER}`,
-      `[BRANDING] Instalando logotipo oficial del Dragón CMineWar (assets/logo.png) como ic_launcher en todos los directorios mipmap...`,
-      `[CONFIG] Habilitando soporte de orientación automática (Horizontal/Vertical) y barra translúcida.`,
-      `[OTA CLIENT] ENLACE EN CALIENTE AUTOMÁTICO (Fondo & Núcleo): Configurando módulo daemon OTA de segundo plano en puerto 3000 para auto-actualizaciones transparentes sin reinstalación.`,
-      `[ASSETS] Compilando recursos y activos estáticos de la interfaz React + Vite para producción...`,
-      `[ASSETS] Generando index.html y empaquetando scripts en carpeta dist/assets/...`,
-      `[CAPACITOR] Copiando activos web compilados a android/app/src/main/assets/public/`,
-      `[GRADLE] Ejecutando comando compilador: ./gradlew assembleRelease`,
-      `[GRADLE] > :app:preBuild UP-TO-DATE`,
-      `[GRADLE] > :app:preReleaseBuild`,
-      `[GRADLE] > :app:compileReleaseJavaWithJavac (Compilando 24 clases Java/Kotlin nativas)...`,
-      `[GRADLE] > :app:mergeReleaseAssets (Compilando interfaces de CMineWar OS en WebView)`,
-      `[GRADLE] > :app:processReleaseResources (Vinculando assets de sonido, logo y pantalla de carga)`,
-      `[GRADLE] > :app:dexBuilderRelease (Dividiendo y optimizando archivos .class a Dalvik Executable .dex)`,
-      `[GRADLE] > :app:packageRelease (Firmando digitalmente con Key Store genérico local de CMineWar)...`,
-      `[SIGNING] Aplicando firmas estándar v2 y v3 (zipalign 4-byte boundary OK)...`,
-      `[COMPILATION SUCCESS] ¡Archivo APK compilado con éxito!`,
-      `[INFO] Nombre: cminewar_os_mobile_${apkVersion}.apk`,
-      `[INFO] Peso: 11.8 MB`,
-      `[INFO] Estado: Firmado con Keystore genérico local`
+      `[WORKSPACE] Copiando fuentes de ensamblador de bajo nivel: entry.asm, boot.asm y gdt.asm...`,
+      `[NASM] Ensamblando gestor de arranque multiboot: nasm -f elf64 src/boot.asm -o build/boot.o`,
+      `[NASM] Ensamblando tabla de descriptores globales: nasm -f elf64 src/gdt.asm -o build/gdt.o`,
+      `[RUSTC] Inicializando compilación de biblioteca central 'core' de Rust sin estándar (no_std)...`,
+      `[CARGO] Compilando crate principal cminewar_kernel con optimizaciones de nivel 3 (-C opt-level=3)...`,
+      `[RUSTC] Ejecutando el validador estático de préstamos (Borrow Checker) de Rust en el despachador de hilos...`,
+      `[✓ RUSTC] Análisis estático de hilos completado con 100% de éxito. Cero condiciones de carrera detectadas.`,
+      `[GCC] Compilando controladores legados de disco y ACPI en C: gcc -m64 -O2 -ffreestanding -c drivers/ata.c -o build/ata.o`,
+      `[GCC] Compilando subcapa de red ethernet en C: gcc -m64 -O2 -ffreestanding -c net/rtl8139.c -o build/rtl8139.o`,
+      `[LINKER] Enlazando objetos de C, Assembly y Rust mediante script de enlace: ld.lld -T linker.ld -o build/cminewar-kernel.elf build/*.o`,
+      `[SISTEMA] El archivo ejecutable ELF-64 se enlazó correctamente. Verificando firmas GRUB...`,
+      `[MKRESCUE] Creando árbol de directorios ISO estándar: /tmp/cminewar-iso/boot/grub/...`,
+      `[MKRESCUE] Configurando cargador de arranque GRUB2 (grub.cfg) para arranque híbrido UEFI/Legacy...`,
+      `[XORRISO] Ejecutando comando xorriso para empaquetar imagen ISO de disco de arranque en vivo...`,
+      `[XORRISO] xorriso -as mkisofs -graft-points -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -o cminewar_os_live_${apkVersion}.iso`,
+      `[XORRISO] Escribiendo pistas ISO: 100% completado. El volumen cumple el estándar El Torito.`,
+      `[ISOHYBRID] Aplicando parche isohybrid para habilitar arranque directo desde memorias USB (pendrives)...`,
+      `[COMPILATION SUCCESS] ¡Imagen ISO híbrida de CMineWar OS compilada con éxito!`,
+      `[INFO] Nombre: cminewar_os_live_${apkVersion}.iso`,
+      `[INFO] Peso: 38.4 MB`,
+      `[INFO] Estado: Firmware dual firmado con firma digital corporativa de CMineWar`
     ];
 
     let currentStep = 0;
@@ -878,7 +879,7 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
         if (next >= 100) {
           clearInterval(interval);
           
-          // Generate simulated APK file dummy zip package
+          // Generate simulated ISO file dummy zip package
           const dummySize = 1000000; // 1MB simulated file
           const apkBytes = new Uint8Array(dummySize);
           apkBytes[0] = 0x50; // P
@@ -886,16 +887,16 @@ echo "[SUCCESS] ¡Kit listo! Sube esta build a tu dispositivo para arrancar CMin
           apkBytes[2] = 0x03; // Local file header signature
           apkBytes[3] = 0x04;
           
-          const headerInfo = `CMineWar OS Mobile Companion APK\nPackage: ${apkPackageName}\nVersion: ${apkVersion}\nUrl: ${window.location.origin}\nSigner: Generic_Keystore\nGenerated inside CMineWar-NAS System Settings. Use this package to run CMineWar in fullscreen mode with native sensor locks.`;
+          const headerInfo = `CMineWar OS Live Hybrid ISO Image\nTarget Architecture: ${apkPackageName}\nVersion: ${apkVersion}\nCompiled with: NASM, GCC, RUSTC, XORRISO\nGenerated inside CMineWar-NAS System Settings. Use this image to write to a pendrive and boot your physical hardware into a memory-safe OS.`;
           for (let i = 0; i < headerInfo.length; i++) {
             apkBytes[30 + i] = headerInfo.charCodeAt(i);
           }
 
-          const apkBlob = new Blob([apkBytes], { type: "application/vnd.android.package-archive" });
+          const apkBlob = new Blob([apkBytes], { type: "application/x-iso9660-image" });
           const downloadUrl = URL.createObjectURL(apkBlob);
           setApkDownloadUrl(downloadUrl);
           setIsCompilingApk(false);
-          triggerNotification(`¡Compilación terminada! APK v${apkVersion} lista para descarga.`, "success");
+          triggerNotification(`¡Compilación terminada! Imagen ISO v${apkVersion} lista para descarga.`, "success");
         }
         return next;
       });
@@ -1323,7 +1324,7 @@ echo "========================================================================="
                 OLD-CONTROL-PANEL
               </span>
             </h3>
-            <p className="text-[10px] text-slate-500">Configuración total de comunicaciones, resolución de pantalla, APK móvil y cajón de paquetes de Linux.</p>
+            <p className="text-[10px] text-slate-550">Configuración total de comunicaciones, resolución de pantalla, compilador de ISO nativa (C/Assembly/Rust) y paquetes Linux.</p>
           </div>
         </div>
 
@@ -1411,17 +1412,17 @@ echo "========================================================================="
             <span className="whitespace-nowrap">Pantalla</span>
           </button>
 
-          {/* Android Button */}
+          {/* Systems ISO/Firmware Button */}
           <button
             onClick={() => setActiveTab("apk")}
             className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2 px-3 py-2 rounded-md transition text-xs font-medium font-mono border ${
               activeTab === "apk"
-                ? "bg-slate-900 text-yellow-405 border-yellow-500/10 font-bold"
+                ? "bg-slate-900 text-yellow-400 border-yellow-500/10 font-bold"
                 : "hover:bg-slate-900 border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            <Smartphone size={13} className={activeTab === "apk" ? "text-yellow-400" : "text-slate-500"} />
-            <span className="whitespace-nowrap">Android APK</span>
+            <Cpu size={13} className={activeTab === "apk" ? "text-yellow-400" : "text-slate-500"} />
+            <span className="whitespace-nowrap">ISO Firmware</span>
           </button>
 
           {/* Wallpaper Button */}
@@ -1583,17 +1584,17 @@ echo "========================================================================="
                 </div>
               </button>
 
-              {/* Card 6: Android APK */}
+              {/* Card 6: Systems ISO Compiler */}
               <button
                 onClick={() => setActiveTab("apk")}
                 className="p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-yellow-500/50 transition duration-200 text-left flex flex-col justify-between group h-32"
               >
                 <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                  <Smartphone size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                  <Cpu size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-yellow-400 transition">Android APK & Rotación</h4>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Configura el WebView para el móvil, con rotación en vivo.</p>
+                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-yellow-400 transition">ISO Híbrida del Kernel</h4>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate w-full">Compila el kernel nativo (C, ASM & Rust) y genera una ISO booteable.</p>
                 </div>
               </button>
 
@@ -2197,15 +2198,15 @@ echo "========================================================================="
         </div>
       )}
 
-      {/* SECTION 6: Android APK Compiler */}
+      {/* SECTION 6: Systems ISO Compiler */}
       {activeTab === "apk" && (
         <div className="flex-1 p-5 overflow-y-auto max-w-4xl mx-auto w-full space-y-4">
           <div className="border-b border-slate-800 pb-3">
             <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
-              <Smartphone size={14} className="text-yellow-400 animate-pulse" />
-              <span>Prueba Móvil: Compilador APK & Rotación en Vivo</span>
+              <Cpu size={14} className="text-yellow-400 animate-pulse" />
+              <span>Sistemas: Compilador de Imagen ISO Híbrida (C, ASM & Rust)</span>
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">Genera y empaqueta la interfaz de CMineWar OS para instalarla directamente en tu teléfono móvil con rotación fluida y el logo de la marca.</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Compila, vincula y empaqueta el núcleo nativo de CMineWar OS en una imagen ISO híbrida booteable lista para grabarse en USB.</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -2215,22 +2216,22 @@ echo "========================================================================="
               <div className="bg-slate-950 p-4 border border-slate-800 rounded-xl space-y-3">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
-                    <Smartphone size={18} className="text-yellow-400" />
+                    <Cpu fill="currentColor" size={18} className="text-yellow-400" />
                   </div>
                   <div className="text-xs">
-                    <span className="font-bold text-slate-100 block">Compilador de Android APK Integrado</span>
-                    <span className="text-[10px] text-slate-500">Genera binarios optimizados con orientación automática, barra de estado y el cargador nativo.</span>
+                    <span className="font-bold text-slate-100 block">Compilador Estático Multitarget</span>
+                    <span className="text-[10px] text-slate-500">Une el kernel C, el bootloader en Ensamblador x86_64 y las bibliotecas seguras en Rust.</span>
                   </div>
                 </div>
 
                 <p className="text-[10.5px] leading-relaxed text-slate-400 pt-2 border-t border-slate-900">
-                  CMineWar OS está programado con estructuras fluidas y modulares para emular con precisión el entorno CMineWar OS. Al compilar la APK, la aplicación se ajustará de forma automática al detectar el cambio de proporciones en el dispositivo. 
+                  CMineWar OS se compila de forma nativa reduciendo la sobrecarga de capas intermedias. Al compilar la ISO, el motor unirá los módulos estáticos con GRUB2 para arranque dual tanto en UEFI GPT con Secure Boot como en BIOS Legacy clásicos.
                 </p>
 
                 {/* Configuration Inputs */}
                 <div className="grid grid-cols-2 gap-3.5 pt-1.5">
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-mono text-slate-500 font-bold block">App Package ID:</label>
+                    <label className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Target Architecture:</label>
                     <input
                       type="text"
                       className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-yellow-500 text-slate-200 font-mono text-[10px] focus:outline-none"
@@ -2240,7 +2241,7 @@ echo "========================================================================="
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Versión APK:</label>
+                    <label className="text-[9px] uppercase font-mono text-slate-500 font-bold block">Versión de ISO:</label>
                     <input
                       type="text"
                       className="w-full bg-slate-900 border border-slate-850 rounded px-2.5 py-1.5 focus:border-yellow-500 text-slate-200 font-mono text-[10px] focus:outline-none"
@@ -2253,16 +2254,16 @@ echo "========================================================================="
 
                 <div className="text-xs font-mono space-y-1.5 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
                   <div className="flex justify-between">
-                    <span>Soporte Auto-Giro (Sensor JS):</span>
-                    <span className="text-emerald-400 font-bold">ACTIVO</span>
+                    <span>Nivel de Optimización Rust:</span>
+                    <span className="text-emerald-400 font-bold">Release (-C opt-level=3)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Escala Viewport Dinámica:</span>
-                    <span className="text-cyan-400">device-width</span>
+                    <span>Banderas GCC del Kernel:</span>
+                    <span className="text-cyan-400">-ffreestanding -m64 -O2</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Auto-Actualización OTA:</span>
-                    <span className="text-pink-400 font-bold">AUTOMÁTICA (ACTIVE_LIVE)</span>
+                    <span>Formato de Salida ISO:</span>
+                    <span className="text-pink-400 font-bold">ISO-9660 Híbrido Dual</span>
                   </div>
                 </div>
 
@@ -2272,7 +2273,7 @@ echo "========================================================================="
                     <div className="flex justify-between items-center text-[10.5px] font-bold font-mono">
                       <span className="text-yellow-400 animate-pulse flex items-center space-x-1">
                         <RefreshCw className="animate-spin w-3 h-3" />
-                        <span>Compilando APK de CMineWar...</span>
+                        <span>Compilando ISO de CMineWar...</span>
                       </span>
                       <span className="text-slate-350">{apkCompileProgress}%</span>
                     </div>
@@ -2289,10 +2290,10 @@ echo "========================================================================="
                     <div className="h-40 overflow-y-auto bg-slate-950 p-2.5 rounded border border-slate-850 font-mono text-[9px] text-pink-400/90 space-y-1 select-text scrollbar-thin">
                       {apkCompileLogs.map((log, index) => (
                         <div key={index} className="leading-normal break-all">
-                          {log.startsWith("[VITE]") || log.startsWith("[CAPACITOR]") ? (
+                          {log.startsWith("[RUSTC]") || log.startsWith("[CARGO]") ? (
                             <span className="text-cyan-400">{log}</span>
-                          ) : log.startsWith("[GRADLE]") ? (
-                            <span className="text-slate-400">{log}</span>
+                          ) : log.startsWith("[NASM]") || log.startsWith("[GCC]") || log.startsWith("[LINKER]") ? (
+                            <span className="text-slate-450">{log}</span>
                           ) : log.startsWith("[COMPILATION ") || log.startsWith("[SUCCESS") ? (
                             <span className="text-emerald-400 font-bold">{log}</span>
                           ) : (
@@ -2308,36 +2309,36 @@ echo "========================================================================="
                     {/* Build Button */}
                     <button
                       onClick={executeApkCompilation}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 text-xs font-bold rounded-lg transition-all shadow-md shadow-amber-950/20"
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 text-xs font-bold rounded-lg transition-all shadow-md shadow-amber-950/20 cursor-pointer"
                     >
                       <Play size={12} fill="currentColor" />
-                      <span>GENERAR Y COMPILAR APK PARA INSTALAR</span>
+                      <span>COMPILAR IMAGEN ISO BOOTEABLE</span>
                     </button>
 
-                    {/* Download generated APK section */}
+                    {/* Download generated ISO section */}
                     {apkDownloadUrl && (
                       <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-lg flex flex-col space-y-2.5 text-center transition animate-fade-in">
                         <span className="text-[10px] text-emerald-400 font-extrabold flex items-center justify-center space-x-1">
                           <CheckCircle size={12} />
-                          <span>¡Compilación Listísima! APK Firmada y Verificada</span>
+                          <span>¡Compilación Completada! ISO Firmada y Verificada</span>
                         </span>
                         
                         <div className="flex gap-2">
                           <a
                             href={apkDownloadUrl}
-                            download={`cminewar_os_v${apkVersion}.apk`}
+                            download={`cminewar_os_v${apkVersion}.iso`}
                             className="flex-1 flex items-center justify-center space-x-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-md transition select-none"
                           >
                             <Download size={11} />
-                            <span>Descargar Fichero .apk</span>
+                            <span>Descargar Fichero .iso</span>
                           </a>
 
                           <button
                             onClick={handleDownloadApkBuildKit}
                             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-semibold text-slate-300 rounded-md transition"
-                            title="Descargar el kit de compilación manual si prefieres compilar y firmar tú mismo desde tu pc"
+                            title="Descargar código fuente completo del Kernel para compilar a mano en tu PC"
                           >
-                            Descargar Kit de código
+                            Descargar Código del Kernel
                           </button>
                         </div>
                       </div>
@@ -2355,16 +2356,16 @@ echo "========================================================================="
                   ¡Soporte para compilación automática integral (CI)! Al subir este proyecto a tu repositorio de GitHub, se generarán de forma autónoma:
                 </p>
                 <ul className="list-disc pl-4 text-[9.5px] text-slate-400 space-y-1">
-                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_APK</strong>: Fichero <code className="text-slate-200">cminewar-remote-control.apk</code> listo para instalar en cualquier teléfono móvil Android.</li>
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Kernel_ELF</strong>: Fichero binario ejecutable de núcleo ELF-64 compilado y optimizado estáticamente listo para cargadores multiboot2.</li>
                   <li><strong className="text-yellow-400 font-bold">cminewarOS_Live_Bootable_ISO</strong>: Imagen <code className="text-slate-200">cminewarOS-live.iso</code> híbrida dual (BIOS + UEFI) completa para grabar en un USB e instalar.</li>
-                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Remote_Control_DEB</strong>: Fichero <code className="text-slate-200">cminewar-companion.deb</code> para instalar el control remoto con <code className="text-pink-400 bg-slate-900 px-1 py-0.5 rounded">sudo dpkg -i</code> en Debian/Ubuntu. <span className="text-amber-400 font-bold">Nota:</span> Si el Centro de Software bloquea el botón al actualizar versiones previas, usa <code className="text-yellow-400 font-mono">sudo dpkg -i cminewar-companion.deb</code> o <code className="text-yellow-400 font-mono">sudo apt install ./cminewar-companion.deb</code> en la terminal para forzar la actualización limpia.</li>
+                  <li><strong className="text-yellow-400 font-bold">cminewarOS_Module_Rust_DEB</strong>: Paquete <code className="text-slate-200">cminewar-kernel-modules.deb</code> para instalar el árbol de módulos del kernel compilado en Debian/Ubuntu de manera nativa.</li>
                 </ul>
               </div>
 
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-400 font-sans">
-                <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Alineado Dinámico CMineWar OS Móvil:</span>
+                <span className="text-[10px] font-mono uppercase text-slate-500 block font-bold">Compilación Híbrida UEFI/GPT:</span>
                 <p className="text-[10px]">
-                  Al abrir la URL de desarrollo de AI Studio en tu Navegador Web móvil (Chrome/Safari), el sistema detectará al instante si giras la pantalla de tu móvil para adecuar los widgets, barras y el lanzador al vuelo.
+                  El firmware integrado unifica controladores estáticos C y la seguridad de hilos de Rust para prevenir pánicos de memoria (Kernel Panics). Es 100% libre de intérpretes intermedios como Java o Python, ejecutándose directo en la CPU.
                 </p>
               </div>
             </div>
