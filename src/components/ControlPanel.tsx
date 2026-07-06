@@ -17,9 +17,16 @@ import {
   Smartphone,
   Bot,
   ShieldCheck,
-  Laptop
+  Laptop,
+  Cloud,
+  Server,
+  ShieldAlert,
+  Globe,
+  Clock,
+  Key
 } from "lucide-react";
 import { cminewarFetch } from "../utils/api";
+import { auth } from "../lib/firebase";
 
 import BootDiagnosticsPanel from "./BootDiagnosticsPanel";
 
@@ -28,7 +35,167 @@ interface ControlPanelProps {
 }
 
 export default function ControlPanel({ openWindow }: ControlPanelProps = {}) {
-  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics" | "usb_creator" | "rust_kernel">("network");
+  const [activeTab, setActiveTab ] = useState<"network" | "memory" | "services" | "wallpaper" | "diagnostics" | "usb_creator" | "rust_kernel" | "cloud_sync">("network");
+  
+  // States for Cloud Handshake/User Sync Diagnostics
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [activeNodeIp, setActiveNodeIp] = useState<string>("");
+  const [activeNodeHost, setActiveNodeHost] = useState<string>("");
+  const [loadingNode, setLoadingNode] = useState<boolean>(false);
+  const [handshakeStatus, setHandshakeStatus] = useState<"IDLE" | "PINGING" | "SUCCESS" | "ERROR" | "WARNING">("IDLE");
+  const [handshakeLogs, setHandshakeLogs] = useState<string[]>([]);
+  const [handshakeLatency, setHandshakeLatency] = useState<number | null>(null);
+  const [lastHandshakeTime, setLastHandshakeTime] = useState<string>("");
+  const [remoteUptime, setRemoteUptime] = useState<number | null>(null);
+  const [remoteInstanceId, setRemoteInstanceId] = useState<string>("");
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setFirebaseUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      setActiveNodeIp("");
+      setActiveNodeHost("");
+      return;
+    }
+
+    const fetchNodeSettings = async () => {
+      setLoadingNode(true);
+      try {
+        const token = await firebaseUser.getIdToken();
+        const settingsRes = await fetch("/api/cminewar/db/settings", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          if (Array.isArray(settingsData)) {
+            const ipSetting = settingsData.find((s: any) => s.key === "active_node_ip");
+            const hostSetting = settingsData.find((s: any) => s.key === "active_node_host");
+            if (ipSetting) setActiveNodeIp(ipSetting.value);
+            if (hostSetting) setActiveNodeHost(hostSetting.value);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching settings in Control Panel:", err);
+      } finally {
+        setLoadingNode(false);
+      }
+    };
+
+    fetchNodeSettings();
+  }, [firebaseUser]);
+
+  const runCloudHandshake = async () => {
+    setHandshakeStatus("PINGING");
+    setHandshakeLatency(null);
+    setRemoteUptime(null);
+    setRemoteInstanceId("");
+
+    const startTime = Date.now();
+    const formattedTime = new Date().toLocaleTimeString();
+    setLastHandshakeTime(formattedTime);
+
+    const logs: string[] = [
+      `[${formattedTime}] 📡 INICIANDO HANDSHAKE DE DIAGNÓSTICO CLOUD...`,
+      `[${formattedTime}] 🔒 Verificando estado de sesión con Google Firebase...`,
+    ];
+    setHandshakeLogs([...logs]);
+
+    // Small delay for UI experience
+    await new Promise((r) => setTimeout(r, 450));
+
+    if (!firebaseUser) {
+      const errorMsg = `[FALLO] No se ha detectado ninguna sesión activa. Inicia sesión con Google o Correo/Contraseña en el escritorio primero.`;
+      setHandshakeLogs((prev) => [
+        ...prev,
+        errorMsg,
+        `[⚠️ RECOMENDACIÓN] Haz clic en 'Enlace Cloud Remoto' en la esquina inferior izquierda de tu pantalla de CMineWar OS e inicia sesión para sincronizar automáticamente.`
+      ]);
+      setHandshakeStatus("ERROR");
+      return;
+    }
+
+    setHandshakeLogs((prev) => [
+      ...prev,
+      `[✓ OK] Sesión de Firebase activa. Correo: ${firebaseUser.email}`,
+      `[✓ OK] Identificador de Sincronización (UID): ${firebaseUser.uid}`,
+      `[INFO] Buscando parámetros de nodo registrados en Cloud SQL...`,
+    ]);
+
+    await new Promise((r) => setTimeout(r, 450));
+
+    const targetIp = activeNodeIp || "";
+    const targetHost = activeNodeHost || "";
+
+    if (!targetIp && !targetHost) {
+      setHandshakeLogs((prev) => [
+        ...prev,
+        `[⚠️ ADVERTENCIA] No hay IP de nodo registrada en Cloud SQL para este usuario.`,
+        `[INFO] Iniciando en modo local (Servidor de Desarrollo de CMineWar en 127.0.0.1) como demostración...`,
+      ]);
+    } else {
+      setHandshakeLogs((prev) => [
+        ...prev,
+        `[✓ ENCONTRADO] IP del Nodo Registrada: ${targetIp}`,
+        `[✓ ENCONTRADO] Host de Enlace: ${targetHost || "No especificado"}`,
+        `[INFO] Intentando conectar con el nodo remoto http://${targetIp}:3000 a través de Secure Server-Side CORS Proxy...`,
+      ]);
+    }
+
+    await new Promise((r) => setTimeout(r, 600));
+
+    try {
+      // Use activeNodeIp or default to "demo" which resolves to localhost/127.0.0.1 in server.ts
+      const queryIp = targetIp || "demo";
+      const proxyUrl = `/api/cminewar/proxy?ip=${encodeURIComponent(queryIp)}&path=/api/cminewar/system-status`;
+
+      setHandshakeLogs((prev) => [
+        ...prev,
+        `[HTTPS GET] Enviando petición a: ${proxyUrl}`,
+      ]);
+
+      const res = await fetch(proxyUrl);
+      const data = await res.json();
+      const latency = Date.now() - startTime;
+
+      if (res.ok && data.status === "ok") {
+        setHandshakeLatency(latency);
+        setRemoteUptime(data.uptime);
+        setRemoteInstanceId(data.instanceId || "N/A");
+        setHandshakeStatus("SUCCESS");
+
+        setHandshakeLogs((prev) => [
+          ...prev,
+          `[✓ ENLACE ESTABLECIDO] Handshake completado exitosamente en ${latency}ms.`,
+          `[✓ ESTADO DEL NODO] Activo y respondiendo adecuadamente (HTTP 200).`,
+          `[✓ METADATOS] ID de Instancia del Servidor: ${data.instanceId || "Desconocido"}`,
+          `[✓ METADATOS] Tiempo de actividad (Uptime): ${data.uptime} segundos.`,
+          `[✓ SINCRONIZACIÓN] Historial de comandos y preferencias en la nube: OPERATIVO ☁️`,
+        ]);
+      } else {
+        throw new Error(data.error || "Fallo en la respuesta del proxy.");
+      }
+    } catch (err: any) {
+      const latency = Date.now() - startTime;
+      setHandshakeLogs((prev) => [
+        ...prev,
+        `[❌ ERROR DE HANDSHAKE] Fallo al establecer conexión tras ${latency}ms.`,
+        `[❌ DETALLE] ${err.message || "Error de red o Servidor no disponible."}`,
+        `[⚠️ RECOMENDACIONES]`,
+        `  1. Verifica que tu terminal Ubuntu o App de Android esté encendida.`,
+        `  2. Revisa si el servidor de CMineWar OS está corriendo en el puerto 3000 en el nodo destino.`,
+        `  3. Si usas WiFi local, asegúrate de que ambos dispositivos puedan enrutarse o registra la IP pública del nodo.`,
+        `  4. Comprueba las reglas de Firewall de tu router y habilita la redirección de puertos si es necesario.`,
+      ]);
+      setHandshakeStatus("ERROR");
+    }
+  };
   
   // States for interactive C/Assembly vs Rust Kernel compiler
   const [kernelLanguage, setKernelLanguage] = useState<"c_assembly" | "rust">(() => {
@@ -1032,6 +1199,19 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
         >
           <Cpu size={14} className={activeTab === "rust_kernel" ? "text-emerald-400" : "text-slate-500"} />
           <span className="whitespace-nowrap">Re-escritura Kernel</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("cloud_sync")}
+          className={`flex-1 md:flex-initial flex items-center justify-center md:justify-start space-x-2.5 px-3 py-2.5 rounded-md text-xs font-medium transition ${
+            activeTab === "cloud_sync"
+              ? "bg-slate-900 text-cyan-400 border border-cyan-500/10 font-bold"
+              : "hover:bg-slate-900 border border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+          id="btn-tab-cloud-sync"
+        >
+          <Cloud size={14} className={activeTab === "cloud_sync" ? "text-cyan-400 animate-pulse" : "text-slate-500"} />
+          <span className="whitespace-nowrap">Handshake Cloud</span>
         </button>
       </div>
 
@@ -2155,6 +2335,209 @@ echo "Puede reiniciar su equipo y arrancar desde \${USB_DEV} seleccionándolo en
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "cloud_sync" && (
+          <div className="flex-1 p-4 overflow-y-auto w-full space-y-4 text-left font-sans animate-fade-in" id="view-cloud-sync-control">
+            <div className="border-b border-slate-800 pb-2.5 flex justify-between items-center">
+              <div>
+                <h4 className="text-xs font-bold text-slate-200 flex items-center space-x-2">
+                  <Cloud size={14} className="text-cyan-400 animate-pulse" />
+                  <span>Diagnóstico de Enlace & Handshake Cloud</span>
+                </h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Verifica la conexión segura de base de datos e inicio de sesión de Firebase con tu terminal Android o servidor Ubuntu local.
+                </p>
+              </div>
+              <div className="px-2 py-0.5 bg-slate-950 border border-slate-850 rounded font-mono text-[9px] text-slate-400 flex items-center gap-1.5">
+                <span>Estado Global:</span>
+                {handshakeStatus === "SUCCESS" ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    CONECTADO
+                  </span>
+                ) : handshakeStatus === "PINGING" ? (
+                  <span className="text-cyan-400 font-bold flex items-center gap-1">
+                    <RefreshCw size={8} className="animate-spin" />
+                    EVALUANDO...
+                  </span>
+                ) : handshakeStatus === "ERROR" ? (
+                  <span className="text-rose-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    ERROR ENLACE
+                  </span>
+                ) : (
+                  <span className="text-amber-500 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    INACTIVO
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Diagnostics Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Card 1: Firebase Session */}
+              <div className="bg-[#020617]/40 border border-slate-900 rounded-xl p-3.5 space-y-2">
+                <div className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-900 pb-1.5">
+                  <Key size={12} className="text-cyan-400" />
+                  Sesión Firebase (Auth)
+                </div>
+                {firebaseUser ? (
+                  <div className="space-y-1.5 font-mono text-[10px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Usuario:</span>
+                      <span className="text-slate-350 font-semibold truncate max-w-[130px]">{firebaseUser.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Provider:</span>
+                      <span className="text-emerald-400 font-semibold uppercase">
+                        {firebaseUser.providerData?.[0]?.providerId === "google.com" ? "Google SSO" : "Correo / Clave"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Token Firebase:</span>
+                      <span className="text-slate-400 text-[8.5px] truncate max-w-[100px]">{firebaseUser.uid}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-2 text-center text-[10px] text-slate-500 font-mono">
+                    ⚠️ Sin sesión activa.<br />Inicia sesión en el escritorio.
+                  </div>
+                )}
+              </div>
+
+              {/* Card 2: Registered Cloud SQL parameters */}
+              <div className="bg-[#020617]/40 border border-slate-900 rounded-xl p-3.5 space-y-2">
+                <div className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-900 pb-1.5">
+                  <Server size={12} className="text-emerald-400" />
+                  Nodo Destino (Cloud SQL)
+                </div>
+                <div className="space-y-1.5 font-mono text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Dirección IP:</span>
+                    <span className="text-slate-350 font-bold">{activeNodeIp || <span className="text-slate-600 italic">No registrada</span>}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Host de Enlace:</span>
+                    <span className="text-slate-350 truncate max-w-[120px]">{activeNodeHost || <span className="text-slate-600 italic">No registrado</span>}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Puerto de Escucha:</span>
+                    <span className="text-cyan-500">3000 (HTTP)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Performance & Handshake metrics */}
+              <div className="bg-[#020617]/40 border border-slate-900 rounded-xl p-3.5 space-y-2">
+                <div className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-900 pb-1.5">
+                  <Activity size={12} className="text-amber-400" />
+                  Métricas de Sincronización
+                </div>
+                <div className="space-y-1.5 font-mono text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Latencia de Enlace:</span>
+                    <span className={`font-bold ${handshakeLatency !== null ? "text-emerald-400" : "text-slate-500"}`}>
+                      {handshakeLatency !== null ? `${handshakeLatency} ms` : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Uptime Remoto:</span>
+                    <span className="text-slate-350">
+                      {remoteUptime !== null ? `${remoteUptime}s` : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">ID Instancia Remota:</span>
+                    <span className="text-slate-400 text-[8px] truncate max-w-[90px]">{remoteInstanceId || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Handshake Console & Diagnostic Advice */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {/* Terminal Logs */}
+              <div className="lg:col-span-3 bg-slate-950 border border-slate-900 rounded-xl overflow-hidden flex flex-col h-[280px]">
+                <div className="bg-[#030712] px-3.5 py-2 border-b border-slate-900 flex justify-between items-center shrink-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/80"></span>
+                    <span className="text-[10px] font-mono text-slate-400 font-bold ml-1.5">
+                      handshake_debugger.log
+                    </span>
+                  </div>
+                  {lastHandshakeTime && (
+                    <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1">
+                      <Clock size={10} />
+                      Último test: {lastHandshakeTime}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 w-full bg-[#020617]/95 p-3.5 font-mono text-[9px] overflow-y-auto space-y-1.5 select-text scrollbar-thin">
+                  {handshakeLogs.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-600 italic">
+                      <Cloud size={24} className="mb-1.5 text-slate-800" />
+                      Presiona "Ejecutar Handshake" para iniciar la traza de diagnóstico.
+                    </div>
+                  ) : (
+                    handshakeLogs.map((log, index) => {
+                      let color = "text-slate-400";
+                      if (log.startsWith("[✓") || log.includes("ENLACE ESTABLECIDO") || log.includes("OK]")) {
+                        color = "text-emerald-400 font-semibold";
+                      } else if (log.startsWith("[❌") || log.startsWith("[FALLO")) {
+                        color = "text-rose-400 font-bold";
+                      } else if (log.startsWith("[⚠️") || log.includes("ADVERTENCIA]")) {
+                        color = "text-amber-400 font-semibold";
+                      } else if (log.startsWith("[HTTPS")) {
+                        color = "text-cyan-400";
+                      }
+                      return (
+                        <div key={index} className={`leading-normal break-words ${color}`}>
+                          {log}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Troubleshooting and Handshake Control panel */}
+              <div className="lg:col-span-2 flex flex-col justify-between space-y-3 min-h-[280px]">
+                <div className="bg-[#020617]/25 p-4 rounded-xl border border-slate-900 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-900 pb-1.5 flex items-center gap-1.5">
+                      <ShieldAlert size={12} className="text-cyan-400 animate-pulse" />
+                      Resolución de Errores Comunes
+                    </div>
+                    <ul className="text-[9.5px] text-slate-500 space-y-1.5 list-disc list-inside leading-relaxed">
+                      <li>
+                        <strong className="text-slate-400">The requested action is invalid:</strong> Suele ocurrir si los dominios autorizados de OAuth de Firebase o redirect de Google no se han configurado para la URL de este applet. Usa el inicio por <strong>Correo/Clave</strong> alternativo.
+                      </li>
+                      <li>
+                        <strong className="text-slate-400">Fallo de Enlace (HTTP 502/Timeout):</strong> Confirma que la terminal destino tiene internet y el servicio principal <code className="text-cyan-500 font-mono">cminewar.service</code> esté activo en el puerto <code className="text-emerald-500 font-mono">3000</code>.
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={runCloudHandshake}
+                    disabled={handshakeStatus === "PINGING"}
+                    className={`w-full py-2.5 px-4 rounded-lg text-[10.5px] font-mono uppercase tracking-wider font-bold border flex items-center justify-center gap-2 cursor-pointer transition duration-300 ${
+                      handshakeStatus === "PINGING"
+                        ? "bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/30 text-white shadow-lg shadow-cyan-950/20"
+                    }`}
+                  >
+                    <RefreshCw size={12} className={handshakeStatus === "PINGING" ? "animate-spin" : ""} />
+                    <span>{handshakeStatus === "PINGING" ? "Enviando Ping Handshake..." : "Ejecutar Handshake Cloud"}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

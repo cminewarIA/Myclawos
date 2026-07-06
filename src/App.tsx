@@ -19,7 +19,7 @@ import Bootloader from "./components/Bootloader";
 import { VERSION, BUILD_NUMBER } from "./version";
 import { cminewarFetch } from "./utils/api";
 import { auth, googleAuthProvider } from "./lib/firebase";
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { PkgHtop, PkgNeofetch, PkgCmatrix, PkgNginx, PkgRetroarch } from "./components/InstalledPackages";
 import { EuroWord, EuroCalc, EuroSlide } from "./components/EuroOffice";
 import HardwareControl from "./components/HardwareControl";
@@ -348,6 +348,23 @@ export default function App() {
     }
     return false;
   });
+
+  const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
+  const [emailInput, setEmailInput] = useState<string>("");
+  const [passwordInput, setPasswordInput] = useState<string>("");
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          console.log("Firebase redirect login success:", result.user);
+        }
+      })
+      .catch((err) => {
+        console.error("Firebase Redirect Result Error:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -1768,25 +1785,150 @@ export default function App() {
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const result = await signInWithPopup(auth, googleAuthProvider);
-                      triggerNotification(`¡Hola ${result.user.displayName}! Sesión de Firebase iniciada.`, "success");
-                    } catch (err: any) {
-                      console.error("Firebase Login Error:", err);
-                      triggerNotification("Fallo de autenticación: " + err.message, "info");
-                    }
-                  }}
-                  className="w-full py-2.5 bg-[#1a1f36] hover:bg-[#202744] border border-slate-800 text-slate-200 hover:text-white rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
-                >
-                  <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.94 5.94 0 0 1 8 12.571a5.94 5.94 0 0 1 5.991-5.943c1.554 0 2.973.57 4.073 1.514l3.14-3.14A10.3 10.3 0 0 0 13.99 1C7.92 1 3 5.92 3 12s4.92 11 11 11c6.51 0 10.59-4.52 10.59-10.714 0-.693-.075-1.343-.2-2H12.24Z" />
-                  </svg>
-                  <span>Iniciar con Google</span>
-                </button>
+              <div className="space-y-3">
+                {/* Auth Mode Tabs */}
+                <div className="grid grid-cols-2 gap-1 bg-[#020617] p-1 rounded-lg border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMethod("google")}
+                    className={`py-1 text-[10px] font-bold font-mono uppercase tracking-wider rounded transition-all duration-200 cursor-pointer ${
+                      authMethod === "google"
+                        ? "bg-slate-800 text-slate-100 border border-slate-700/50"
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMethod("email")}
+                    className={`py-1 text-[10px] font-bold font-mono uppercase tracking-wider rounded transition-all duration-200 cursor-pointer ${
+                      authMethod === "email"
+                        ? "bg-slate-800 text-slate-100 border border-slate-700/50"
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    Correo/Clave
+                  </button>
+                </div>
+
+                {authMethod === "google" ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const isMobileOrWebView = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|wv/i.test(navigator.userAgent);
+                        
+                        if (isMobileOrWebView) {
+                          triggerNotification("Iniciando redirección de Google compatible con Android...", "info");
+                          await signInWithRedirect(auth, googleAuthProvider);
+                        } else {
+                          try {
+                            const result = await signInWithPopup(auth, googleAuthProvider);
+                            triggerNotification(`¡Hola ${result.user.displayName}! Sesión de Firebase iniciada.`, "success");
+                          } catch (popupErr: any) {
+                            console.warn("Popup authentication error, falling back to redirect:", popupErr);
+                            if (
+                              popupErr.code === "auth/popup-blocked" || 
+                              popupErr.code === "auth/operation-not-supported-in-this-environment" ||
+                              popupErr.code === "auth/popup-closed-by-user" ||
+                              popupErr.message?.toLowerCase().includes("popup")
+                            ) {
+                              triggerNotification("Redirigiendo a inicio de sesión seguro...", "info");
+                              await signInWithRedirect(auth, googleAuthProvider);
+                            } else {
+                              throw popupErr;
+                            }
+                          }
+                        }
+                      } catch (err: any) {
+                        console.error("Firebase Login Error:", err);
+                        triggerNotification("Fallo de autenticación: " + err.message, "info");
+                      }
+                    }}
+                    className="w-full py-2.5 bg-[#1a1f36] hover:bg-[#202744] border border-slate-800 text-slate-200 hover:text-white rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.94 5.94 0 0 1 8 12.571a5.94 5.94 0 0 1 5.991-5.943c1.554 0 2.973.57 4.073 1.514l3.14-3.14A10.3 10.3 0 0 0 13.99 1C7.92 1 3 5.92 3 12s4.92 11 11 11c6.51 0 10.59-4.52 10.59-10.714 0-.693-.075-1.343-.2-2H12.24Z" />
+                    </svg>
+                    <span>Iniciar con Google</span>
+                  </button>
+                ) : (
+                  <div className="space-y-2 bg-[#020617]/40 border border-slate-900 rounded-lg p-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
+                        Correo Electrónico
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="tu@correo.com"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-[#020617] border border-slate-800/80 rounded text-slate-200 text-xs font-mono focus:border-emerald-500/50 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
+                        Contraseña
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-[#020617] border border-slate-800/80 rounded text-slate-200 text-xs font-mono focus:border-emerald-500/50 focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!emailInput || !passwordInput) {
+                          triggerNotification("Completa todos los campos", "info");
+                          return;
+                        }
+                        if (passwordInput.length < 6) {
+                          triggerNotification("La contraseña debe tener al menos 6 caracteres", "info");
+                          return;
+                        }
+
+                        try {
+                          if (isRegistering) {
+                            const result = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
+                            triggerNotification(`¡Cuenta creada! Bienvenido, ${result.user.email}`, "success");
+                          } else {
+                            const result = await signInWithEmailAndPassword(auth, emailInput, passwordInput);
+                            triggerNotification(`Sesión iniciada como: ${result.user.email}`, "success");
+                          }
+                        } catch (err: any) {
+                          console.error("Email Auth Error:", err);
+                          let msg = err.message;
+                          if (err.code === "auth/invalid-credential") {
+                            msg = "Credenciales incorrectas.";
+                          } else if (err.code === "auth/email-already-in-use") {
+                            msg = "El correo ya está registrado.";
+                          } else if (err.code === "auth/weak-password") {
+                            msg = "Contraseña demasiado débil.";
+                          }
+                          triggerNotification(`Error: ${msg}`, "info");
+                        }
+                      }}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 border border-emerald-500/20 text-white rounded font-bold font-mono text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer"
+                    >
+                      {isRegistering ? "Crear Cuenta de Enlace" : "Iniciar Sesión de Enlace"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsRegistering(!isRegistering)}
+                      className="w-full text-center text-[9px] text-slate-500 hover:text-slate-300 underline font-mono cursor-pointer block"
+                    >
+                      {isRegistering ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate gratis"}
+                    </button>
+                  </div>
+                )}
+
                 <div className="bg-[#020617]/50 border border-slate-900 rounded-lg p-2.5 space-y-1.5">
                   <p className="text-[9.5px] text-slate-400 text-center leading-normal font-mono">
                     ☁️ <span className="text-emerald-500 font-bold">Enlace Cloud Remoto</span>
