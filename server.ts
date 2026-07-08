@@ -234,7 +234,7 @@ app.post("/api/cminewar/db/commands", requireAuth, async (req: AuthRequest, res)
 });
 
 // POST /api/cminewar/terminal/execute - Execute real command on the host
-app.post("/api/cminewar/terminal/execute", (req, res) => {
+app.post("/api/cminewar/terminal/execute", requireAuth, async (req: AuthRequest, res) => {
   const { command, cwd } = req.body;
   if (!command) {
     return res.status(400).json({ error: "Falta especificar el comando" });
@@ -242,7 +242,6 @@ app.post("/api/cminewar/terminal/execute", (req, res) => {
 
   console.log(`[TERMINAL HOST] Ejecutando: ${command} en ${cwd || "root"}`);
   
-  const { exec } = require("child_process");
   exec(command, { cwd: process.cwd() }, (error: any, stdout: string, stderr: string) => {
     res.json({
       stdout: stdout || "",
@@ -253,15 +252,14 @@ app.post("/api/cminewar/terminal/execute", (req, res) => {
 });
 
 // POST /api/cminewar/github-update - Actualiza de forma real con el código de GitHub
-app.post("/api/cminewar/github-update", (req, res) => {
+app.post("/api/cminewar/github-update", requireAuth, async (req: AuthRequest, res) => {
   const { owner, repo, branch } = req.body;
-  const safeOwner = owner || "cminewarIA";
-  const safeRepo = repo || "MyCMineWarOS";
-  const safeBranch = branch || "main";
+  const safeOwner = String(owner || "cminewarIA").replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeRepo = String(repo || "MyCMineWarOS").replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeBranch = String(branch || "main").replace(/[^a-zA-Z0-9_.-]/g, "");
   
   console.log(`[GITHUB REAL UPDATE] Sincronizando con ${safeOwner}/${safeRepo}:${safeBranch}`);
   
-  const { exec } = require("child_process");
   exec("git pull origin " + safeBranch, (err: any, stdout: string, stderr: string) => {
     if (err) {
       const cmdSeq = [
@@ -495,7 +493,7 @@ app.get("/api/cminewar/system-metrics", (req, res) => {
 });
 
 // POST /api/cminewar/firewall/toggle - Real iptables block/allow trigger
-app.post("/api/cminewar/firewall/toggle", (req, res) => {
+app.post("/api/cminewar/firewall/toggle", requireAuth, async (req: AuthRequest, res) => {
   const { action } = req.body; // "block" or "allow"
   if (action !== "block" && action !== "allow") {
     return res.status(400).json({ error: "Acción requerida: block o allow" });
@@ -542,7 +540,7 @@ app.post("/api/cminewar/firewall/toggle", (req, res) => {
 });
 
 // POST /api/cminewar/services/control - Control real systemd services
-app.post("/api/cminewar/services/control", (req, res) => {
+app.post("/api/cminewar/services/control", requireAuth, async (req: AuthRequest, res) => {
   const { serviceId, action } = req.body; // action: "start" or "stop" or "restart"
   if (!serviceId || !action) {
     return res.status(400).json({ error: "Faltan parámetros: serviceId y action" });
@@ -633,7 +631,7 @@ app.post("/api/cminewar/services/control", (req, res) => {
 });
 
 // POST /api/cminewar/system/power - Real power control for hosts (Reboot / Shutdown)
-app.post("/api/cminewar/system/power", (req, res) => {
+app.post("/api/cminewar/system/power", requireAuth, async (req: AuthRequest, res) => {
   const { action } = req.body; // "reboot" or "shutdown"
   if (action !== "reboot" && action !== "shutdown") {
     return res.status(400).json({ error: "Acción requerida: reboot o shutdown" });
@@ -752,7 +750,7 @@ app.get("/api/cminewar/disks", (req, res) => {
 });
 
 // CMineWar - Start real OS installation background service execution
-app.post("/api/cminewar/install", (req, res) => {
+app.post("/api/cminewar/install", requireAuth, async (req: AuthRequest, res) => {
   const { disk, omitStandardUser, disableSleep, defaultBrowserChromium } = req.body;
 
   if (!disk) {
@@ -841,7 +839,7 @@ app.get("/api/cminewar/install-status", (req, res) => {
 });
 
 // CMineWar - Real bootable ISO compilation endpoint
-app.post("/api/cminewar/build-iso", (req, res) => {
+app.post("/api/cminewar/build-iso", requireAuth, async (req: AuthRequest, res) => {
   const { omitStandardUser, disableSleep, defaultBrowserChromium } = req.body;
   
   const progressFile = "/tmp/cminewar_iso_progress.txt";
@@ -935,7 +933,7 @@ app.get("/api/cminewar/download-iso", (req, res) => {
 });
 
 // CMineWar - Start full system and GRUB update background service execution
-app.post("/api/cminewar/system-update", (req, res) => {
+app.post("/api/cminewar/system-update", requireAuth, async (req: AuthRequest, res) => {
   try {
     const scriptPath = path.join(process.cwd(), "bare-metal", "update_system.py");
     if (fs.existsSync(scriptPath)) {
@@ -1057,7 +1055,7 @@ app.get("/api/cminewar/ubuntu-companion/cache-status", (req, res) => {
 });
 
 // POST /api/cminewar/ubuntu-companion/clear-cache - Real physical cache clear
-app.post("/api/cminewar/ubuntu-companion/clear-cache", (req, res) => {
+app.post("/api/cminewar/ubuntu-companion/clear-cache", requireAuth, async (req: AuthRequest, res) => {
   const cacheDir = "/tmp/ubuntu-companion-cache";
   if (fs.existsSync(cacheDir)) {
     try {
@@ -1077,7 +1075,7 @@ app.post("/api/cminewar/ubuntu-companion/clear-cache", (req, res) => {
 });
 
 // POST /api/cminewar/ubuntu-companion/create-usb - Real background physical action trigger
-app.post("/api/cminewar/ubuntu-companion/create-usb", (req, res) => {
+app.post("/api/cminewar/ubuntu-companion/create-usb", requireAuth, async (req: AuthRequest, res) => {
   const { device, legacyCompatibility, highPerformance, cacheLibraries, packages, downloadFromNetwork } = req.body;
   
   if (!device) {
@@ -1375,7 +1373,7 @@ function safeExec(cmd: string): string {
 }
 
 // 1. Filesystem True Root Explorer Endpoints
-app.get("/api/cminewar/files/list", (req, res) => {
+app.get("/api/cminewar/files/list", requireAuth, async (req: AuthRequest, res) => {
   const reqPath = String(req.query.path || "/");
   try {
     // Standardize path relative to root of physical container/machine
@@ -1419,7 +1417,7 @@ app.get("/api/cminewar/files/list", (req, res) => {
   }
 });
 
-app.get("/api/cminewar/files/read", (req, res) => {
+app.get("/api/cminewar/files/read", requireAuth, async (req: AuthRequest, res) => {
   const reqPath = String(req.query.path || "");
   try {
     const targetPath = path.resolve("/", reqPath);
@@ -1445,7 +1443,7 @@ app.get("/api/cminewar/files/read", (req, res) => {
   }
 });
 
-app.post("/api/cminewar/files/create", (req, res) => {
+app.post("/api/cminewar/files/create", requireAuth, async (req: AuthRequest, res) => {
   const { path: reqPath, name, type } = req.body;
   if (!name) return res.status(400).json({ error: "Nombre es requerido." });
   
@@ -1464,7 +1462,7 @@ app.post("/api/cminewar/files/create", (req, res) => {
   }
 });
 
-app.post("/api/cminewar/files/delete", (req, res) => {
+app.post("/api/cminewar/files/delete", requireAuth, async (req: AuthRequest, res) => {
   const { path: reqPath } = req.body;
   if (!reqPath) return res.status(400).json({ error: "Ruta es requerida." });
   
