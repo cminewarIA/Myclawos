@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { exec, execSync, execFileSync, spawn } from "child_process";
+import { exec, execSync, execFileSync, spawn, execFile } from "child_process";
 import fs from "fs";
 import os from "os";
 import { rateLimit } from "express-rate-limit";
@@ -260,7 +260,7 @@ app.post("/api/cminewar/github-update", requireAuth, async (req: AuthRequest, re
   
   console.log(`[GITHUB REAL UPDATE] Sincronizando con ${safeOwner}/${safeRepo}:${safeBranch}`);
   
-  exec("git pull origin " + safeBranch, (err: any, stdout: string, stderr: string) => {
+  execFile("git", ["pull", "origin", safeBranch], (err: any, stdout: string, stderr: string) => {
     if (err) {
       const cmdSeq = [
         "git init",
